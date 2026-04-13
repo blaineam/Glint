@@ -20,12 +20,26 @@ import Foundation
 // ---------------------------------------------------------------------------
 
 func renderImage(size: NSSize, _ draw: (NSGraphicsContext) -> Void) -> NSImage {
+    // Use NSBitmapImageRep to guarantee exact pixel dimensions (no Retina 2x scaling)
+    let w = Int(size.width)
+    let h = Int(size.height)
+    let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: w, pixelsHigh: h,
+        bitsPerSample: 8, samplesPerPixel: 4,
+        hasAlpha: true, isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0, bitsPerPixel: 0)!
+    rep.size = size  // logical size = pixel size (1x)
+
+    let ctx = NSGraphicsContext(bitmapImageRep: rep)!
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = ctx
+    draw(ctx)
+    NSGraphicsContext.restoreGraphicsState()
+
     let img = NSImage(size: size)
-    img.lockFocus()
-    if let ctx = NSGraphicsContext.current {
-        draw(ctx)
-    }
-    img.unlockFocus()
+    img.addRepresentation(rep)
     return img
 }
 
@@ -316,6 +330,9 @@ func generateIconPNGs(outputDir: String) {
         ("icon-512.png", 512),
         ("icon-256.png", 256),
         ("icon-128.png", 128),
+        ("icon-64.png", 64),
+        ("icon-32.png", 32),
+        ("icon-16.png", 16),
     ]
 
     for (name, size) in sizes {
