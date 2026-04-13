@@ -312,7 +312,7 @@ func generateOGPoster() -> NSImage {
             .foregroundColor: NSColor(white: 1.0, alpha: 0.65),
             .paragraphStyle: titleStyle,
         ]
-        let tagStr = "DDC display control\nfrom your keyboard."
+        let tagStr = "Control all your displays'\nbrightness and volume."
         let tagRect = NSRect(x: textX, y: h * 0.30, width: textMaxW, height: 80)
         tagStr.draw(in: tagRect, withAttributes: tagAttrs)
 
