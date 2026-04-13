@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.2
+
+- **Fix About version**: Settings now reads version from the app bundle instead of a hardcoded string
+
 ## v1.2.1
 
 - **Mute OSD**: Mute key now shows a muted speaker icon when muting and the volume level when unmuting

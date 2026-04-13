@@ -51,7 +51,7 @@ struct SettingsView: View {
                     Text("Glint")
                         .font(.headline)
                     Spacer()
-                    Text("v1.0.0")
+                    Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")")
                         .foregroundStyle(.secondary)
                 }
                 Text("DDC display control from your keyboard.")
