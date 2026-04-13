@@ -43,7 +43,13 @@ Glint makes your keyboard Just Work™ with external displays.
 
 ## 📦 Install
 
-### Download (recommended)
+### Homebrew
+
+```bash
+brew install --cask glint
+```
+
+### Download
 
 Grab the latest **notarized DMG** from [Releases](../../releases) — drag to Applications, done.
 
