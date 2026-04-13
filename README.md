@@ -32,7 +32,8 @@ Glint makes your keyboard Just Work™ with external displays.
 | 🔆 **Brightness keys** | Controls your external display's backlight via DDC — not software gamma |
 | 🔊 **Volume keys** | Adjusts your monitor's built-in speakers via DDC |
 | 🔇 **Mute key** | Toggles monitor speaker mute |
-| 🔄 **Sync mode** | First keypress syncs external display to match your Mac's current brightness/volume, then adjusts both in lockstep |
+| 🎯 **Cursor-aware** | Brightness keys adjust only the display the cursor is on — no more changing every screen at once |
+| 🔄 **Sync mode** | First keypress syncs all displays to match the cursor display's brightness, then adjusts every screen in lockstep |
 | 🖥️ **Subtle OSD** | Shows a minimal pill-style brightness/volume overlay below the notch |
 | 👻 **Invisible mode** | Hide from menu bar AND dock — completely invisible, always listening |
 | 🚀 **Launch at login** | Starts silently, ready before you are |
@@ -99,8 +100,9 @@ Toggle **"Hide menu bar icon"** in Settings. Glint vanishes from the menu bar an
 
 1. **`CGEventTap`** intercepts and fully consumes media key events — no macOS OSD ever appears
 2. **DDC/CI commands** are sent over the I2C bus (via `IOAVService` on Apple Silicon) to adjust hardware brightness/volume on external displays
-3. **Sync mode** (on by default): Glint programmatically adjusts the built-in display brightness (via IOKit) and system volume (via CoreAudio) alongside external monitors — both stay in lockstep
-4. **First-keystroke sync**: when sync is enabled, the first key press reads your Mac's current brightness/volume and sets the external display to match before adjusting
+3. **Cursor-aware**: when sync is off, only the display the cursor is on is adjusted — built-in or external
+4. **Sync mode** (on by default): Glint programmatically adjusts the built-in display brightness (via IOKit) and system volume (via CoreAudio) alongside external monitors — all stay in lockstep
+5. **First-keystroke sync**: when sync is enabled, the first key press reads the cursor display's current brightness and forces all other displays to match before adjusting together
 
 ### Why not the Mac App Store?
 
@@ -204,7 +206,7 @@ Open Glint from your Applications folder (or Spotlight). When the app detects it
 <details>
 <summary><strong>Can I control multiple monitors?</strong></summary>
 
-Yes! Glint detects all connected external displays and adjusts them simultaneously.
+Yes! Glint detects all connected external displays. With sync mode off, brightness keys adjust only the display your cursor is on. With sync mode on, all displays (including the built-in screen) are adjusted together and synced to the same brightness on first key press.
 </details>
 
 <details>
