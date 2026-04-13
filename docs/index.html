@@ -21,6 +21,36 @@
             --glass-bg: rgba(255, 255, 255, 0.06);
             --glass-border: rgba(255, 255, 255, 0.12);
             --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --glow-opacity: 0.08;
+            --monitor-bg: #111118;
+            --monitor-border: #2a2a35;
+            --monitor-screen: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+            --code-bg: rgba(0, 0, 0, 0.3);
+            --key-bg: rgba(255, 255, 255, 0.06);
+            --key-border: rgba(255, 255, 255, 0.15);
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --gold: #D9960A;
+                --amber: #CC7A00;
+                --deep: #A85C00;
+                --bg-dark: #f5f3f0;
+                --bg-card: rgba(0, 0, 0, 0.03);
+                --border: rgba(0, 0, 0, 0.08);
+                --text: #1a1820;
+                --text-muted: rgba(0, 0, 0, 0.5);
+                --glass-bg: rgba(255, 255, 255, 0.7);
+                --glass-border: rgba(0, 0, 0, 0.08);
+                --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+                --glow-opacity: 0.04;
+                --monitor-bg: #e8e6e3;
+                --monitor-border: #c8c5c0;
+                --monitor-screen: linear-gradient(180deg, #2a2a3e 0%, #1a1a2a 100%);
+                --code-bg: rgba(0, 0, 0, 0.06);
+                --key-bg: rgba(0, 0, 0, 0.06);
+                --key-border: rgba(0, 0, 0, 0.2);
+            }
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,7 +72,7 @@
             transform: translateX(-50%);
             width: 800px;
             height: 800px;
-            background: radial-gradient(circle, rgba(255, 194, 56, 0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 194, 56, var(--glow-opacity)) 0%, transparent 70%);
             pointer-events: none;
             z-index: 0;
         }
@@ -138,8 +168,8 @@
             backdrop-filter: blur(12px);
         }
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
+            background: var(--glass-bg);
+            border-color: var(--glass-border);
         }
         .badge {
             display: inline-block;
@@ -180,16 +210,16 @@
             height: 65%;
             top: 5%;
             left: 15%;
-            background: #111118;
+            background: var(--monitor-bg);
             border-radius: 8px;
-            border: 3px solid #2a2a35;
+            border: 3px solid var(--monitor-border);
             overflow: hidden;
             box-shadow: 0 0 40px rgba(255, 194, 56, 0.05);
         }
         .monitor-screen {
             width: 100%;
             height: 100%;
-            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+            background: var(--monitor-screen);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -201,7 +231,7 @@
             height: 12%;
             top: 70%;
             left: 46%;
-            background: #2a2a35;
+            background: var(--monitor-border);
         }
         .monitor-base {
             position: absolute;
@@ -209,7 +239,7 @@
             height: 3%;
             top: 82%;
             left: 40%;
-            background: #2a2a35;
+            background: var(--monitor-border);
             border-radius: 2px;
         }
         /* Laptop */
@@ -223,23 +253,23 @@
         .laptop-screen {
             width: 100%;
             height: 75%;
-            background: #111118;
+            background: var(--monitor-bg);
             border-radius: 4px 4px 0 0;
-            border: 2px solid #2a2a35;
+            border: 2px solid var(--monitor-border);
             overflow: hidden;
         }
         .laptop-screen-inner {
             width: 100%;
             height: 100%;
-            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+            background: var(--monitor-screen);
         }
         .laptop-base {
             width: 110%;
             height: 25%;
-            background: #1e1e28;
+            background: var(--monitor-bg);
             border-radius: 0 0 4px 4px;
             margin-left: -5%;
-            border: 2px solid #2a2a35;
+            border: 2px solid var(--monitor-border);
             border-top: none;
         }
         /* Keyboard hint */
@@ -254,8 +284,8 @@
         .key {
             width: 28px;
             height: 24px;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: var(--key-bg);
+            border: 1px solid var(--key-border);
             border-radius: 4px;
             display: flex;
             align-items: center;
@@ -338,7 +368,7 @@
         }
         .feature-card:hover {
             border-color: rgba(255, 194, 56, 0.2);
-            background: rgba(255, 255, 255, 0.08);
+            background: var(--glass-bg);
             transform: translateY(-2px);
         }
         .feature-icon {
@@ -408,7 +438,7 @@
             font-size: 0.95rem;
             user-select: none;
         }
-        .faq-question:hover { background: rgba(255, 255, 255, 0.03); }
+        .faq-question:hover { background: var(--bg-card); }
         .faq-arrow {
             transition: transform 0.3s;
             font-size: 0.8rem;
@@ -558,8 +588,8 @@
 
         <!-- SIZE CALLOUT -->
         <section class="size-callout">
-            <div class="size-number">&lt;2</div>
-            <div class="size-unit">megabytes</div>
+            <div class="size-number">&lt;1</div>
+            <div class="size-unit">megabyte</div>
             <p>No Electron. No frameworks. Just your keyboard and your display.</p>
         </section>
 

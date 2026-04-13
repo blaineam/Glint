@@ -8,7 +8,7 @@
 
 Glint intercepts your Mac's brightness and volume media keys and sends [DDC/CI](https://en.wikipedia.org/wiki/Display_Data_Channel) commands to your external monitor — so the keys that normally only control your MacBook screen now also control your monitor's **actual hardware brightness** and **built-in speakers**.
 
-> 🪶 **Under 2 MB.** No Electron. No frameworks. Pure Swift + IOKit.
+> 🪶 **Under 1 MB.** No Electron. No frameworks. Pure Swift + IOKit.
 > Zero CPU when idle. Disappears completely if you want it to.
 
 ---
@@ -36,7 +36,7 @@ Glint makes your keyboard Just Work™ with external displays.
 | 🖥️ **Native OSD** | Shows a brightness/volume overlay just like macOS |
 | 👻 **Invisible mode** | Hide from menu bar AND dock — completely invisible, always listening |
 | 🚀 **Launch at login** | Starts silently, ready before you are |
-| 🪶 **Tiny footprint** | < 2 MB, zero dependencies, negligible CPU/memory |
+| 🪶 **Tiny footprint** | < 1 MB, zero dependencies, negligible CPU/memory |
 | 🆓 **Free & open source** | MIT License. No telemetry. No accounts. No nonsense. |
 
 ---
@@ -79,7 +79,7 @@ Toggle **"Hide menu bar icon"** in Settings. Glint vanishes from the menu bar an
 ```
 ┌──────────────┐    CGEventTap     ┌──────────────┐    IOKit I2C     ┌──────────────┐
 │   Keyboard   │ ───────────────▶  │    Glint     │ ──────────────▶ │   Monitor    │
-│  Media Keys  │   intercept key   │  (< 2 MB)    │   DDC/CI cmd    │  Hardware    │
+│  Media Keys  │   intercept key   │  (< 1 MB)    │   DDC/CI cmd    │  Hardware    │
 └──────────────┘                   └──────────────┘                 └──────────────┘
                                          │
                                          │ (sync mode)
