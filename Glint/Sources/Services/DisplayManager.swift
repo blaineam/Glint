@@ -77,6 +77,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
 
         displays = externals
+        DebugLogger.shared.log("DISPLAYS: found \(externals.count) external(s): \(externals.map { "\($0.name) (id=\($0.id), brightness=\($0.brightness ?? 0)/\($0.maxBrightness ?? 0), volume=\($0.volume ?? 0)/\($0.maxVolume ?? 0))" })")
     }
 
     // MARK: - Cursor Display Detection
@@ -123,7 +124,13 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     /// matches the audio device name against connected display names to catch any
     /// edge cases where the transport type doesn't clearly indicate a monitor.
     func isAudioOutputDisplayBased() -> Bool {
-        guard let device = defaultOutputDevice() else { return false }
+        let log = DebugLogger.shared
+        guard let device = defaultOutputDevice() else {
+            log.log("AUDIO: No default output device")
+            return false
+        }
+
+        let deviceName = audioDeviceName(for: device) ?? "unknown"
 
         // Check transport type — covers direct HDMI, DisplayPort, and USB-C hub connections
         var addr = AudioObjectPropertyAddress(
@@ -134,26 +141,68 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         var transportType: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         if AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &transportType) == noErr {
+            let transportName = transportTypeName(transportType)
+            log.log("AUDIO: device=\"\(deviceName)\" transport=\(transportName) (0x\(String(transportType, radix: 16)))")
+
             if transportType == kAudioDeviceTransportTypeHDMI
                 || transportType == kAudioDeviceTransportTypeDisplayPort {
+                log.log("AUDIO: -> display-based (HDMI/DP transport)")
                 return true
             }
 
             // USB transport — could be a monitor via USB-C hub or a USB headset/DAC.
             // Match audio device name against connected display names to distinguish.
             if transportType == kAudioDeviceTransportTypeUSB {
-                return audioDeviceMatchesDisplay(device)
+                let match = audioDeviceMatchesDisplay(device)
+                log.log("AUDIO: USB transport, display name match = \(match)")
+                return match
             }
+        } else {
+            log.log("AUDIO: device=\"\(deviceName)\" transport=unknown (query failed)")
         }
 
         // Final fallback: name match regardless of transport type
-        return audioDeviceMatchesDisplay(device)
+        let match = audioDeviceMatchesDisplay(device)
+        log.log("AUDIO: fallback name match = \(match)")
+        return match
     }
 
     /// Returns true if the audio device name matches any connected external display name.
+    /// Uses word-level partial matching to handle cases where names partially overlap
+    /// (e.g., audio "LG HDR 4K" matching display "LG HDR 4K (2)").
     private func audioDeviceMatchesDisplay(_ deviceID: AudioDeviceID) -> Bool {
         guard let audioName = audioDeviceName(for: deviceID)?.lowercased() else { return false }
-        return displays.contains { audioName.contains($0.name.lowercased()) || $0.name.lowercased().contains(audioName) }
+        let log = DebugLogger.shared
+        let displayNames = displays.map { $0.name }
+        log.log("AUDIO: matching audio=\"\(audioName)\" against displays=\(displayNames)")
+
+        return displays.contains { display in
+            let displayName = display.name.lowercased()
+            // Full containment match
+            if audioName.contains(displayName) || displayName.contains(audioName) {
+                return true
+            }
+            // Partial word match — check if significant words overlap
+            let audioWords = Set(audioName.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init))
+            let displayWords = Set(displayName.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init))
+            let common = audioWords.intersection(displayWords)
+            return common.count >= 2 || (!audioWords.isEmpty && common == audioWords) || (!displayWords.isEmpty && common == displayWords)
+        }
+    }
+
+    private func transportTypeName(_ type: UInt32) -> String {
+        switch type {
+        case kAudioDeviceTransportTypeBuiltIn: return "BuiltIn"
+        case kAudioDeviceTransportTypeUSB: return "USB"
+        case kAudioDeviceTransportTypeHDMI: return "HDMI"
+        case kAudioDeviceTransportTypeDisplayPort: return "DisplayPort"
+        case kAudioDeviceTransportTypeBluetooth: return "Bluetooth"
+        case kAudioDeviceTransportTypeBluetoothLE: return "BluetoothLE"
+        case kAudioDeviceTransportTypeThunderbolt: return "Thunderbolt"
+        case kAudioDeviceTransportTypeAirPlay: return "AirPlay"
+        case kAudioDeviceTransportTypeVirtual: return "Virtual"
+        default: return "Other"
+        }
     }
 
     private func audioDeviceName(for deviceID: AudioDeviceID) -> String? {

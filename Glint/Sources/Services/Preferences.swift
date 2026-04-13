@@ -40,6 +40,10 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         }
     }
 
+    @Published var debugLogging: Bool {
+        didSet { defaults.set(debugLogging, forKey: "debugLogging") }
+    }
+
     private init() {
         // Register defaults
         defaults.register(defaults: [
@@ -50,6 +54,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
             "volumeStep": 6,
             "syncWithBuiltIn": true,
             "hideMenuBarIcon": false,
+            "debugLogging": false,
         ])
 
         launchAtLogin = defaults.bool(forKey: "launchAtLogin")
@@ -59,6 +64,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         volumeStep = defaults.integer(forKey: "volumeStep")
         syncWithBuiltIn = defaults.bool(forKey: "syncWithBuiltIn")
         hideMenuBarIcon = defaults.bool(forKey: "hideMenuBarIcon")
+        debugLogging = defaults.bool(forKey: "debugLogging")
     }
 
     private func updateLoginItem() {

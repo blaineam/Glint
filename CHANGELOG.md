@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.0
+
+- **Debug logging**: Optional debug log that records DDC commands, audio routing decisions, display detection, and I2C results to `~/Library/Application Support/Glint/debug.log` — toggle in Settings with a button to reveal the log in Finder
+- **Better audio/display name matching**: Partial word-level matching for audio device names against display names (e.g., "LG HDR" matches "LG HDR 4K (2)")
+
 ## v1.2.3
 
 - **USB-C hub audio detection**: Volume keys now correctly use DDC for monitors connected through USB-C hubs/docks by matching the audio device name against connected display names

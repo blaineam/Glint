@@ -46,6 +46,22 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Diagnostics") {
+                Toggle("Debug logging", isOn: $prefs.debugLogging)
+                    .help("Writes detailed DDC and audio routing info to a log file for troubleshooting.")
+                if prefs.debugLogging {
+                    HStack {
+                        Text("Logs DDC commands, audio detection, and display info")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Show Log File") {
+                            DebugLogger.shared.revealInFinder()
+                        }
+                    }
+                }
+            }
+
             Section("About") {
                 HStack {
                     Text("Glint")
@@ -73,7 +89,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 400, height: 420)
+        .frame(width: 400, height: 500)
     }
 }
 

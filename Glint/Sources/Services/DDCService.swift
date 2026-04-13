@@ -37,24 +37,44 @@ final class DDCService: @unchecked Sendable {
 
     // MARK: - Public API
 
+    private let log = DebugLogger.shared
+
     func read(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> DDCReadResult? {
+        log.log("DDC READ vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) platform=\(isAppleSilicon ? "arm64" : "x86")")
+        let result: DDCReadResult?
         if isAppleSilicon {
-            return avServiceRead(command: code.rawValue, displayID: displayID)
+            result = avServiceRead(command: code.rawValue, displayID: displayID)
         } else {
-            guard let framebuffer = framebuffer(for: displayID) else { return nil }
+            guard let framebuffer = framebuffer(for: displayID) else {
+                log.log("DDC READ FAILED: no framebuffer for display \(displayID)")
+                return nil
+            }
             defer { IOObjectRelease(framebuffer) }
-            return i2cRead(service: framebuffer, command: code.rawValue)
+            result = i2cRead(service: framebuffer, command: code.rawValue)
         }
+        if let r = result {
+            log.log("DDC READ OK: current=\(r.currentValue) max=\(r.maxValue)")
+        } else {
+            log.log("DDC READ FAILED: nil result for vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID)")
+        }
+        return result
     }
 
     func write(vcp code: VCPCode, value: UInt16, to displayID: CGDirectDisplayID) -> Bool {
+        log.log("DDC WRITE vcp=0x\(String(code.rawValue, radix: 16)) value=\(value) display=\(displayID)")
+        let success: Bool
         if isAppleSilicon {
-            return avServiceWrite(command: code.rawValue, value: value, displayID: displayID)
+            success = avServiceWrite(command: code.rawValue, value: value, displayID: displayID)
         } else {
-            guard let framebuffer = framebuffer(for: displayID) else { return false }
+            guard let framebuffer = framebuffer(for: displayID) else {
+                log.log("DDC WRITE FAILED: no framebuffer for display \(displayID)")
+                return false
+            }
             defer { IOObjectRelease(framebuffer) }
-            return i2cWrite(service: framebuffer, command: code.rawValue, value: value)
+            success = i2cWrite(service: framebuffer, command: code.rawValue, value: value)
         }
+        log.log("DDC WRITE \(success ? "OK" : "FAILED") vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID)")
+        return success
     }
 
     /// Adjusts a VCP value by a relative amount, clamped to [0, max].
@@ -62,6 +82,7 @@ final class DDCService: @unchecked Sendable {
         guard let current = read(vcp: code, from: displayID) else { return nil }
         let newValue = UInt16(clamping: Int(current.currentValue) + delta)
         let clamped = min(newValue, current.maxValue)
+        log.log("DDC ADJUST vcp=0x\(String(code.rawValue, radix: 16)) current=\(current.currentValue) delta=\(delta) new=\(clamped) max=\(current.maxValue)")
         if write(vcp: code, value: clamped, to: displayID) {
             return clamped
         }
@@ -76,7 +97,10 @@ final class DDCService: @unchecked Sendable {
     /// caches a mapping of display ID to service index.
     private func avService(for displayID: CGDirectDisplayID) -> IOAVService? {
         // Built-in displays don't support DDC
-        if CGDisplayIsBuiltin(displayID) != 0 { return nil }
+        if CGDisplayIsBuiltin(displayID) != 0 {
+            log.log("DDC: Skipping built-in display \(displayID)")
+            return nil
+        }
 
         var iter: io_iterator_t = 0
         guard let matching = IOServiceMatching("DCPAVServiceProxy") else { return nil }
@@ -101,7 +125,10 @@ final class DDCService: @unchecked Sendable {
         }
 
         // If no external services found, return nil
-        guard !externalServices.isEmpty else { return nil }
+        guard !externalServices.isEmpty else {
+            log.log("DDC: No external DCPAVServiceProxy services found")
+            return nil
+        }
 
         // For single external display, just use it
         // For multiple externals, try to match by probing DDC — each display
@@ -113,6 +140,8 @@ final class DDCService: @unchecked Sendable {
 
         let chosen = externalServices[serviceIndex]
         let avService = IOAVServiceCreateWithService(kCFAllocatorDefault, chosen)?.takeRetainedValue()
+
+        log.log("DDC: display=\(displayID) serviceIndex=\(serviceIndex)/\(externalServices.count) avService=\(avService != nil ? "found" : "nil")")
 
         for s in externalServices { IOObjectRelease(s) }
         return avService

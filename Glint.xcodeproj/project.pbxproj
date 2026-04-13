@@ -14,6 +14,7 @@
 		97BCF0C2163D7B620F890FF1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82A8057ECF1F6FA17690EAFB /* SettingsView.swift */; };
 		A6F09635614F2ED6D668657B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8270790A03573066AEA43219 /* CoreAudio.framework */; };
 		BDB4EFCB21435B86D4CF01A2 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C1E83CE4CDABC4F0038185 /* Preferences.swift */; };
+		BDE625CBD0C63680B0EAE3DC /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */; };
 		BFB4C9E4BF4E452E3ACF8ED9 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */; };
 		EE884A591152F0EF72D43C20 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B1FD40AB8D03FF3FDCA0E3B /* IOKit.framework */; };
 		F1DC01014450ED71DC1B5E5C /* DDCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF93EB90A6AE593A6393654 /* DDCService.swift */; };
@@ -33,6 +34,7 @@
 		91F871A5D2864AB32F025196 /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
 		B782F26D30192C2F6180E26A /* OSDOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSDOverlay.swift; sourceTree = "<group>"; };
 		C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		D280CA78B805CF0C47F15519 /* Glint-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Glint-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -62,6 +64,7 @@
 			isa = PBXGroup;
 			children = (
 				0BF93EB90A6AE593A6393654 /* DDCService.swift */,
+				C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */,
 				91F871A5D2864AB32F025196 /* DisplayManager.swift */,
 				300605DA6ABBB04FAE37DD1B /* MediaKeyInterceptor.swift */,
 				B782F26D30192C2F6180E26A /* OSDOverlay.swift */,
@@ -198,6 +201,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1DC01014450ED71DC1B5E5C /* DDCService.swift in Sources */,
+				BDE625CBD0C63680B0EAE3DC /* DebugLogger.swift in Sources */,
 				31D50731B062DF56EED921D5 /* DisplayManager.swift in Sources */,
 				30D103D38B5D3F8844D7FEF2 /* GlintApp.swift in Sources */,
 				644BAA10D4A2E62C4B479AE4 /* MediaKeyInterceptor.swift in Sources */,

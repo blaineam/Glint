@@ -164,11 +164,11 @@ Contributions welcome! Here's how to get started:
 
 ### Reporting issues
 
-If DDC doesn't work with your monitor, please include:
-- Monitor make & model
-- Connection type (HDMI, DisplayPort, USB-C)
-- macOS version
-- Whether other DDC apps (MonitorControl, BetterDisplay) work with your monitor
+If DDC doesn't work with your monitor:
+1. Enable **Debug logging** in Settings
+2. Try adjusting brightness/volume
+3. Click **Show Log File** to find the log
+4. Include the log along with your monitor make & model, connection type, macOS version, and whether other DDC apps work
 
 ---
 
