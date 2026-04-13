@@ -112,8 +112,8 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
         case Int(NX_KEYTYPE_MUTE):
             guard prefs.interceptVolume else { return event }
             ddcQueue.async {
-                DisplayManager.shared.toggleMute()
-                self.showOSD(.volume)
+                let muted = DisplayManager.shared.toggleMute()
+                self.showMuteOSD(muted: muted)
             }
             return nil
 
@@ -146,6 +146,15 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             icon = "speaker.wave.2.fill"
             percent = dm.currentVolumePercent()
         }
+        Task { @MainActor in
+            OSDOverlay.shared.show(icon: icon, value: percent, on: cursorScreen)
+        }
+    }
+
+    private func showMuteOSD(muted: Bool) {
+        let cursorScreen = DisplayManager.shared.screenUnderCursor()
+        let icon = muted ? "speaker.slash.fill" : "speaker.wave.2.fill"
+        let percent = muted ? 0 : DisplayManager.shared.currentVolumePercent()
         Task { @MainActor in
             OSDOverlay.shared.show(icon: icon, value: percent, on: cursorScreen)
         }

@@ -31,7 +31,7 @@ Glint makes your keyboard Just Work™ with external displays.
 |---------|---------|
 | 🔆 **Brightness keys** | Controls your external display's backlight via DDC — not software gamma |
 | 🔊 **Volume keys** | Adjusts volume via DDC when audio output is HDMI/DisplayPort, or system volume for built-in speakers/headphones/USB/Bluetooth |
-| 🔇 **Mute key** | Toggles monitor speaker mute |
+| 🔇 **Mute key** | Toggles mute with a proper muted/unmuted OSD indicator |
 | 🎯 **Cursor-aware** | Brightness keys adjust only the display the cursor is on — no more changing every screen at once |
 | 🔄 **Sync mode** | First keypress syncs all displays to match the cursor display's brightness, then adjusts every screen in lockstep |
 | 🖥️ **Subtle OSD** | Shows a minimal pill-style brightness/volume overlay below the notch |
@@ -74,7 +74,8 @@ xcodebuild -scheme Glint -configuration Release build
 
 1. **Open Glint** — it appears in your menu bar as a ☀️ icon
 2. **Grant Accessibility access** when prompted (System Settings → Privacy & Security → Accessibility)
-3. **Press your brightness/volume keys** — they now control your external display!
+3. **Quit and relaunch Glint** after enabling Accessibility access
+4. **Press your brightness/volume keys** — they now control your external display!
 
 ### Going invisible
 

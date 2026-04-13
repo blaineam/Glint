@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.1
+
+- **Mute OSD**: Mute key now shows a muted speaker icon when muting and the volume level when unmuting
+- **Accessibility restart notice**: Alert and settings view now inform users that Glint must be relaunched after enabling Accessibility access
+
 ## v1.2.0
 
 - **Smart volume routing**: Volume keys now automatically use DDC when audio output is HDMI/DisplayPort, and system volume when using built-in speakers, headphones, USB, or Bluetooth — switches gracefully when you change output devices

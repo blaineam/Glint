@@ -97,7 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func promptAccessibility() {
         let alert = NSAlert()
         alert.messageText = "Accessibility Access Required"
-        alert.informativeText = "Glint needs Accessibility access to intercept media keys and control your display brightness and volume via DDC.\n\nPlease add Glint in System Settings > Privacy & Security > Accessibility."
+        alert.informativeText = "Glint needs Accessibility access to intercept media keys and control your display brightness and volume via DDC.\n\nPlease add Glint in System Settings > Privacy & Security > Accessibility.\n\nAfter enabling access, you will need to quit and relaunch Glint for it to take effect."
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Later")
         alert.alertStyle = .informational

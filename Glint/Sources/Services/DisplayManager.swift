@@ -248,24 +248,33 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    func toggleMute() {
+    /// Toggles mute and returns whether the output is now muted.
+    func toggleMute() -> Bool {
         let syncMode = Preferences.shared.syncWithBuiltIn
         let displayAudio = isAudioOutputDisplayBased()
+        var muted = false
 
         if syncMode || displayAudio {
             // Toggle DDC mute on external displays
             for display in displays {
                 if (display.volume ?? 0) > 0 {
                     setVolume(0, for: display.id)
+                    muted = true
                 } else {
                     setVolume(50, for: display.id)
+                    muted = false
                 }
             }
         }
 
         if syncMode || !displayAudio {
             toggleSystemMute()
+            if let device = defaultOutputDevice() {
+                muted = systemMute(device: device) ?? muted
+            }
         }
+
+        return muted
     }
 
     // MARK: - System Volume Control (CoreAudio)

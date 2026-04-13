@@ -30,7 +30,7 @@ struct SettingsView: View {
                         VStack(alignment: .leading) {
                             Text("Accessibility access required")
                                 .foregroundStyle(.orange)
-                            Text("Open System Settings > Privacy & Security > Accessibility and add Glint.")
+                            Text("Open System Settings > Privacy & Security > Accessibility and add Glint. You will need to quit and relaunch Glint after enabling access.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
