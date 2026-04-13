@@ -107,6 +107,7 @@ struct MenuBarView: View {
 struct DisplayControlView: View {
     let display: ExternalDisplay
     @ObservedObject var displayManager = DisplayManager.shared
+    @ObservedObject var prefs = Preferences.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -126,7 +127,11 @@ struct DisplayControlView: View {
                             get: { Double(brightness) },
                             set: { val in
                                 let percent = Int(val / Double(maxBrightness) * 100)
-                                displayManager.setBrightness(percent, for: display.id)
+                                if prefs.syncWithBuiltIn {
+                                    displayManager.setBrightnessForAll(percent)
+                                } else {
+                                    displayManager.setBrightness(percent, for: display.id)
+                                }
                             }
                         ),
                         in: 0...Double(maxBrightness)

@@ -10,6 +10,7 @@
 		30D103D38B5D3F8844D7FEF2 /* GlintApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */; };
 		31D50731B062DF56EED921D5 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F871A5D2864AB32F025196 /* DisplayManager.swift */; };
 		644BAA10D4A2E62C4B479AE4 /* MediaKeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300605DA6ABBB04FAE37DD1B /* MediaKeyInterceptor.swift */; };
+		888CC26DF19E4F218B94FE47 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B392AF935EBF332BE851397 /* Assets.xcassets */; };
 		97BCF0C2163D7B620F890FF1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82A8057ECF1F6FA17690EAFB /* SettingsView.swift */; };
 		A6F09635614F2ED6D668657B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8270790A03573066AEA43219 /* CoreAudio.framework */; };
 		BDB4EFCB21435B86D4CF01A2 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C1E83CE4CDABC4F0038185 /* Preferences.swift */; };
@@ -20,6 +21,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0B392AF935EBF332BE851397 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0BF93EB90A6AE593A6393654 /* DDCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDCService.swift; sourceTree = "<group>"; };
 		1B1FD40AB8D03FF3FDCA0E3B /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlintApp.swift; sourceTree = "<group>"; };
@@ -100,6 +102,7 @@
 		EA6921C9B6CB486D18C07534 = {
 			isa = PBXGroup;
 			children = (
+				FD569EF777D164901CEB4F30 /* Resources */,
 				2737906091E3FF8EFD782CD1 /* Sources */,
 				846EE2A0E01AF110EE275AFD /* Frameworks */,
 				F0DEBFD467843DF4F582D172 /* Products */,
@@ -114,6 +117,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		FD569EF777D164901CEB4F30 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0B392AF935EBF332BE851397 /* Assets.xcassets */,
+			);
+			name = Resources;
+			path = Glint/Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -122,6 +134,7 @@
 			buildConfigurationList = 4AC9F6345A7677531E105A3D /* Build configuration list for PBXNativeTarget "Glint" */;
 			buildPhases = (
 				86AD9E59837D6EEC7E56E0F0 /* Sources */,
+				15DB57E4B5291059A1FB8D4A /* Resources */,
 				98BEE1CADB909FBA0A70E63B /* Frameworks */,
 			);
 			buildRules = (
@@ -168,6 +181,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		15DB57E4B5291059A1FB8D4A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				888CC26DF19E4F218B94FE47 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		86AD9E59837D6EEC7E56E0F0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -201,6 +225,11 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"-F/System/Library/PrivateFrameworks",
+					"-framework",
+					DisplayServices,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.Glint;
 				SDKROOT = macosx;
@@ -286,6 +315,11 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"-F/System/Library/PrivateFrameworks",
+					"-framework",
+					DisplayServices,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.Glint;
 				SDKROOT = macosx;

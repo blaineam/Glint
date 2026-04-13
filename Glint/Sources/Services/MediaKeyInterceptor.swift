@@ -127,20 +127,27 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
     private enum OSDType { case brightness, volume }
 
     private func showOSD(_ type: OSDType) {
-        let displays = DisplayManager.shared.displays
-        guard let display = displays.first else { return }
+        let dm = DisplayManager.shared
+        let cursorDisplayID = dm.displayUnderCursor()
+        let cursorScreen = dm.screenUnderCursor()
+
         let percent: Int
         let icon: String
         switch type {
         case .brightness:
-            percent = display.brightnessPercent
             icon = "sun.max.fill"
+            if let cursorID = cursorDisplayID,
+               let p = dm.brightnessPercent(for: cursorID) {
+                percent = p
+            } else {
+                percent = dm.displays.first?.brightnessPercent ?? 0
+            }
         case .volume:
-            percent = display.volumePercent
             icon = "speaker.wave.2.fill"
+            percent = dm.displays.first?.volumePercent ?? 0
         }
         Task { @MainActor in
-            OSDOverlay.shared.show(icon: icon, value: percent)
+            OSDOverlay.shared.show(icon: icon, value: percent, on: cursorScreen)
         }
     }
 }

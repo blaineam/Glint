@@ -79,30 +79,77 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         displays = externals
     }
 
+    // MARK: - Cursor Display Detection
+
+    /// Returns the CGDirectDisplayID of the display the mouse cursor is currently on.
+    func displayUnderCursor() -> CGDirectDisplayID? {
+        let mouseLocation = NSEvent.mouseLocation
+        for screen in NSScreen.screens {
+            if screen.frame.contains(mouseLocation) {
+                return screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+            }
+        }
+        return nil
+    }
+
+    /// Returns the NSScreen the mouse cursor is currently on.
+    func screenUnderCursor() -> NSScreen? {
+        let mouseLocation = NSEvent.mouseLocation
+        return NSScreen.screens.first { $0.frame.contains(mouseLocation) }
+    }
+
+    /// Returns brightness percent for any display (built-in or external).
+    func brightnessPercent(for displayID: CGDirectDisplayID) -> Int? {
+        if CGDisplayIsBuiltin(displayID) != 0 {
+            guard let b = getBuiltInBrightness() else { return nil }
+            return Int(round(b * 100))
+        }
+        return displays.first(where: { $0.id == displayID })?.brightnessPercent
+    }
+
     // MARK: - Brightness
 
     func adjustBrightness(by step: Int) {
         let syncMode = Preferences.shared.syncWithBuiltIn
+        let cursorDisplayID = displayUnderCursor()
 
-        // On first keystroke, sync externals to built-in brightness
-        if !brightnessSynced && syncMode && hasBuiltInDisplay() {
-            syncBrightnessToBuiltIn()
-            brightnessSynced = true
-        }
+        if syncMode {
+            // On first keystroke, sync ALL displays to the cursor display's brightness
+            if !brightnessSynced {
+                if let cursorID = cursorDisplayID {
+                    syncAllBrightnesses(to: cursorID)
+                }
+                brightnessSynced = true
+            }
 
-        // Adjust external displays via DDC
-        for display in displays {
-            let delta = stepToAbsolute(step, max: display.maxBrightness ?? 100)
-            if let newVal = ddc.adjust(vcp: .brightness, by: delta, on: display.id) {
-                if let idx = displays.firstIndex(where: { $0.id == display.id }) {
-                    displays[idx].brightness = newVal
+            // Adjust ALL external displays via DDC
+            for display in displays {
+                let delta = stepToAbsolute(step, max: display.maxBrightness ?? 100)
+                if let newVal = ddc.adjust(vcp: .brightness, by: delta, on: display.id) {
+                    if let idx = displays.firstIndex(where: { $0.id == display.id }) {
+                        displays[idx].brightness = newVal
+                    }
                 }
             }
-        }
 
-        // Also adjust built-in display programmatically (since we consume the event)
-        if syncMode {
-            adjustBuiltInBrightness(by: step)
+            // Also adjust built-in display
+            if hasBuiltInDisplay() {
+                adjustBuiltInBrightness(by: step)
+            }
+        } else {
+            // Only adjust the display the cursor is on
+            guard let cursorID = cursorDisplayID else { return }
+
+            if CGDisplayIsBuiltin(cursorID) != 0 {
+                adjustBuiltInBrightness(by: step)
+            } else if let display = displays.first(where: { $0.id == cursorID }) {
+                let delta = stepToAbsolute(step, max: display.maxBrightness ?? 100)
+                if let newVal = ddc.adjust(vcp: .brightness, by: delta, on: cursorID) {
+                    if let idx = displays.firstIndex(where: { $0.id == cursorID }) {
+                        displays[idx].brightness = newVal
+                    }
+                }
+            }
         }
     }
 
@@ -112,6 +159,16 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         let value = UInt16(Double(maxVal) * Double(percent) / 100.0)
         if ddc.write(vcp: .brightness, value: value, to: displayID) {
             displays[idx].brightness = value
+        }
+    }
+
+    /// Sets brightness on ALL displays (externals + built-in) to the same percentage.
+    func setBrightnessForAll(_ percent: Int) {
+        for display in displays {
+            setBrightness(percent, for: display.id)
+        }
+        if hasBuiltInDisplay() {
+            setBuiltInBrightness(Float(percent) / 100.0)
         }
     }
 
@@ -294,11 +351,28 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return false
     }
 
-    private func syncBrightnessToBuiltIn() {
-        guard let builtInBrightness = getBuiltInBrightness() else { return }
-        let percent = Int(builtInBrightness * 100)
+    /// Syncs ALL displays to match the brightness of the given target display.
+    private func syncAllBrightnesses(to targetDisplayID: CGDirectDisplayID) {
+        let targetPercent: Int
+
+        if CGDisplayIsBuiltin(targetDisplayID) != 0 {
+            guard let brightness = getBuiltInBrightness() else { return }
+            targetPercent = Int(round(brightness * 100))
+        } else {
+            guard let display = displays.first(where: { $0.id == targetDisplayID }) else { return }
+            targetPercent = display.brightnessPercent
+        }
+
+        // Set all external displays to target
         for display in displays {
-            setBrightness(percent, for: display.id)
+            if display.id != targetDisplayID {
+                setBrightness(targetPercent, for: display.id)
+            }
+        }
+
+        // Set built-in to target if target is not the built-in
+        if CGDisplayIsBuiltin(targetDisplayID) == 0, hasBuiltInDisplay() {
+            setBuiltInBrightness(Float(targetPercent) / 100.0)
         }
     }
 

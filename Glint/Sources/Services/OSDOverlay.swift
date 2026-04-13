@@ -16,7 +16,7 @@ final class OSDOverlay {
 
     private init() {}
 
-    func show(icon: String, value: Int) {
+    func show(icon: String, value: Int, on screen: NSScreen? = nil) {
         hideTask?.cancel()
 
         // Update content without recreating the view
@@ -45,8 +45,9 @@ final class OSDOverlay {
             window = panel
         }
 
-        // Position below notch/menu bar
-        if let screen = NSScreen.main {
+        // Position below notch/menu bar on the target screen
+        let targetScreen = screen ?? NSScreen.main
+        if let screen = targetScreen {
             let screenFrame = screen.frame
             let visibleFrame = screen.visibleFrame
             let menuBarHeight = screenFrame.maxY - visibleFrame.maxY
