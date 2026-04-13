@@ -107,6 +107,34 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return displays.first(where: { $0.id == displayID })?.brightnessPercent
     }
 
+    /// Returns the current volume percent based on the audio output.
+    /// Uses DDC volume if audio is routed to HDMI/DP, system volume otherwise.
+    func currentVolumePercent() -> Int {
+        if isAudioOutputDisplayBased() {
+            // Audio going to a monitor — use DDC volume from first external display
+            return displays.first?.volumePercent ?? 0
+        } else {
+            return Int(round(getSystemVolume() * 100))
+        }
+    }
+
+    /// Returns true if the default audio output is HDMI or DisplayPort (i.e., a monitor).
+    func isAudioOutputDisplayBased() -> Bool {
+        guard let device = defaultOutputDevice() else { return false }
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var transportType: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &transportType) == noErr else {
+            return false
+        }
+        return transportType == kAudioDeviceTransportTypeHDMI
+            || transportType == kAudioDeviceTransportTypeDisplayPort
+    }
+
     // MARK: - Brightness
 
     func adjustBrightness(by step: Int) {
@@ -176,25 +204,37 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     func adjustVolume(by step: Int) {
         let syncMode = Preferences.shared.syncWithBuiltIn
+        let displayAudio = isAudioOutputDisplayBased()
 
-        // On first keystroke, sync externals to system volume
-        if !volumeSynced && syncMode && hasBuiltInDisplay() {
-            syncVolumeToSystem()
-            volumeSynced = true
-        }
+        if syncMode {
+            // On first keystroke, sync externals to system volume
+            if !volumeSynced && hasBuiltInDisplay() {
+                syncVolumeToSystem()
+                volumeSynced = true
+            }
 
-        // Adjust external displays via DDC
-        for display in displays {
-            let delta = stepToAbsolute(step, max: display.maxVolume ?? 100)
-            if let newVal = ddc.adjust(vcp: .volume, by: delta, on: display.id) {
-                if let idx = displays.firstIndex(where: { $0.id == display.id }) {
-                    displays[idx].volume = newVal
+            // Adjust both DDC and system volume
+            for display in displays {
+                let delta = stepToAbsolute(step, max: display.maxVolume ?? 100)
+                if let newVal = ddc.adjust(vcp: .volume, by: delta, on: display.id) {
+                    if let idx = displays.firstIndex(where: { $0.id == display.id }) {
+                        displays[idx].volume = newVal
+                    }
                 }
             }
-        }
-
-        // Also adjust system volume programmatically (since we consume the event)
-        if syncMode {
+            adjustSystemVolume(by: step)
+        } else if displayAudio {
+            // Audio going to HDMI/DP — adjust DDC volume only
+            for display in displays {
+                let delta = stepToAbsolute(step, max: display.maxVolume ?? 100)
+                if let newVal = ddc.adjust(vcp: .volume, by: delta, on: display.id) {
+                    if let idx = displays.firstIndex(where: { $0.id == display.id }) {
+                        displays[idx].volume = newVal
+                    }
+                }
+            }
+        } else {
+            // Audio going to built-in/headphones/USB/BT — adjust system volume only
             adjustSystemVolume(by: step)
         }
     }
@@ -209,17 +249,21 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     }
 
     func toggleMute() {
-        // Toggle DDC mute on external displays
-        for display in displays {
-            if (display.volume ?? 0) > 0 {
-                setVolume(0, for: display.id)
-            } else {
-                setVolume(50, for: display.id)
+        let syncMode = Preferences.shared.syncWithBuiltIn
+        let displayAudio = isAudioOutputDisplayBased()
+
+        if syncMode || displayAudio {
+            // Toggle DDC mute on external displays
+            for display in displays {
+                if (display.volume ?? 0) > 0 {
+                    setVolume(0, for: display.id)
+                } else {
+                    setVolume(50, for: display.id)
+                }
             }
         }
 
-        // Also toggle system mute
-        if Preferences.shared.syncWithBuiltIn {
+        if syncMode || !displayAudio {
             toggleSystemMute()
         }
     }

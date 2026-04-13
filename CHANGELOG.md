@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.0
+
+- **Smart volume routing**: Volume keys now automatically use DDC when audio output is HDMI/DisplayPort, and system volume when using built-in speakers, headphones, USB, or Bluetooth — switches gracefully when you change output devices
+- **Audio-aware mute**: Mute key targets the correct output based on the active audio device
+
 ## v1.1.0
 
 - **Cursor-aware brightness**: When sync is off, brightness keys now only adjust the display the cursor is on

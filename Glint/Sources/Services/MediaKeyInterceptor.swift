@@ -144,7 +144,7 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             }
         case .volume:
             icon = "speaker.wave.2.fill"
-            percent = dm.displays.first?.volumePercent ?? 0
+            percent = dm.currentVolumePercent()
         }
         Task { @MainActor in
             OSDOverlay.shared.show(icon: icon, value: percent, on: cursorScreen)

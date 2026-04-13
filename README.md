@@ -30,7 +30,7 @@ Glint makes your keyboard Just Work™ with external displays.
 | Feature | Details |
 |---------|---------|
 | 🔆 **Brightness keys** | Controls your external display's backlight via DDC — not software gamma |
-| 🔊 **Volume keys** | Adjusts your monitor's built-in speakers via DDC |
+| 🔊 **Volume keys** | Adjusts volume via DDC when audio output is HDMI/DisplayPort, or system volume for built-in speakers/headphones/USB/Bluetooth |
 | 🔇 **Mute key** | Toggles monitor speaker mute |
 | 🎯 **Cursor-aware** | Brightness keys adjust only the display the cursor is on — no more changing every screen at once |
 | 🔄 **Sync mode** | First keypress syncs all displays to match the cursor display's brightness, then adjusts every screen in lockstep |
