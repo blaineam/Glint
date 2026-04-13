@@ -112,11 +112,27 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          xcrun notarytool submit dist/Glint.dmg \
+          SUBMIT_OUT=$(xcrun notarytool submit dist/Glint.dmg \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
-            --wait
+            --wait 2>&1)
+          echo "$SUBMIT_OUT"
+
+          # Extract submission ID and fetch log on failure
+          SUB_ID=$(echo "$SUBMIT_OUT" | grep "id:" | head -1 | awk '{print $NF}')
+          STATUS=$(echo "$SUBMIT_OUT" | grep "status:" | tail -1 | awk '{print $NF}')
+
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "::error::Notarization failed with status: $STATUS"
+            echo "--- Fetching notarization log ---"
+            xcrun notarytool log "$SUB_ID" \
+              --apple-id "$APPLE_ID" \
+              --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_PASSWORD" || true
+            exit 1
+          fi
+
           xcrun stapler staple dist/Glint.dmg
 
       - name: Get version
