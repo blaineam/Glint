@@ -61,6 +61,7 @@ jobs:
 
           # Replace icon
           if [ -f "build/assets/AppIcon.icns" ]; then
+            mkdir -p "$APP_PATH/Contents/Resources"
             cp build/assets/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
             /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
             codesign --force --deep --sign "$IDENTITY" --options runtime --timestamp "$APP_PATH"
