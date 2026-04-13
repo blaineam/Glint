@@ -33,7 +33,7 @@ Glint makes your keyboard Just Work™ with external displays.
 | 🔊 **Volume keys** | Adjusts your monitor's built-in speakers via DDC |
 | 🔇 **Mute key** | Toggles monitor speaker mute |
 | 🔄 **Sync mode** | First keypress syncs external display to match your Mac's current brightness/volume, then adjusts both in lockstep |
-| 🖥️ **Native OSD** | Shows a brightness/volume overlay just like macOS |
+| 🖥️ **Subtle OSD** | Shows a minimal pill-style brightness/volume overlay below the notch |
 | 👻 **Invisible mode** | Hide from menu bar AND dock — completely invisible, always listening |
 | 🚀 **Launch at login** | Starts silently, ready before you are |
 | 🪶 **Tiny footprint** | < 1 MB, zero dependencies, negligible CPU/memory |
@@ -84,14 +84,15 @@ Toggle **"Hide menu bar icon"** in Settings. Glint vanishes from the menu bar an
                                          │
                                          │ (sync mode)
                                          ▼
-                                   Pass event through
-                                   to macOS for built-in
-                                   display/speakers too
+                                   Programmatic control
+                                   of built-in display
+                                   brightness & system
+                                   volume via IOKit/CoreAudio
 ```
 
-1. **`CGEventTap`** intercepts system media key events before macOS processes them
-2. **DDC/CI commands** are sent over the I2C bus (via IOKit's `IOI2CInterface`) to adjust hardware brightness/volume
-3. **Sync mode** (on by default): the key event passes through to macOS so your MacBook screen and speakers also adjust — both displays stay in lockstep
+1. **`CGEventTap`** intercepts and fully consumes media key events — no macOS OSD ever appears
+2. **DDC/CI commands** are sent over the I2C bus (via `IOAVService` on Apple Silicon) to adjust hardware brightness/volume on external displays
+3. **Sync mode** (on by default): Glint programmatically adjusts the built-in display brightness (via IOKit) and system volume (via CoreAudio) alongside external monitors — both stay in lockstep
 4. **First-keystroke sync**: when sync is enabled, the first key press reads your Mac's current brightness/volume and sets the external display to match before adjusting
 
 ### Why not the Mac App Store?
