@@ -59,14 +59,6 @@ jobs:
           APP_PATH=$(find build/DerivedData -name "Glint.app" -type d | head -1)
           IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/build.keychain-db | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
 
-          # Replace icon
-          if [ -f "build/assets/AppIcon.icns" ]; then
-            mkdir -p "$APP_PATH/Contents/Resources"
-            cp build/assets/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
-            codesign --force --deep --sign "$IDENTITY" --options runtime --timestamp "$APP_PATH"
-          fi
-
           mkdir -p dist
           hdiutil create -volname "Glint" -fs HFS+ -size 50m build/glint-temp.dmg -quiet
           ATTACH_OUT=$(hdiutil attach -readwrite -noverify build/glint-temp.dmg)
