@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glint — DDC Display Control for Mac</title>
+    <meta name="description" content="Control your external monitor's brightness and volume with your Mac keyboard. Tiny, invisible, free.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>✨</text></svg>">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --gold: #FFC238;
+            --amber: #FF991A;
+            --deep: #D97308;
+            --bg-dark: #0a0a12;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #e8e4f0;
+            --text-muted: rgba(255, 255, 255, 0.5);
+            --glass-bg: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Ambient glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -30%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(255, 194, 56, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* NAV */
+        nav {
+            padding: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold), var(--amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        nav a:hover { color: var(--gold); }
+        .nav-links { display: flex; gap: 24px; }
+
+        /* HERO */
+        .hero {
+            text-align: center;
+            padding: 80px 0 60px;
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+            line-height: 1.1;
+        }
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--gold), var(--amber), var(--deep));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 520px;
+            margin: 0 auto 32px;
+            font-weight: 400;
+        }
+        .hero-cta {
+            display: inline-flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gold), var(--amber));
+            color: #1a1000;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 194, 56, 0.3);
+        }
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--text);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(255, 194, 56, 0.12);
+            color: var(--gold);
+            border: 1px solid rgba(255, 194, 56, 0.2);
+            margin-bottom: 20px;
+        }
+
+        /* DEMO SECTION */
+        .demo-section {
+            padding: 40px 0 80px;
+        }
+        .demo-container {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--glass-shadow);
+            overflow: hidden;
+        }
+        .desk-scene {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+            aspect-ratio: 16 / 9;
+        }
+        /* Monitor */
+        .monitor {
+            position: absolute;
+            width: 70%;
+            height: 65%;
+            top: 5%;
+            left: 15%;
+            background: #111118;
+            border-radius: 8px;
+            border: 3px solid #2a2a35;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(255, 194, 56, 0.05);
+        }
+        .monitor-screen {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .monitor-stand {
+            position: absolute;
+            width: 8%;
+            height: 12%;
+            top: 70%;
+            left: 46%;
+            background: #2a2a35;
+        }
+        .monitor-base {
+            position: absolute;
+            width: 20%;
+            height: 3%;
+            top: 82%;
+            left: 40%;
+            background: #2a2a35;
+            border-radius: 2px;
+        }
+        /* Laptop */
+        .laptop {
+            position: absolute;
+            width: 36%;
+            height: 22%;
+            bottom: 8%;
+            left: 32%;
+        }
+        .laptop-screen {
+            width: 100%;
+            height: 75%;
+            background: #111118;
+            border-radius: 4px 4px 0 0;
+            border: 2px solid #2a2a35;
+            overflow: hidden;
+        }
+        .laptop-screen-inner {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+        }
+        .laptop-base {
+            width: 110%;
+            height: 25%;
+            background: #1e1e28;
+            border-radius: 0 0 4px 4px;
+            margin-left: -5%;
+            border: 2px solid #2a2a35;
+            border-top: none;
+        }
+        /* Keyboard hint */
+        .keyboard-hint {
+            position: absolute;
+            bottom: 4%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+        }
+        .key {
+            width: 28px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-muted);
+            transition: all 0.15s;
+        }
+        .key.active {
+            background: rgba(255, 194, 56, 0.2);
+            border-color: var(--gold);
+            color: var(--gold);
+            box-shadow: 0 0 12px rgba(255, 194, 56, 0.3);
+        }
+        /* OSD overlay on monitor */
+        .osd {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .osd.visible { opacity: 1; }
+        .osd-icon { font-size: 20px; }
+        .osd-bar {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .osd-fill {
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 50%;
+        }
+        /* Screen brightness overlay */
+        .brightness-overlay {
+            position: absolute;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
+        /* FEATURES */
+        .features {
+            padding: 80px 0;
+        }
+        .features h2 {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 48px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .feature-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            border-color: rgba(255, 194, 56, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+        .feature-icon {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+        .feature-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .feature-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* SIZE CALLOUT */
+        .size-callout {
+            text-align: center;
+            padding: 60px 0;
+        }
+        .size-number {
+            font-size: 5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold), var(--amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+        }
+        .size-unit {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .size-callout p {
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-size: 1.1rem;
+        }
+
+        /* FAQ */
+        .faq {
+            padding: 80px 0;
+        }
+        .faq h2 {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+        }
+        .faq-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+        }
+        .faq-question {
+            padding: 18px 24px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            user-select: none;
+        }
+        .faq-question:hover { background: rgba(255, 255, 255, 0.03); }
+        .faq-arrow {
+            transition: transform 0.3s;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .faq-item.open .faq-arrow { transform: rotate(180deg); }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s;
+            padding: 0 24px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+        .faq-item.open .faq-answer {
+            max-height: 300px;
+            padding: 0 24px 18px;
+        }
+
+        /* FOOTER */
+        footer {
+            text-align: center;
+            padding: 60px 0 40px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+        footer a {
+            color: var(--gold);
+            text-decoration: none;
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 { font-size: 2.2rem; }
+            .hero .subtitle { font-size: 1rem; }
+            .size-number { font-size: 3.5rem; }
+            .demo-container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- NAV -->
+        <nav>
+            <div class="logo">✨ Glint</div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#faq">FAQ</a>
+                <a href="https://github.com/blaineam/Glint">GitHub</a>
+            </div>
+        </nav>
+
+        <!-- HERO -->
+        <section class="hero">
+            <div class="badge">🪶 Under 2 MB — zero dependencies</div>
+            <h1>Your keyboard.<br><span>Your monitor.</span></h1>
+            <p class="subtitle">
+                Control your external display's brightness and volume with the keys that should have worked all along. Free, open source, invisible.
+            </p>
+            <div class="hero-cta">
+                <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="btn btn-primary">
+                    ⬇ Download for Mac
+                </a>
+                <a href="https://github.com/blaineam/Glint" class="btn btn-secondary">
+                    View on GitHub
+                </a>
+            </div>
+        </section>
+
+        <!-- DEMO -->
+        <section class="demo-section">
+            <div class="demo-container">
+                <div class="desk-scene" id="deskScene">
+                    <!-- Monitor -->
+                    <div class="monitor">
+                        <div class="monitor-screen" id="monitorScreen">
+                            <div class="brightness-overlay" id="monitorBrightness"></div>
+                            <div class="osd" id="monitorOsd">
+                                <div class="osd-icon" id="osdIcon">☀️</div>
+                                <div class="osd-bar">
+                                    <div class="osd-fill" id="osdFill"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="monitor-stand"></div>
+                    <div class="monitor-base"></div>
+
+                    <!-- Laptop -->
+                    <div class="laptop">
+                        <div class="laptop-screen">
+                            <div class="laptop-screen-inner">
+                                <div class="brightness-overlay" id="laptopBrightness"></div>
+                            </div>
+                        </div>
+                        <div class="laptop-base"></div>
+                    </div>
+
+                    <!-- Keyboard keys -->
+                    <div class="keyboard-hint">
+                        <div class="key" id="keyDown">🔅</div>
+                        <div class="key" id="keyUp">🔆</div>
+                        <div class="key" id="keyVolDown">🔉</div>
+                        <div class="key" id="keyVolUp">🔊</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEATURES -->
+        <section class="features" id="features">
+            <h2>Everything you need. Nothing you don't.</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔆</div>
+                    <h3>Hardware Brightness</h3>
+                    <p>Controls your monitor's actual backlight via DDC — not a software overlay or gamma trick.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔊</div>
+                    <h3>Monitor Speakers</h3>
+                    <p>Adjusts your display's built-in speakers via DDC. Volume keys finally work for your monitor.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Sync Mode</h3>
+                    <p>Keeps your MacBook screen and external display in lockstep. One keypress adjusts both.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👻</div>
+                    <h3>Invisible Mode</h3>
+                    <p>Hide from the menu bar and dock entirely. Completely out of sight, always listening.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🪶</div>
+                    <h3>Featherweight</h3>
+                    <p>Under 2 MB, zero dependencies, negligible CPU/memory. Pure Swift + IOKit.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🆓</div>
+                    <h3>Free & Open Source</h3>
+                    <p>MIT licensed. No telemetry, no accounts, no subscriptions. Read every line of code.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SIZE CALLOUT -->
+        <section class="size-callout">
+            <div class="size-number">&lt;2</div>
+            <div class="size-unit">megabytes</div>
+            <p>No Electron. No frameworks. Just your keyboard and your display.</p>
+        </section>
+
+        <!-- FAQ -->
+        <section class="faq" id="faq">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Does Glint work with my monitor?
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Most external monitors support DDC/CI. If your monitor has an OSD with brightness/volume controls, it almost certainly supports DDC. Works over HDMI, DisplayPort, and USB-C/Thunderbolt. Some USB-C hubs may block DDC signals — try connecting directly if you have issues.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Why does Glint need Accessibility access?
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    To intercept media key events before macOS processes them, Glint uses a CGEventTap, which requires Accessibility permission. Without it, Glint can't detect brightness/volume key presses. This is a standard macOS security requirement for any app that reads keyboard input.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Is this safe? Why isn't it on the Mac App Store?
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Glint is open source (read every line!) and notarized by Apple (malware-scanned). DDC requires IOKit I2C access, which the App Store sandbox blocks. This is the same reason BetterDisplay, MonitorControl, and Lunar distribute outside the Store.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    How do I get settings back after hiding the menu bar icon?
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Open Glint from your Applications folder (or Spotlight search for "Glint"). When the app detects it's being re-opened, it automatically shows the settings window.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Can I control multiple monitors?
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Yes! Glint detects all connected external displays and adjusts them simultaneously when you press brightness or volume keys.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    What's the CPU/memory usage?
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Effectively zero when idle. Glint uses a CGEventTap which is interrupt-driven — no polling, no timers, no background threads. Memory footprint is under 15 MB.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    Does it conflict with BetterDisplay / MonitorControl?
+                    <span class="faq-arrow">▼</span>
+                </div>
+                <div class="faq-answer">
+                    Possibly — if two apps both intercept the same media keys, they may interfere. We recommend using one DDC controller at a time.
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer>
+            <p>
+                ✨ Glint — free, open source, <a href="https://github.com/blaineam/Glint/blob/main/LICENSE">MIT License</a>
+                <br>
+                Built by <a href="https://github.com/blaineam">Blaine Miller</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // FAQ toggle
+        function toggleFaq(el) {
+            el.parentElement.classList.toggle('open');
+        }
+
+        // Animated demo
+        (function() {
+            const monitorBrightness = document.getElementById('monitorBrightness');
+            const laptopBrightness = document.getElementById('laptopBrightness');
+            const monitorOsd = document.getElementById('monitorOsd');
+            const osdIcon = document.getElementById('osdIcon');
+            const osdFill = document.getElementById('osdFill');
+            const keyUp = document.getElementById('keyUp');
+            const keyDown = document.getElementById('keyDown');
+            const keyVolUp = document.getElementById('keyVolUp');
+            const keyVolDown = document.getElementById('keyVolDown');
+
+            let brightness = 50;
+            let volume = 50;
+            let step = 0;
+
+            const sequence = [
+                // Brightness up sequence
+                { key: 'up', type: 'brightness', delta: 10 },
+                { key: 'up', type: 'brightness', delta: 10 },
+                { key: 'up', type: 'brightness', delta: 10 },
+                { key: 'up', type: 'brightness', delta: 10 },
+                // Pause
+                { key: null, type: 'pause', delta: 0 },
+                // Brightness down
+                { key: 'down', type: 'brightness', delta: -15 },
+                { key: 'down', type: 'brightness', delta: -15 },
+                { key: 'down', type: 'brightness', delta: -15 },
+                // Pause
+                { key: null, type: 'pause', delta: 0 },
+                // Volume up
+                { key: 'volUp', type: 'volume', delta: 12 },
+                { key: 'volUp', type: 'volume', delta: 12 },
+                { key: 'volUp', type: 'volume', delta: 12 },
+                // Pause
+                { key: null, type: 'pause', delta: 0 },
+                // Volume down
+                { key: 'volDown', type: 'volume', delta: -20 },
+                { key: 'volDown', type: 'volume', delta: -20 },
+                // Reset pause
+                { key: null, type: 'pause', delta: 0 },
+            ];
+
+            function showOsd(type, value) {
+                osdIcon.textContent = type === 'brightness' ? '☀️' : '🔊';
+                osdFill.style.width = Math.max(0, Math.min(100, value)) + '%';
+                monitorOsd.classList.add('visible');
+                setTimeout(() => monitorOsd.classList.remove('visible'), 1200);
+            }
+
+            function pressKey(keyName) {
+                const keyEl = keyName === 'up' ? keyUp
+                            : keyName === 'down' ? keyDown
+                            : keyName === 'volUp' ? keyVolUp
+                            : keyVolDown;
+                keyEl.classList.add('active');
+                setTimeout(() => keyEl.classList.remove('active'), 200);
+            }
+
+            function updateBrightness() {
+                const opacity = Math.max(0, Math.min(0.3, (brightness - 50) / 150));
+                monitorBrightness.style.opacity = opacity;
+                laptopBrightness.style.opacity = opacity;
+            }
+
+            function tick() {
+                const action = sequence[step % sequence.length];
+                step++;
+
+                if (action.type === 'pause') {
+                    setTimeout(tick, 1500);
+                    return;
+                }
+
+                if (action.key) pressKey(action.key);
+
+                if (action.type === 'brightness') {
+                    brightness = Math.max(10, Math.min(100, brightness + action.delta));
+                    updateBrightness();
+                    showOsd('brightness', brightness);
+                } else if (action.type === 'volume') {
+                    volume = Math.max(0, Math.min(100, volume + action.delta));
+                    showOsd('volume', volume);
+                }
+
+                setTimeout(tick, 700);
+            }
+
+            // Start animation after a short delay
+            setTimeout(tick, 2000);
+        })();
+    </script>
+</body>
+</html>

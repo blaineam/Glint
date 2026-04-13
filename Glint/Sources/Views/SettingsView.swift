@@ -15,6 +15,8 @@ struct SettingsView: View {
 
             Section("General") {
                 Toggle("Launch at login", isOn: $prefs.launchAtLogin)
+                Toggle("Hide menu bar icon", isOn: $prefs.hideMenuBarIcon)
+                    .help("Glint disappears completely. To access settings again, open Glint from Applications.")
             }
 
             Section("Accessibility") {
@@ -62,9 +64,16 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
+
+            Section {
+                Button("Quit Glint") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .foregroundStyle(.red)
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 400, height: 340)
+        .frame(width: 400, height: 420)
     }
 }
 
@@ -77,7 +86,7 @@ final class SettingsWindowController: @unchecked Sendable {
 
     private init() {}
 
-    func show() {
+    @MainActor func show() {
         if let window = window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)

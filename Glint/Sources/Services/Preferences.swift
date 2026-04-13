@@ -14,17 +14,11 @@ final class Preferences: ObservableObject, @unchecked Sendable {
     }
 
     @Published var interceptBrightness: Bool {
-        didSet {
-            defaults.set(interceptBrightness, forKey: "interceptBrightness")
-            MediaKeyInterceptor.shared.interceptBrightness = interceptBrightness
-        }
+        didSet { defaults.set(interceptBrightness, forKey: "interceptBrightness") }
     }
 
     @Published var interceptVolume: Bool {
-        didSet {
-            defaults.set(interceptVolume, forKey: "interceptVolume")
-            MediaKeyInterceptor.shared.interceptVolume = interceptVolume
-        }
+        didSet { defaults.set(interceptVolume, forKey: "interceptVolume") }
     }
 
     @Published var brightnessStep: Int {
@@ -36,9 +30,13 @@ final class Preferences: ObservableObject, @unchecked Sendable {
     }
 
     @Published var syncWithBuiltIn: Bool {
+        didSet { defaults.set(syncWithBuiltIn, forKey: "syncWithBuiltIn") }
+    }
+
+    @Published var hideMenuBarIcon: Bool {
         didSet {
-            defaults.set(syncWithBuiltIn, forKey: "syncWithBuiltIn")
-            MediaKeyInterceptor.shared.syncWithBuiltIn = syncWithBuiltIn
+            defaults.set(hideMenuBarIcon, forKey: "hideMenuBarIcon")
+            NotificationCenter.default.post(name: .glintMenuBarVisibilityChanged, object: nil)
         }
     }
 
@@ -51,6 +49,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
             "brightnessStep": 6,
             "volumeStep": 6,
             "syncWithBuiltIn": true,
+            "hideMenuBarIcon": false,
         ])
 
         launchAtLogin = defaults.bool(forKey: "launchAtLogin")
@@ -59,6 +58,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         brightnessStep = defaults.integer(forKey: "brightnessStep")
         volumeStep = defaults.integer(forKey: "volumeStep")
         syncWithBuiltIn = defaults.bool(forKey: "syncWithBuiltIn")
+        hideMenuBarIcon = defaults.bool(forKey: "hideMenuBarIcon")
     }
 
     private func updateLoginItem() {

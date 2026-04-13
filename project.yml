@@ -17,6 +17,8 @@ targets:
     platform: macOS
     sources:
       - Glint/Sources
+    resources:
+      - Glint/Resources/Assets.xcassets
     info:
       path: Glint/Resources/Info.plist
       properties:
@@ -32,6 +34,7 @@ targets:
         com.apple.security.app-sandbox: false
     dependencies:
       - sdk: IOKit.framework
+      - sdk: CoreAudio.framework
     settings:
       base:
         CODE_SIGN_IDENTITY: "-"
@@ -41,3 +44,5 @@ targets:
         COMBINE_HIDPI_IMAGES: true
         SWIFT_OBJC_BRIDGING_HEADER: Glint/Sources/App/Glint-Bridging-Header.h
         SWIFT_STRICT_CONCURRENCY: minimal
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

@@ -11,7 +11,11 @@ xcuserdata/
 *.swp
 *~
 
-# Archives
+# Archives & dist
 *.xcarchive
 *.dmg
 *.zip
+dist/
+
+# Test binaries
+test_avservice

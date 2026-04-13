@@ -1,0 +1,153 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build, Sign & Notarize
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Generate brand assets
+        run: swift Scripts/generate-assets.swift build/assets
+
+      - name: Import signing certificate
+        env:
+          CERTIFICATE_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          echo "$CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Build release
+        run: |
+          IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/build.keychain-db | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          xcodebuild -scheme Glint \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_IDENTITY="$IDENTITY" \
+            CODE_SIGN_STYLE=Manual \
+            ENABLE_HARDENED_RUNTIME=YES \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime" \
+            build
+
+      - name: Package DMG
+        run: |
+          APP_PATH=$(find build/DerivedData -name "Glint.app" -type d | head -1)
+          IDENTITY=$(security find-identity -v -p codesigning $RUNNER_TEMP/build.keychain-db | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+
+          # Replace icon
+          if [ -f "build/assets/AppIcon.icns" ]; then
+            cp build/assets/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+            codesign --force --deep --sign "$IDENTITY" --options runtime --timestamp "$APP_PATH"
+          fi
+
+          mkdir -p dist
+          hdiutil create -volname "Glint" -fs HFS+ -size 50m build/glint-temp.dmg -quiet
+          ATTACH_OUT=$(hdiutil attach -readwrite -noverify build/glint-temp.dmg)
+          DEVICE=$(echo "$ATTACH_OUT" | head -1 | awk '{print $1}')
+
+          cp -R "$APP_PATH" "/Volumes/Glint/"
+          ln -s /Applications "/Volumes/Glint/Applications" 2>/dev/null || true
+
+          if [ -f "build/assets/dmg-background.jpg" ]; then
+            mkdir -p "/Volumes/Glint/.background"
+            cp build/assets/dmg-background.jpg "/Volumes/Glint/.background/background.jpg"
+          fi
+
+          sleep 2
+
+          osascript <<EOF || true
+          tell application "Finder"
+            tell disk "Glint"
+              open
+              delay 2
+              set current view of container window to icon view
+              set toolbar visible of container window to false
+              set statusbar visible of container window to false
+              set bounds of container window to {200, 200, 860, 600}
+              set viewOptions to icon view options of container window
+              set icon size of viewOptions to 100
+              try
+                set background picture of viewOptions to file ".background:background.jpg"
+              end try
+              try
+                set position of item "Glint.app" of container window to {145, 185}
+              end try
+              try
+                set position of item "Applications" of container window to {515, 185}
+              end try
+              close
+              delay 1
+            end tell
+          end tell
+          EOF
+
+          sleep 2
+          hdiutil detach "$DEVICE" -force 2>/dev/null || true
+          sleep 1
+          hdiutil convert build/glint-temp.dmg -format UDZO -imagekey zlib-level=9 -o dist/Glint.dmg -quiet
+          codesign --force --sign "$IDENTITY" --timestamp dist/Glint.dmg
+
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun notarytool submit dist/Glint.dmg \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait
+          xcrun stapler staple dist/Glint.dmg
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Glint ${{ steps.version.outputs.version }}
+          body: |
+            ## ✨ Glint ${{ steps.version.outputs.version }}
+
+            DDC display control from your keyboard. Tiny, invisible, always ready.
+
+            ### Install
+            1. Download `Glint.dmg` below
+            2. Open the DMG and drag Glint to Applications
+            3. Launch Glint and grant Accessibility access when prompted
+
+            **Notarized by Apple** — safe to run on any Mac.
+
+            ---
+            _See [CHANGELOG](../../blob/main/CHANGELOG.md) for details._
+          files: dist/Glint.dmg
+          draft: false
+          prerelease: false

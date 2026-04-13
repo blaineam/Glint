@@ -1,25 +1,36 @@
 import AppKit
 import SwiftUI
 
-/// A macOS-native OSD overlay (like Apple's brightness/volume HUD).
+/// A subtle, non-disruptive OSD pill that appears below the notch area.
 @MainActor
 final class OSDOverlay {
     static let shared = OSDOverlay()
 
-    private var window: NSWindow?
+    private var window: NSPanel?
     private var hideTask: Task<Void, Never>?
+    private var hostingView: NSHostingView<OSDPillView>?
+    private var isVisible = false
+
+    private let pillWidth: CGFloat = 200
+    private let pillHeight: CGFloat = 28
 
     private init() {}
 
     func show(icon: String, value: Int) {
         hideTask?.cancel()
 
-        let hostingView = NSHostingView(rootView: OSDView(icon: icon, value: value))
-        hostingView.frame = NSRect(x: 0, y: 0, width: 200, height: 200)
+        // Update content without recreating the view
+        if let hostingView = hostingView {
+            hostingView.rootView = OSDPillView(icon: icon, value: value)
+        } else {
+            let view = NSHostingView(rootView: OSDPillView(icon: icon, value: value))
+            view.frame = NSRect(x: 0, y: 0, width: pillWidth, height: pillHeight)
+            hostingView = view
+        }
 
         if window == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 200, height: 200),
+                contentRect: NSRect(x: 0, y: 0, width: pillWidth, height: pillHeight),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
@@ -30,60 +41,90 @@ final class OSDOverlay {
             panel.hasShadow = false
             panel.ignoresMouseEvents = true
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary]
+            panel.contentView = hostingView
             window = panel
         }
 
-        window?.contentView = hostingView
-
-        // Center on screen
+        // Position below notch/menu bar
         if let screen = NSScreen.main {
             let screenFrame = screen.frame
-            let x = screenFrame.midX - 100
-            let y = screenFrame.minY + screenFrame.height * 0.18
+            let visibleFrame = screen.visibleFrame
+            let menuBarHeight = screenFrame.maxY - visibleFrame.maxY
+            let topInset = menuBarHeight + 8
+            let x = screenFrame.midX - pillWidth / 2
+            let y = screenFrame.maxY - topInset - pillHeight
             window?.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
-        window?.orderFrontRegardless()
+        // Only fade in if not already visible
+        if !isVisible {
+            window?.alphaValue = 0
+            window?.orderFrontRegardless()
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.15
+                window?.animator().alphaValue = 1
+            }
+            isVisible = true
+        }
 
+        // Reset hide timer
         hideTask = Task {
-            try? await Task.sleep(for: .seconds(1.5))
+            try? await Task.sleep(for: .seconds(1.2))
             guard !Task.isCancelled else { return }
-            self.window?.orderOut(nil)
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.3
+                self.window?.animator().alphaValue = 0
+            }, completionHandler: {
+                self.window?.orderOut(nil)
+                self.isVisible = false
+            })
         }
     }
 }
 
-// MARK: - OSD SwiftUI View
+// MARK: - Pill View
 
-private struct OSDView: View {
+struct OSDPillView: View {
     let icon: String
     let value: Int
 
     var body: some View {
-        VStack(spacing: 12) {
+        HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 36, weight: .medium))
-                .foregroundStyle(.white)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 14)
 
-            // Bar indicator
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(.white.opacity(0.2))
+                    Capsule()
+                        .fill(.white.opacity(0.15))
 
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(.white)
-                        .frame(width: geo.size.width * CGFloat(value) / 100)
+                    Capsule()
+                        .fill(.white.opacity(0.85))
+                        .frame(width: max(2, geo.size.width * CGFloat(value) / 100))
                 }
             }
-            .frame(width: 140, height: 6)
+            .frame(height: 4)
+
+            Text("\(value)")
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.6))
+                .frame(width: 22, alignment: .trailing)
+                .monospacedDigit()
         }
-        .padding(30)
-        .frame(width: 200, height: 200)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .frame(width: 200, height: 28)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
+            Capsule()
+                .fill(.black.opacity(0.55))
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .environment(\.colorScheme, .dark)
+                )
+                .clipShape(Capsule())
         )
     }
 }
