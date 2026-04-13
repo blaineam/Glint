@@ -30,7 +30,7 @@ Glint makes your keyboard Just Work™ with external displays.
 | Feature | Details |
 |---------|---------|
 | 🔆 **Brightness keys** | Controls your external display's backlight via DDC — not software gamma |
-| 🔊 **Volume keys** | Adjusts volume via DDC when audio output is HDMI/DisplayPort, or system volume for built-in speakers/headphones/USB/Bluetooth |
+| 🔊 **Volume keys** | Adjusts volume via DDC when audio output is HDMI/DisplayPort/USB-C (including hubs), or system volume for built-in speakers/headphones/Bluetooth |
 | 🔇 **Mute key** | Toggles mute with a proper muted/unmuted OSD indicator |
 | 🎯 **Cursor-aware** | Brightness keys adjust only the display the cursor is on — no more changing every screen at once |
 | 🔄 **Sync mode** | First keypress syncs all displays to match the cursor display's brightness, then adjusts every screen in lockstep |
@@ -183,7 +183,7 @@ Most external monitors support DDC/CI. If your monitor has an OSD (on-screen dis
 <details>
 <summary><strong>Does it work over HDMI? DisplayPort? USB-C?</strong></summary>
 
-Yes to all three. DDC/CI works over HDMI, DisplayPort, and USB-C/Thunderbolt. Some USB-C hubs/docks may block DDC signals — if you have issues, try connecting directly.
+Yes to all three. DDC/CI works over HDMI, DisplayPort, and USB-C/Thunderbolt — including through USB-C hubs and docks. Glint automatically detects monitor audio routed through hubs by matching the audio device name against connected displays.
 </details>
 
 <details>
