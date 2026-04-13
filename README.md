@@ -3,7 +3,7 @@
 **DDC display control from your keyboard. Tiny, invisible, always ready.**
 
 <p align="center">
-  <img src="docs/assets/hero.png" alt="Glint — control your external display with keyboard shortcuts" width="600">
+  <img src="docs/og-poster.jpg" alt="Glint — DDC display control from your keyboard" width="600">
 </p>
 
 Glint intercepts your Mac's brightness and volume media keys and sends [DDC/CI](https://en.wikipedia.org/wiki/Display_Data_Channel) commands to your external monitor — so the keys that normally only control your MacBook screen now also control your monitor's **actual hardware brightness** and **built-in speakers**.
