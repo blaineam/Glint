@@ -78,13 +78,19 @@ final class DDCService: @unchecked Sendable {
     }
 
     /// Adjusts a VCP value by a relative amount, clamped to [0, max].
-    func adjust(vcp code: VCPCode, by delta: Int, on displayID: CGDirectDisplayID) -> UInt16? {
+    /// Includes a delay between read and write — some monitors (e.g., LG) drop
+    /// writes that arrive too quickly after a read on the I2C bus.
+    func adjust(vcp code: VCPCode, by delta: Int, on displayID: CGDirectDisplayID) -> DDCReadResult? {
         guard let current = read(vcp: code, from: displayID) else { return nil }
         let newValue = UInt16(clamping: Int(current.currentValue) + delta)
         let clamped = min(newValue, current.maxValue)
         log.log("DDC ADJUST vcp=0x\(String(code.rawValue, radix: 16)) current=\(current.currentValue) delta=\(delta) new=\(clamped) max=\(current.maxValue)")
+
+        // Delay between read and write — some monitors need the I2C bus to settle
+        usleep(50_000)
+
         if write(vcp: code, value: clamped, to: displayID) {
-            return clamped
+            return DDCReadResult(currentValue: clamped, maxValue: current.maxValue)
         }
         return nil
     }

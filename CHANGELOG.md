@@ -1,9 +1,10 @@
 # Changelog
 
-## v1.3.1
+## v1.3.2
 
-- **Fix stale DDC reads**: Brightness and volume adjustments now use cached values instead of re-reading from DDC each time — fixes monitors (e.g., some LG displays) that return stale values on DDC reads, causing volume/brightness to get stuck
-- **Fix N/A sliders**: If the initial DDC read during startup fails, the first key press now populates max values via a one-time read, fixing "N/A" sliders and stuck-at-0 OSD
+- **DDC read retries on startup**: Initial display refresh now retries DDC reads up to 3 times with 100ms delays — fixes "N/A" sliders on monitors that need time to respond after connection
+- **I2C bus settling delay**: Added 50ms delay between DDC read and write in adjust commands — fixes monitors (e.g., some LG displays) that drop writes arriving too quickly after a read
+- **Adjust returns max value**: DDC adjust now updates both current and max values in the display state, ensuring sliders and OSD always have correct ranges
 
 ## v1.3.0
 
