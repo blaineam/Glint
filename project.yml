@@ -17,7 +17,6 @@ targets:
     platform: macOS
     sources:
       - Glint/Sources
-    resources:
       - Glint/Resources/Assets.xcassets
     info:
       path: Glint/Resources/Info.plist
