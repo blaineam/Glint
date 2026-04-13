@@ -219,6 +219,43 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return name as String
     }
 
+    // MARK: - DDC Adjust (cached)
+
+    /// Adjusts a VCP value using cached current/max values rather than reading from DDC
+    /// each time. Some monitors return stale values on DDC reads, causing repeated writes
+    /// of the same value. If maxValue is unknown, does a one-time DDC read to populate it.
+    private func adjustDDC(vcp code: VCPCode, by step: Int, on displayID: CGDirectDisplayID,
+                           current: UInt16?, max: UInt16?) -> (value: UInt16, max: UInt16)? {
+        let log = DebugLogger.shared
+        var maxVal = max
+        var curVal = current
+
+        // If we don't have max, do a one-time DDC read to learn it
+        if maxVal == nil || curVal == nil {
+            if let result = ddc.read(vcp: code, from: displayID) {
+                if maxVal == nil { maxVal = result.maxValue }
+                if curVal == nil { curVal = result.currentValue }
+                log.log("DDC CACHED: filled from read current=\(result.currentValue) max=\(result.maxValue)")
+            } else {
+                log.log("DDC CACHED: read failed, using defaults")
+                maxVal = maxVal ?? 100
+                curVal = curVal ?? 0
+            }
+        }
+
+        guard let m = maxVal else { return nil }
+        let c = curVal ?? 0
+
+        let delta = stepToAbsolute(step, max: m)
+        let newValue = UInt16(clamping: Swift.max(0, Swift.min(Int(m), Int(c) + delta)))
+        log.log("DDC CACHED ADJUST vcp=0x\(String(code.rawValue, radix: 16)) cached=\(c) delta=\(delta) new=\(newValue) max=\(m)")
+
+        if ddc.write(vcp: code, value: newValue, to: displayID) {
+            return (newValue, m)
+        }
+        return nil
+    }
+
     // MARK: - Brightness
 
     func adjustBrightness(by step: Int) {
@@ -235,12 +272,11 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             }
 
             // Adjust ALL external displays via DDC
-            for display in displays {
-                let delta = stepToAbsolute(step, max: display.maxBrightness ?? 100)
-                if let newVal = ddc.adjust(vcp: .brightness, by: delta, on: display.id) {
-                    if let idx = displays.firstIndex(where: { $0.id == display.id }) {
-                        displays[idx].brightness = newVal
-                    }
+            for i in displays.indices {
+                if let result = adjustDDC(vcp: .brightness, by: step, on: displays[i].id,
+                                          current: displays[i].brightness, max: displays[i].maxBrightness) {
+                    displays[i].brightness = result.value
+                    displays[i].maxBrightness = result.max
                 }
             }
 
@@ -254,12 +290,11 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
             if CGDisplayIsBuiltin(cursorID) != 0 {
                 adjustBuiltInBrightness(by: step)
-            } else if let display = displays.first(where: { $0.id == cursorID }) {
-                let delta = stepToAbsolute(step, max: display.maxBrightness ?? 100)
-                if let newVal = ddc.adjust(vcp: .brightness, by: delta, on: cursorID) {
-                    if let idx = displays.firstIndex(where: { $0.id == cursorID }) {
-                        displays[idx].brightness = newVal
-                    }
+            } else if let i = displays.firstIndex(where: { $0.id == cursorID }) {
+                if let result = adjustDDC(vcp: .brightness, by: step, on: cursorID,
+                                          current: displays[i].brightness, max: displays[i].maxBrightness) {
+                    displays[i].brightness = result.value
+                    displays[i].maxBrightness = result.max
                 }
             }
         }
@@ -298,23 +333,21 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             }
 
             // Adjust both DDC and system volume
-            for display in displays {
-                let delta = stepToAbsolute(step, max: display.maxVolume ?? 100)
-                if let newVal = ddc.adjust(vcp: .volume, by: delta, on: display.id) {
-                    if let idx = displays.firstIndex(where: { $0.id == display.id }) {
-                        displays[idx].volume = newVal
-                    }
+            for i in displays.indices {
+                if let result = adjustDDC(vcp: .volume, by: step, on: displays[i].id,
+                                          current: displays[i].volume, max: displays[i].maxVolume) {
+                    displays[i].volume = result.value
+                    displays[i].maxVolume = result.max
                 }
             }
             adjustSystemVolume(by: step)
         } else if displayAudio {
             // Audio going to HDMI/DP — adjust DDC volume only
-            for display in displays {
-                let delta = stepToAbsolute(step, max: display.maxVolume ?? 100)
-                if let newVal = ddc.adjust(vcp: .volume, by: delta, on: display.id) {
-                    if let idx = displays.firstIndex(where: { $0.id == display.id }) {
-                        displays[idx].volume = newVal
-                    }
+            for i in displays.indices {
+                if let result = adjustDDC(vcp: .volume, by: step, on: displays[i].id,
+                                          current: displays[i].volume, max: displays[i].maxVolume) {
+                    displays[i].volume = result.value
+                    displays[i].maxVolume = result.max
                 }
             }
         } else {

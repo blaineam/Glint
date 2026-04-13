@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.1
+
+- **Fix stale DDC reads**: Brightness and volume adjustments now use cached values instead of re-reading from DDC each time — fixes monitors (e.g., some LG displays) that return stale values on DDC reads, causing volume/brightness to get stuck
+- **Fix N/A sliders**: If the initial DDC read during startup fails, the first key press now populates max values via a one-time read, fixing "N/A" sliders and stuck-at-0 OSD
+
 ## v1.3.0
 
 - **Debug logging**: Optional debug log that records DDC commands, audio routing decisions, display detection, and I2C results to `~/Library/Application Support/Glint/debug.log` — toggle in Settings with a button to reveal the log in Finder
