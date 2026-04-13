@@ -300,38 +300,48 @@
             color: var(--gold);
             box-shadow: 0 0 12px rgba(255, 194, 56, 0.3);
         }
-        /* OSD overlay on monitor */
+        /* OSD pill overlay on monitor — matches Glint's actual OSD */
         .osd {
             position: absolute;
-            bottom: 20%;
+            top: 10%;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.55);
             backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 16px 20px;
+            border-radius: 100px;
+            padding: 6px 14px;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
             gap: 8px;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.2s;
+            white-space: nowrap;
         }
         .osd.visible { opacity: 1; }
-        .osd-icon { font-size: 20px; }
+        .osd-icon { font-size: 11px; opacity: 0.9; }
         .osd-bar {
-            width: 80px;
+            width: 70px;
             height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 100px;
             overflow: hidden;
         }
         .osd-fill {
             height: 100%;
-            background: white;
-            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 100px;
             transition: width 0.3s ease;
             width: 50%;
+        }
+        .osd-value {
+            font-size: 9px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Inter', -apple-system, sans-serif;
+            min-width: 18px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
         }
         /* Screen brightness overlay */
         .brightness-overlay {
@@ -522,6 +532,7 @@
                                 <div class="osd-bar">
                                     <div class="osd-fill" id="osdFill"></div>
                                 </div>
+                                <div class="osd-value" id="osdValue">50</div>
                             </div>
                         </div>
                     </div>
@@ -691,6 +702,7 @@
             const monitorOsd = document.getElementById('monitorOsd');
             const osdIcon = document.getElementById('osdIcon');
             const osdFill = document.getElementById('osdFill');
+            const osdValue = document.getElementById('osdValue');
             const keyUp = document.getElementById('keyUp');
             const keyDown = document.getElementById('keyDown');
             const keyVolUp = document.getElementById('keyVolUp');
@@ -728,8 +740,10 @@
             ];
 
             function showOsd(type, value) {
+                const clamped = Math.max(0, Math.min(100, Math.round(value)));
                 osdIcon.textContent = type === 'brightness' ? '☀️' : '🔊';
-                osdFill.style.width = Math.max(0, Math.min(100, value)) + '%';
+                osdFill.style.width = clamped + '%';
+                osdValue.textContent = clamped;
                 monitorOsd.classList.add('visible');
                 setTimeout(() => monitorOsd.classList.remove('visible'), 1200);
             }
