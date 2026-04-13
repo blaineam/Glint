@@ -46,3 +46,4 @@ targets:
         SWIFT_STRICT_CONCURRENCY: minimal
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        OTHER_LDFLAGS: ["-F/System/Library/PrivateFrameworks", "-framework", "DisplayServices"]

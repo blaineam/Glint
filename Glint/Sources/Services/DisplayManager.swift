@@ -2,6 +2,13 @@ import AppKit
 import Combine
 import CoreAudio
 
+// Private DisplayServices API — reliable brightness control on Apple Silicon
+@_silgen_name("DisplayServicesSetBrightness")
+private func DisplayServicesSetBrightness(_ display: CGDirectDisplayID, _ brightness: Float) -> Int32
+
+@_silgen_name("DisplayServicesGetBrightness")
+private func DisplayServicesGetBrightness(_ display: CGDirectDisplayID, _ brightness: UnsafeMutablePointer<Float>) -> Int32
+
 struct ExternalDisplay: Identifiable, Hashable {
     let id: CGDirectDisplayID
     let name: String
@@ -253,7 +260,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    // MARK: - Built-in Brightness Control (IOKit)
+    // MARK: - Built-in Brightness Control
 
     private func adjustBuiltInBrightness(by step: Int) {
         guard let current = getBuiltInBrightness() else { return }
@@ -263,9 +270,16 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     }
 
     private func setBuiltInBrightness(_ brightness: Float) {
-        guard let service = builtInDisplayService() else { return }
-        defer { IOObjectRelease(service) }
-        IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, brightness)
+        guard let builtInID = builtInDisplayID() else { return }
+        // Use private DisplayServices API — works reliably on Apple Silicon
+        let result = DisplayServicesSetBrightness(builtInID, brightness)
+        if result != 0 {
+            // Fallback to IOKit
+            if let service = builtInDisplayService() {
+                IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, brightness)
+                IOObjectRelease(service)
+            }
+        }
     }
 
     // MARK: - Sync
@@ -298,11 +312,29 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     }
 
     private func getBuiltInBrightness() -> Float? {
+        guard let builtInID = builtInDisplayID() else { return nil }
+        // Use private DisplayServices API first
+        var brightness: Float = 0
+        if DisplayServicesGetBrightness(builtInID, &brightness) == 0 {
+            return brightness
+        }
+        // Fallback to IOKit
         guard let service = builtInDisplayService() else { return nil }
         defer { IOObjectRelease(service) }
-        var brightness: Float = 0
         let result = IODisplayGetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, &brightness)
         return result == kIOReturnSuccess ? brightness : nil
+    }
+
+    private func builtInDisplayID() -> CGDirectDisplayID? {
+        var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
+        var count: UInt32 = 0
+        CGGetActiveDisplayList(16, &displayIDs, &count)
+        for i in 0..<Int(count) {
+            if CGDisplayIsBuiltin(displayIDs[i]) != 0 {
+                return displayIDs[i]
+            }
+        }
+        return nil
     }
 
     /// Gets the system output volume (0.0–1.0) using CoreAudio.
