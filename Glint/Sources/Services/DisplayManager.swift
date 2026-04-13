@@ -118,9 +118,14 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    /// Returns true if the default audio output is HDMI or DisplayPort (i.e., a monitor).
+    /// Returns true if the default audio output is a monitor (HDMI/DisplayPort/USB).
+    /// Checks transport type for HDMI, DisplayPort, and USB connections, then also
+    /// matches the audio device name against connected display names to catch any
+    /// edge cases where the transport type doesn't clearly indicate a monitor.
     func isAudioOutputDisplayBased() -> Bool {
         guard let device = defaultOutputDevice() else { return false }
+
+        // Check transport type — covers direct HDMI, DisplayPort, and USB-C hub connections
         var addr = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyTransportType,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -128,11 +133,41 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         )
         var transportType: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
-        guard AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &transportType) == noErr else {
-            return false
+        if AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &transportType) == noErr {
+            if transportType == kAudioDeviceTransportTypeHDMI
+                || transportType == kAudioDeviceTransportTypeDisplayPort {
+                return true
+            }
+
+            // USB transport — could be a monitor via USB-C hub or a USB headset/DAC.
+            // Match audio device name against connected display names to distinguish.
+            if transportType == kAudioDeviceTransportTypeUSB {
+                return audioDeviceMatchesDisplay(device)
+            }
         }
-        return transportType == kAudioDeviceTransportTypeHDMI
-            || transportType == kAudioDeviceTransportTypeDisplayPort
+
+        // Final fallback: name match regardless of transport type
+        return audioDeviceMatchesDisplay(device)
+    }
+
+    /// Returns true if the audio device name matches any connected external display name.
+    private func audioDeviceMatchesDisplay(_ deviceID: AudioDeviceID) -> Bool {
+        guard let audioName = audioDeviceName(for: deviceID)?.lowercased() else { return false }
+        return displays.contains { audioName.contains($0.name.lowercased()) || $0.name.lowercased().contains(audioName) }
+    }
+
+    private func audioDeviceName(for deviceID: AudioDeviceID) -> String? {
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceNameCFString,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var name: CFString = "" as CFString
+        var size = UInt32(MemoryLayout<CFString>.size)
+        guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &name) == noErr else {
+            return nil
+        }
+        return name as String
     }
 
     // MARK: - Brightness

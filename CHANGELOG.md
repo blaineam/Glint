@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.3
+
+- **USB-C hub audio detection**: Volume keys now correctly use DDC for monitors connected through USB-C hubs/docks by matching the audio device name against connected display names
+
 ## v1.2.2
 
 - **Fix About version**: Settings now reads version from the app bundle instead of a hardcoded string
