@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.3.4
+
+- **TTL read cache for DDC**: Adds a 2-second read cache to avoid hammering DDC reads on rate-limited monitors (e.g., LG). Rapid key presses reuse the cached value and write immediately; on cache miss a real DDC read is performed with an I2C settling delay before writing. Cache is updated after every successful write so subsequent adjustments stay accurate without extra reads
+- **Volume adjust uses ddc.write**: Volume adjustment now uses direct `ddc.write` calls with cached reads instead of raw `ddc.read` per keystroke, fixing volume control failures on monitors that rate-limit DDC commands
+
+## v1.3.3
+
+- **Fix volume adjustment**: Use `ddc.read` then `ddc.write` for volume changes instead of `ddc.adjust` which added an unnecessary 50ms delay between read and write
+
 ## v1.3.2
 
 - **DDC read retries on startup**: Initial display refresh now retries DDC reads up to 3 times with 100ms delays — fixes "N/A" sliders on monitors that need time to respond after connection
