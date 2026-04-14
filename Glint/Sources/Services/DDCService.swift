@@ -27,18 +27,21 @@ final class DDCService: @unchecked Sendable {
 
     private let isAppleSilicon: Bool
 
+    // Serial queue — all I2C operations go through here to prevent bus collisions.
+    private let ddcQueue = DispatchQueue(label: "com.glint.ddc", qos: .userInteractive)
+    // Minimum gap between any two I2C operations (read or write).
+    private let busCooldownMicros: useconds_t = 100_000 // 100ms
+
     // TTL read cache — avoids hammering DDC reads on rate-limited monitors (e.g. LG).
-    // On cache hit, returns cached value instantly. On miss, performs a real DDC read.
     private struct CacheEntry {
         let result: DDCReadResult
-        let readTime: UInt64 // mach_absolute_time of the real DDC read
+        let timestamp: UInt64 // mach_absolute_time of the real DDC read or write update
     }
     private struct CacheKey: Hashable {
         let displayID: CGDirectDisplayID
         let vcp: UInt8
     }
     private var readCache: [CacheKey: CacheEntry] = [:]
-    private let cacheLock = NSLock()
     private let cacheTTLNanos: UInt64 = 2_000_000_000 // 2 seconds
 
     private init() {
@@ -54,6 +57,84 @@ final class DDCService: @unchecked Sendable {
     private let log = DebugLogger.shared
 
     func read(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> DDCReadResult? {
+        ddcQueue.sync {
+            readImpl(vcp: code, from: displayID)
+        }
+    }
+
+    func write(vcp code: VCPCode, value: UInt16, to displayID: CGDirectDisplayID) -> Bool {
+        ddcQueue.sync {
+            writeImpl(vcp: code, value: value, to: displayID)
+        }
+    }
+
+    // MARK: - Cached Read/Write
+
+    /// Returns a cached DDC read if within TTL, otherwise performs a real read and caches it.
+    func cachedRead(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> (result: DDCReadResult, wasCacheHit: Bool)? {
+        ddcQueue.sync {
+            let key = CacheKey(displayID: displayID, vcp: code.rawValue)
+            if let entry = readCache[key], nanosElapsed(from: entry.timestamp, to: mach_absolute_time()) < cacheTTLNanos {
+                log.log("DDC CACHE HIT vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) current=\(entry.result.currentValue)")
+                return (entry.result, true)
+            }
+
+            // Cache miss — do a real DDC read
+            guard let result = readImpl(vcp: code, from: displayID) else { return nil }
+            readCache[key] = CacheEntry(result: result, timestamp: mach_absolute_time())
+            return (result, false)
+        }
+    }
+
+    /// Updates the cached value after a successful write (avoids needing another read).
+    func updateCache(vcp code: VCPCode, displayID: CGDirectDisplayID, newValue: UInt16, maxValue: UInt16) {
+        ddcQueue.sync {
+            let key = CacheKey(displayID: displayID, vcp: code.rawValue)
+            readCache[key] = CacheEntry(
+                result: DDCReadResult(currentValue: newValue, maxValue: maxValue),
+                timestamp: mach_absolute_time()
+            )
+        }
+    }
+
+    /// Adjusts a VCP value by a relative amount, clamped to [0, max].
+    /// Uses the TTL read cache to avoid excessive DDC reads on rate-limited monitors.
+    func adjust(vcp code: VCPCode, by delta: Int, on displayID: CGDirectDisplayID) -> DDCReadResult? {
+        ddcQueue.sync {
+            let key = CacheKey(displayID: displayID, vcp: code.rawValue)
+            let current: DDCReadResult
+            var didRealRead = false
+
+            if let entry = readCache[key], nanosElapsed(from: entry.timestamp, to: mach_absolute_time()) < cacheTTLNanos {
+                log.log("DDC CACHE HIT vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) current=\(entry.result.currentValue)")
+                current = entry.result
+            } else {
+                guard let result = readImpl(vcp: code, from: displayID) else { return nil }
+                readCache[key] = CacheEntry(result: result, timestamp: mach_absolute_time())
+                current = result
+                didRealRead = true
+            }
+
+            let newValue = UInt16(clamping: Int(current.currentValue) + delta)
+            let clamped = min(newValue, current.maxValue)
+            log.log("DDC ADJUST vcp=0x\(String(code.rawValue, radix: 16)) current=\(current.currentValue) delta=\(delta) new=\(clamped) max=\(current.maxValue) cacheHit=\(!didRealRead)")
+
+            if writeImpl(vcp: code, value: clamped, to: displayID) {
+                readCache[key] = CacheEntry(
+                    result: DDCReadResult(currentValue: clamped, maxValue: current.maxValue),
+                    timestamp: mach_absolute_time()
+                )
+                return DDCReadResult(currentValue: clamped, maxValue: current.maxValue)
+            }
+            return nil
+        }
+    }
+
+    // MARK: - Internal (must be called on ddcQueue)
+
+    /// Raw DDC read — enforces bus cooldown, no cache logic.
+    private func readImpl(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> DDCReadResult? {
+        usleep(busCooldownMicros)
         log.log("DDC READ vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) platform=\(isAppleSilicon ? "arm64" : "x86")")
         let result: DDCReadResult?
         if isAppleSilicon {
@@ -74,7 +155,9 @@ final class DDCService: @unchecked Sendable {
         return result
     }
 
-    func write(vcp code: VCPCode, value: UInt16, to displayID: CGDirectDisplayID) -> Bool {
+    /// Raw DDC write — enforces bus cooldown.
+    private func writeImpl(vcp code: VCPCode, value: UInt16, to displayID: CGDirectDisplayID) -> Bool {
+        usleep(busCooldownMicros)
         log.log("DDC WRITE vcp=0x\(String(code.rawValue, radix: 16)) value=\(value) display=\(displayID)")
         let success: Bool
         if isAppleSilicon {
@@ -89,63 +172,6 @@ final class DDCService: @unchecked Sendable {
         }
         log.log("DDC WRITE \(success ? "OK" : "FAILED") vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID)")
         return success
-    }
-
-    // MARK: - Cached Read/Write
-
-    /// Returns a cached DDC read if within TTL, otherwise performs a real read and caches it.
-    func cachedRead(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> (result: DDCReadResult, wasCacheHit: Bool)? {
-        let key = CacheKey(displayID: displayID, vcp: code.rawValue)
-        let now = mach_absolute_time()
-
-        cacheLock.lock()
-        if let entry = readCache[key], nanosElapsed(from: entry.readTime, to: now) < cacheTTLNanos {
-            cacheLock.unlock()
-            log.log("DDC CACHE HIT vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) current=\(entry.result.currentValue)")
-            return (entry.result, true)
-        }
-        cacheLock.unlock()
-
-        // Cache miss — do a real DDC read
-        guard let result = read(vcp: code, from: displayID) else { return nil }
-
-        cacheLock.lock()
-        readCache[key] = CacheEntry(result: result, readTime: mach_absolute_time())
-        cacheLock.unlock()
-
-        return (result, false)
-    }
-
-    /// Updates the cached value after a successful write (avoids needing another read).
-    func updateCache(vcp code: VCPCode, displayID: CGDirectDisplayID, newValue: UInt16, maxValue: UInt16) {
-        let key = CacheKey(displayID: displayID, vcp: code.rawValue)
-        cacheLock.lock()
-        readCache[key] = CacheEntry(
-            result: DDCReadResult(currentValue: newValue, maxValue: maxValue),
-            readTime: mach_absolute_time()
-        )
-        cacheLock.unlock()
-    }
-
-    /// Adjusts a VCP value by a relative amount, clamped to [0, max].
-    /// Uses the TTL read cache to avoid excessive DDC reads on rate-limited monitors.
-    /// If the read was a cache miss (real DDC read), delays the write to let the I2C bus settle.
-    func adjust(vcp code: VCPCode, by delta: Int, on displayID: CGDirectDisplayID) -> DDCReadResult? {
-        guard let (current, wasCacheHit) = cachedRead(vcp: code, from: displayID) else { return nil }
-        let newValue = UInt16(clamping: Int(current.currentValue) + delta)
-        let clamped = min(newValue, current.maxValue)
-        log.log("DDC ADJUST vcp=0x\(String(code.rawValue, radix: 16)) current=\(current.currentValue) delta=\(delta) new=\(clamped) max=\(current.maxValue) cacheHit=\(wasCacheHit)")
-
-        // Only delay if we just did a real DDC read — the I2C bus needs time to settle
-        if !wasCacheHit {
-            usleep(50_000)
-        }
-
-        if write(vcp: code, value: clamped, to: displayID) {
-            updateCache(vcp: code, displayID: displayID, newValue: clamped, maxValue: current.maxValue)
-            return DDCReadResult(currentValue: clamped, maxValue: current.maxValue)
-        }
-        return nil
     }
 
     private func nanosElapsed(from start: UInt64, to end: UInt64) -> UInt64 {

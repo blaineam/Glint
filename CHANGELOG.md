@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.5
+
+- **Serial DDC queue**: All I2C operations (reads and writes) now go through a serial `DispatchQueue`, preventing concurrent bus access that caused LG monitors to drop commands. Every operation enforces a 100ms cooldown before hitting the bus
+- **Startup reliability**: DDC retry loop no longer re-reads values that already succeeded — if brightness reads OK on the first attempt, only volume is retried. Retry delay increased from 100ms to 500ms to give LG monitors more recovery time
+- **TTL read cache**: 2-second read cache avoids hammering DDC reads on rapid key presses. Cache is updated after every successful write so subsequent adjustments stay accurate without extra reads
+
 ## v1.3.4
 
 - **TTL read cache for DDC**: Adds a 2-second read cache to avoid hammering DDC reads on rate-limited monitors (e.g., LG). Rapid key presses reuse the cached value and write immediately; on cache miss a real DDC read is performed with an I2C settling delay before writing. Cache is updated after every successful write so subsequent adjustments stay accurate without extra reads

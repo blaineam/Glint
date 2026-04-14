@@ -66,21 +66,26 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
                 modelNumber: CGDisplayModelNumber(id)
             )
 
-            // Retry DDC reads — some monitors need time to respond after connection
+            // Retry DDC reads — some monitors need time to respond after connection.
+            // Only re-read values that haven't succeeded yet.
             for attempt in 1...3 {
-                let brightness = ddc.read(vcp: .brightness, from: id)
-                display.brightness = brightness?.currentValue
-                display.maxBrightness = brightness?.maxValue
+                if display.maxBrightness == nil {
+                    let brightness = ddc.read(vcp: .brightness, from: id)
+                    display.brightness = brightness?.currentValue
+                    display.maxBrightness = brightness?.maxValue
+                }
 
-                let volume = ddc.read(vcp: .volume, from: id)
-                display.volume = volume?.currentValue
-                display.maxVolume = volume?.maxValue
+                if display.maxVolume == nil {
+                    let volume = ddc.read(vcp: .volume, from: id)
+                    display.volume = volume?.currentValue
+                    display.maxVolume = volume?.maxValue
+                }
 
                 if display.maxBrightness != nil && display.maxVolume != nil {
                     break
                 }
                 log.log("DISPLAYS: DDC read attempt \(attempt)/3 incomplete for \(name), retrying...")
-                usleep(100_000) // 100ms between retries
+                usleep(500_000) // 500ms between retries — LG monitors need longer cooldown
             }
 
             externals.append(display)
