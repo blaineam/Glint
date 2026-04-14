@@ -27,6 +27,20 @@ final class DDCService: @unchecked Sendable {
 
     private let isAppleSilicon: Bool
 
+    // TTL read cache — avoids hammering DDC reads on rate-limited monitors (e.g. LG).
+    // On cache hit, returns cached value instantly. On miss, performs a real DDC read.
+    private struct CacheEntry {
+        let result: DDCReadResult
+        let readTime: UInt64 // mach_absolute_time of the real DDC read
+    }
+    private struct CacheKey: Hashable {
+        let displayID: CGDirectDisplayID
+        let vcp: UInt8
+    }
+    private var readCache: [CacheKey: CacheEntry] = [:]
+    private let cacheLock = NSLock()
+    private let cacheTTLNanos: UInt64 = 2_000_000_000 // 2 seconds
+
     private init() {
         #if arch(arm64)
         isAppleSilicon = true
@@ -77,22 +91,67 @@ final class DDCService: @unchecked Sendable {
         return success
     }
 
+    // MARK: - Cached Read/Write
+
+    /// Returns a cached DDC read if within TTL, otherwise performs a real read and caches it.
+    func cachedRead(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> (result: DDCReadResult, wasCacheHit: Bool)? {
+        let key = CacheKey(displayID: displayID, vcp: code.rawValue)
+        let now = mach_absolute_time()
+
+        cacheLock.lock()
+        if let entry = readCache[key], nanosElapsed(from: entry.readTime, to: now) < cacheTTLNanos {
+            cacheLock.unlock()
+            log.log("DDC CACHE HIT vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) current=\(entry.result.currentValue)")
+            return (entry.result, true)
+        }
+        cacheLock.unlock()
+
+        // Cache miss — do a real DDC read
+        guard let result = read(vcp: code, from: displayID) else { return nil }
+
+        cacheLock.lock()
+        readCache[key] = CacheEntry(result: result, readTime: mach_absolute_time())
+        cacheLock.unlock()
+
+        return (result, false)
+    }
+
+    /// Updates the cached value after a successful write (avoids needing another read).
+    func updateCache(vcp code: VCPCode, displayID: CGDirectDisplayID, newValue: UInt16, maxValue: UInt16) {
+        let key = CacheKey(displayID: displayID, vcp: code.rawValue)
+        cacheLock.lock()
+        readCache[key] = CacheEntry(
+            result: DDCReadResult(currentValue: newValue, maxValue: maxValue),
+            readTime: mach_absolute_time()
+        )
+        cacheLock.unlock()
+    }
+
     /// Adjusts a VCP value by a relative amount, clamped to [0, max].
-    /// Includes a delay between read and write — some monitors (e.g., LG) drop
-    /// writes that arrive too quickly after a read on the I2C bus.
+    /// Uses the TTL read cache to avoid excessive DDC reads on rate-limited monitors.
+    /// If the read was a cache miss (real DDC read), delays the write to let the I2C bus settle.
     func adjust(vcp code: VCPCode, by delta: Int, on displayID: CGDirectDisplayID) -> DDCReadResult? {
-        guard let current = read(vcp: code, from: displayID) else { return nil }
+        guard let (current, wasCacheHit) = cachedRead(vcp: code, from: displayID) else { return nil }
         let newValue = UInt16(clamping: Int(current.currentValue) + delta)
         let clamped = min(newValue, current.maxValue)
-        log.log("DDC ADJUST vcp=0x\(String(code.rawValue, radix: 16)) current=\(current.currentValue) delta=\(delta) new=\(clamped) max=\(current.maxValue)")
+        log.log("DDC ADJUST vcp=0x\(String(code.rawValue, radix: 16)) current=\(current.currentValue) delta=\(delta) new=\(clamped) max=\(current.maxValue) cacheHit=\(wasCacheHit)")
 
-        // Delay between read and write — some monitors need the I2C bus to settle
-        usleep(50_000)
+        // Only delay if we just did a real DDC read — the I2C bus needs time to settle
+        if !wasCacheHit {
+            usleep(50_000)
+        }
 
         if write(vcp: code, value: clamped, to: displayID) {
+            updateCache(vcp: code, displayID: displayID, newValue: clamped, maxValue: current.maxValue)
             return DDCReadResult(currentValue: clamped, maxValue: current.maxValue)
         }
         return nil
+    }
+
+    private func nanosElapsed(from start: UInt64, to end: UInt64) -> UInt64 {
+        var timebaseInfo = mach_timebase_info_data_t()
+        mach_timebase_info(&timebaseInfo)
+        return (end - start) * UInt64(timebaseInfo.numer) / UInt64(timebaseInfo.denom)
     }
 
     // MARK: - Apple Silicon: IOAVService
