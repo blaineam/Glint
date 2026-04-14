@@ -307,20 +307,24 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
             // Adjust both DDC and system volume
             for i in displays.indices {
-                let delta = stepToAbsolute(step, max: displays[i].maxVolume ?? 100)
-                if let result = ddc.adjust(vcp: .volume, by: delta, on: displays[i].id) {
-                    displays[i].volume = result.currentValue
-                    displays[i].maxVolume = result.maxValue
+                guard let current = ddc.read(vcp: .volume, from: displays[i].id) else { continue }
+                let delta = stepToAbsolute(step, max: current.maxValue)
+                let newValue = UInt16(clamping: min(max(Int(current.currentValue) + delta, 0), Int(current.maxValue)))
+                if ddc.write(vcp: .volume, value: newValue, to: displays[i].id) {
+                    displays[i].volume = newValue
+                    displays[i].maxVolume = current.maxValue
                 }
             }
             adjustSystemVolume(by: step)
         } else if displayAudio {
             // Audio going to HDMI/DP — adjust DDC volume only
             for i in displays.indices {
-                let delta = stepToAbsolute(step, max: displays[i].maxVolume ?? 100)
-                if let result = ddc.adjust(vcp: .volume, by: delta, on: displays[i].id) {
-                    displays[i].volume = result.currentValue
-                    displays[i].maxVolume = result.maxValue
+                guard let current = ddc.read(vcp: .volume, from: displays[i].id) else { continue }
+                let delta = stepToAbsolute(step, max: current.maxValue)
+                let newValue = UInt16(clamping: min(max(Int(current.currentValue) + delta, 0), Int(current.maxValue)))
+                if ddc.write(vcp: .volume, value: newValue, to: displays[i].id) {
+                    displays[i].volume = newValue
+                    displays[i].maxVolume = current.maxValue
                 }
             }
         } else {
