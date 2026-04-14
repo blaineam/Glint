@@ -48,6 +48,10 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         didSet { defaults.set(alwaysInterceptVolume, forKey: "alwaysInterceptVolume") }
     }
 
+    @Published var writeOnlyVolume: Bool {
+        didSet { defaults.set(writeOnlyVolume, forKey: "writeOnlyVolume") }
+    }
+
     @Published var debugLogging: Bool {
         didSet { defaults.set(debugLogging, forKey: "debugLogging") }
     }
@@ -60,6 +64,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
             "interceptVolume": true,
             "alwaysInterceptBrightness": false,
             "alwaysInterceptVolume": false,
+            "writeOnlyVolume": false,
             "brightnessStep": 6,
             "volumeStep": 6,
             "syncWithBuiltIn": true,
@@ -76,6 +81,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         hideMenuBarIcon = defaults.bool(forKey: "hideMenuBarIcon")
         alwaysInterceptBrightness = defaults.bool(forKey: "alwaysInterceptBrightness")
         alwaysInterceptVolume = defaults.bool(forKey: "alwaysInterceptVolume")
+        writeOnlyVolume = defaults.bool(forKey: "writeOnlyVolume")
         debugLogging = defaults.bool(forKey: "debugLogging")
     }
 

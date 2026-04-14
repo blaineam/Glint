@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.7
+
+- **Write-only volume mode**: New toggle in Settings that skips DDC volume reads entirely — initializes at 50% and tracks volume in memory, sending only DDC writes. Fixes monitors (e.g., some LG displays) where DDC volume reads always fail but writes work fine
+- Volume adjustment falls back to write-only automatically when `ddc.adjust` fails and the setting is enabled
+
 ## v1.3.6
 
 - **Exponential backoff DDC reads**: Failed reads now retry up to 3 times with exponential backoff (100ms, 200ms, 400ms), fixing volume reads that fail after brightness reads on rate-limited LG monitors

@@ -91,6 +91,12 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
                 display.volume = volume.currentValue
                 display.maxVolume = volume.maxValue > 0 ? volume.maxValue : 100
                 display.ddcVolumeAvailable = true
+            } else if Preferences.shared.writeOnlyVolume {
+                // Write-only mode: assume 50% volume and track in memory
+                display.volume = 50
+                display.maxVolume = 100
+                display.ddcVolumeAvailable = true
+                log.log("DISPLAYS: write-only volume mode — initializing \(name) at 50/100")
             }
 
             externals.append(display)
@@ -317,23 +323,41 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
             // Adjust both DDC and system volume
             for i in displays.indices {
-                if let result = ddc.adjust(vcp: .volume, by: stepToAbsolute(step, max: displays[i].maxVolume ?? 100), on: displays[i].id) {
-                    displays[i].volume = result.currentValue
-                    displays[i].maxVolume = result.maxValue
-                }
+                adjustDisplayVolume(at: i, step: step)
             }
             adjustSystemVolume(by: step)
         } else if displayAudio {
             // Audio going to HDMI/DP — adjust DDC volume only
             for i in displays.indices {
-                if let result = ddc.adjust(vcp: .volume, by: stepToAbsolute(step, max: displays[i].maxVolume ?? 100), on: displays[i].id) {
-                    displays[i].volume = result.currentValue
-                    displays[i].maxVolume = result.maxValue
-                }
+                adjustDisplayVolume(at: i, step: step)
             }
         } else {
             // Audio going to built-in/headphones/USB/BT — adjust system volume only
             adjustSystemVolume(by: step)
+        }
+    }
+
+    /// Adjusts volume for a single display. Uses ddc.adjust (read+write) normally,
+    /// falls back to write-only from in-memory state when writeOnlyVolume is enabled.
+    private func adjustDisplayVolume(at i: Int, step: Int) {
+        let maxVal = displays[i].maxVolume ?? 100
+        let delta = stepToAbsolute(step, max: maxVal)
+
+        // Try ddc.adjust first (cached read + write)
+        if let result = ddc.adjust(vcp: .volume, by: delta, on: displays[i].id) {
+            displays[i].volume = result.currentValue
+            displays[i].maxVolume = result.maxValue
+            return
+        }
+
+        // Read failed — if write-only mode, compute from in-memory state and write directly
+        if Preferences.shared.writeOnlyVolume {
+            let current = Int(displays[i].volume ?? 50)
+            let newValue = UInt16(clamping: min(max(current + delta, 0), Int(maxVal)))
+            if ddc.write(vcp: .volume, value: newValue, to: displays[i].id) {
+                displays[i].volume = newValue
+                ddc.updateCache(vcp: .volume, displayID: displays[i].id, newValue: newValue, maxValue: maxVal)
+            }
         }
     }
 

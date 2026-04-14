@@ -18,6 +18,9 @@ struct SettingsView: View {
                     Toggle("Always intercept volume", isOn: $prefs.alwaysInterceptVolume)
                         .help("Intercept volume keys even when DDC volume control wasn't detected. Useful if your monitor responds to DDC writes but not reads.")
                         .padding(.leading, 16)
+                    Toggle("Write-only volume", isOn: $prefs.writeOnlyVolume)
+                        .help("Skip DDC volume reads and start at 50%. Volume is tracked in memory and sent via DDC writes only. Enable this if your monitor ignores DDC volume reads but responds to writes.")
+                        .padding(.leading, 16)
                 }
                 Toggle("Sync with built-in display", isOn: $prefs.syncWithBuiltIn)
                     .help("When on, brightness/volume keys also adjust the built-in display and Mac speakers alongside external displays.")
