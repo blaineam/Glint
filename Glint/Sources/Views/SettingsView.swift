@@ -8,7 +8,17 @@ struct SettingsView: View {
         Form {
             Section("Keyboard Controls") {
                 Toggle("Intercept brightness keys", isOn: $prefs.interceptBrightness)
+                if prefs.interceptBrightness {
+                    Toggle("Always intercept brightness", isOn: $prefs.alwaysInterceptBrightness)
+                        .help("Intercept brightness keys even when DDC brightness control wasn't detected. Useful if your monitor responds to DDC writes but not reads.")
+                        .padding(.leading, 16)
+                }
                 Toggle("Intercept volume keys", isOn: $prefs.interceptVolume)
+                if prefs.interceptVolume {
+                    Toggle("Always intercept volume", isOn: $prefs.alwaysInterceptVolume)
+                        .help("Intercept volume keys even when DDC volume control wasn't detected. Useful if your monitor responds to DDC writes but not reads.")
+                        .padding(.leading, 16)
+                }
                 Toggle("Sync with built-in display", isOn: $prefs.syncWithBuiltIn)
                     .help("When on, brightness/volume keys also adjust the built-in display and Mac speakers alongside external displays.")
             }

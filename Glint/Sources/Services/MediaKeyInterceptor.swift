@@ -78,7 +78,8 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
 
         switch keyCode {
         case Int(NX_KEYTYPE_BRIGHTNESS_UP):
-            guard prefs.interceptBrightness else { return event }
+            guard prefs.interceptBrightness,
+                  prefs.alwaysInterceptBrightness || DisplayManager.shared.ddcBrightnessAvailable else { return event }
             ddcQueue.async {
                 DisplayManager.shared.adjustBrightness(by: 1)
                 self.showOSD(.brightness)
@@ -86,7 +87,8 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             return nil // Consume — Glint handles everything
 
         case Int(NX_KEYTYPE_BRIGHTNESS_DOWN):
-            guard prefs.interceptBrightness else { return event }
+            guard prefs.interceptBrightness,
+                  prefs.alwaysInterceptBrightness || DisplayManager.shared.ddcBrightnessAvailable else { return event }
             ddcQueue.async {
                 DisplayManager.shared.adjustBrightness(by: -1)
                 self.showOSD(.brightness)
@@ -94,7 +96,8 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             return nil
 
         case Int(NX_KEYTYPE_SOUND_UP):
-            guard prefs.interceptVolume else { return event }
+            guard prefs.interceptVolume,
+                  prefs.alwaysInterceptVolume || DisplayManager.shared.ddcVolumeAvailable else { return event }
             ddcQueue.async {
                 DisplayManager.shared.adjustVolume(by: 1)
                 self.showOSD(.volume)
@@ -102,7 +105,8 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             return nil
 
         case Int(NX_KEYTYPE_SOUND_DOWN):
-            guard prefs.interceptVolume else { return event }
+            guard prefs.interceptVolume,
+                  prefs.alwaysInterceptVolume || DisplayManager.shared.ddcVolumeAvailable else { return event }
             ddcQueue.async {
                 DisplayManager.shared.adjustVolume(by: -1)
                 self.showOSD(.volume)
@@ -110,7 +114,8 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             return nil
 
         case Int(NX_KEYTYPE_MUTE):
-            guard prefs.interceptVolume else { return event }
+            guard prefs.interceptVolume,
+                  prefs.alwaysInterceptVolume || DisplayManager.shared.ddcVolumeAvailable else { return event }
             ddcQueue.async {
                 let muted = DisplayManager.shared.toggleMute()
                 self.showMuteOSD(muted: muted)

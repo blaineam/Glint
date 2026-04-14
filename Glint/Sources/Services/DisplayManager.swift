@@ -18,6 +18,8 @@ struct ExternalDisplay: Identifiable, Hashable {
     var maxBrightness: UInt16?
     var volume: UInt16?
     var maxVolume: UInt16?
+    var ddcBrightnessAvailable = false
+    var ddcVolumeAvailable = false
 
     var brightnessPercent: Int {
         guard let b = brightness, let m = maxBrightness, m > 0 else { return 0 }
@@ -40,6 +42,16 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     /// Tracks whether we've synced on first keystroke
     private var brightnessSynced = false
     private var volumeSynced = false
+
+    /// Whether any external display supports DDC brightness control.
+    var ddcBrightnessAvailable: Bool {
+        displays.contains { $0.ddcBrightnessAvailable }
+    }
+
+    /// Whether any external display supports DDC volume control.
+    var ddcVolumeAvailable: Bool {
+        displays.contains { $0.ddcVolumeAvailable }
+    }
 
     private init() {
         refresh()
@@ -66,26 +78,19 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
                 modelNumber: CGDisplayModelNumber(id)
             )
 
-            // Retry DDC reads — some monitors need time to respond after connection.
-            // Only re-read values that haven't succeeded yet.
-            for attempt in 1...3 {
-                if display.maxBrightness == nil {
-                    let brightness = ddc.read(vcp: .brightness, from: id)
-                    display.brightness = brightness?.currentValue
-                    display.maxBrightness = brightness?.maxValue
-                }
+            // DDC reads — DDCService handles retries with exponential backoff internally.
+            let brightness = ddc.read(vcp: .brightness, from: id)
+            if let brightness = brightness {
+                display.brightness = brightness.currentValue
+                display.maxBrightness = brightness.maxValue > 0 ? brightness.maxValue : 100
+                display.ddcBrightnessAvailable = true
+            }
 
-                if display.maxVolume == nil {
-                    let volume = ddc.read(vcp: .volume, from: id)
-                    display.volume = volume?.currentValue
-                    display.maxVolume = volume?.maxValue
-                }
-
-                if display.maxBrightness != nil && display.maxVolume != nil {
-                    break
-                }
-                log.log("DISPLAYS: DDC read attempt \(attempt)/3 incomplete for \(name), retrying...")
-                usleep(500_000) // 500ms between retries — LG monitors need longer cooldown
+            let volume = ddc.read(vcp: .volume, from: id)
+            if let volume = volume {
+                display.volume = volume.currentValue
+                display.maxVolume = volume.maxValue > 0 ? volume.maxValue : 100
+                display.ddcVolumeAvailable = true
             }
 
             externals.append(display)

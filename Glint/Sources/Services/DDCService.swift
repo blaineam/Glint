@@ -132,27 +132,32 @@ final class DDCService: @unchecked Sendable {
 
     // MARK: - Internal (must be called on ddcQueue)
 
-    /// Raw DDC read — enforces bus cooldown, no cache logic.
+    /// Raw DDC read — enforces bus cooldown with exponential backoff retries.
+    /// Retries up to 3 times with 100ms, 200ms, 400ms delays on failure.
     private func readImpl(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> DDCReadResult? {
-        usleep(busCooldownMicros)
-        log.log("DDC READ vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) platform=\(isAppleSilicon ? "arm64" : "x86")")
-        let result: DDCReadResult?
-        if isAppleSilicon {
-            result = avServiceRead(command: code.rawValue, displayID: displayID)
-        } else {
-            guard let framebuffer = framebuffer(for: displayID) else {
-                log.log("DDC READ FAILED: no framebuffer for display \(displayID)")
-                return nil
+        let maxRetries = 3
+        for attempt in 0..<maxRetries {
+            let delay = busCooldownMicros * useconds_t(1 << attempt) // 100ms, 200ms, 400ms
+            usleep(delay)
+            log.log("DDC READ vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) attempt=\(attempt + 1)/\(maxRetries) delay=\(delay / 1000)ms")
+            let result: DDCReadResult?
+            if isAppleSilicon {
+                result = avServiceRead(command: code.rawValue, displayID: displayID)
+            } else {
+                guard let framebuffer = framebuffer(for: displayID) else {
+                    log.log("DDC READ FAILED: no framebuffer for display \(displayID)")
+                    return nil
+                }
+                defer { IOObjectRelease(framebuffer) }
+                result = i2cRead(service: framebuffer, command: code.rawValue)
             }
-            defer { IOObjectRelease(framebuffer) }
-            result = i2cRead(service: framebuffer, command: code.rawValue)
+            if let r = result {
+                log.log("DDC READ OK: current=\(r.currentValue) max=\(r.maxValue)")
+                return r
+            }
+            log.log("DDC READ FAILED: nil result for vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID), \(attempt < maxRetries - 1 ? "retrying..." : "giving up")")
         }
-        if let r = result {
-            log.log("DDC READ OK: current=\(r.currentValue) max=\(r.maxValue)")
-        } else {
-            log.log("DDC READ FAILED: nil result for vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID)")
-        }
-        return result
+        return nil
     }
 
     /// Raw DDC write — enforces bus cooldown.

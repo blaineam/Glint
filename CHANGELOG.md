@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.3.6
+
+- **Exponential backoff DDC reads**: Failed reads now retry up to 3 times with exponential backoff (100ms, 200ms, 400ms), fixing volume reads that fail after brightness reads on rate-limited LG monitors
+- **Default max volume/brightness to 100**: If a monitor reports a current value but a zero or missing max, Glint defaults max to 100 instead of showing broken sliders
+- **Smart key interception**: Brightness and volume keys are only intercepted when DDC successfully detected that capability on startup. If DDC volume reads fail, volume keys pass through to macOS as normal
+- **Always intercept override**: New per-control "Always intercept" toggles in Settings for monitors that respond to DDC writes but not reads
+
 ## v1.3.5
 
 - **Serial DDC queue**: All I2C operations (reads and writes) now go through a serial `DispatchQueue`, preventing concurrent bus access that caused LG monitors to drop commands. Every operation enforces a 100ms cooldown before hitting the bus
