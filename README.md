@@ -47,8 +47,7 @@ Glint makes your keyboard Just Work™ with external displays.
 ### Homebrew
 
 ```bash
-brew tap blaineam/glint
-brew install --cask glint
+brew install --cask blaineam/tap/glint
 ```
 
 ### Download
