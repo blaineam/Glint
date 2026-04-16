@@ -2,12 +2,27 @@ import AppKit
 import Combine
 import CoreAudio
 
-// Private DisplayServices API — reliable brightness control on Apple Silicon
-@_silgen_name("DisplayServicesSetBrightness")
-private func DisplayServicesSetBrightness(_ display: CGDirectDisplayID, _ brightness: Float) -> Int32
+// DisplayServices — resolved at runtime via dlopen/dlsym for resilience.
+// If Apple removes or renames this private framework, the app still launches
+// and falls back to IOKit brightness APIs.
+private enum DisplayServicesAPI {
+    typealias SetBrightnessFn = @convention(c) (CGDirectDisplayID, Float) -> Int32
+    typealias GetBrightnessFn = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Float>) -> Int32
 
-@_silgen_name("DisplayServicesGetBrightness")
-private func DisplayServicesGetBrightness(_ display: CGDirectDisplayID, _ brightness: UnsafeMutablePointer<Float>) -> Int32
+    private static let handle: UnsafeMutableRawPointer? = dlopen(
+        "/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY
+    )
+
+    static let setBrightness: SetBrightnessFn? = {
+        guard let h = handle, let sym = dlsym(h, "DisplayServicesSetBrightness") else { return nil }
+        return unsafeBitCast(sym, to: SetBrightnessFn.self)
+    }()
+
+    static let getBrightness: GetBrightnessFn? = {
+        guard let h = handle, let sym = dlsym(h, "DisplayServicesGetBrightness") else { return nil }
+        return unsafeBitCast(sym, to: GetBrightnessFn.self)
+    }()
+}
 
 struct ExternalDisplay: Identifiable, Hashable {
     let id: CGDirectDisplayID
@@ -504,14 +519,13 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     private func setBuiltInBrightness(_ brightness: Float) {
         guard let builtInID = builtInDisplayID() else { return }
-        // Use private DisplayServices API — works reliably on Apple Silicon
-        let result = DisplayServicesSetBrightness(builtInID, brightness)
-        if result != 0 {
-            // Fallback to IOKit
-            if let service = builtInDisplayService() {
-                IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, brightness)
-                IOObjectRelease(service)
-            }
+        if let setBrightness = DisplayServicesAPI.setBrightness {
+            if setBrightness(builtInID, brightness) == 0 { return }
+        }
+        // Fallback to IOKit
+        if let service = builtInDisplayService() {
+            IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, brightness)
+            IOObjectRelease(service)
         }
     }
 
@@ -563,14 +577,16 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     private func getBuiltInBrightness() -> Float? {
         guard let builtInID = builtInDisplayID() else { return nil }
-        // Use private DisplayServices API first
-        var brightness: Float = 0
-        if DisplayServicesGetBrightness(builtInID, &brightness) == 0 {
-            return brightness
+        if let getBrightness = DisplayServicesAPI.getBrightness {
+            var brightness: Float = 0
+            if getBrightness(builtInID, &brightness) == 0 {
+                return brightness
+            }
         }
         // Fallback to IOKit
         guard let service = builtInDisplayService() else { return nil }
         defer { IOObjectRelease(service) }
+        var brightness: Float = 0
         let result = IODisplayGetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, &brightness)
         return result == kIOReturnSuccess ? brightness : nil
     }

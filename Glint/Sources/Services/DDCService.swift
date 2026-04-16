@@ -25,7 +25,19 @@ struct DDCReadResult {
 final class DDCService: @unchecked Sendable {
     static let shared = DDCService()
 
-    private let isAppleSilicon: Bool
+    // IOAVService — resolved at runtime via dlsym for resilience.
+    // If Apple removes these symbols in a future macOS, the app still launches
+    // and falls back to IOFramebuffer or reports DDC unavailable.
+    private typealias AVCreateFn = @convention(c) (CFAllocator?, io_service_t) -> Unmanaged<CFTypeRef>?
+    private typealias AVWriteI2CFn = @convention(c) (CFTypeRef, UInt32, UInt32, UnsafeMutableRawPointer, UInt32) -> IOReturn
+    private typealias AVReadI2CFn = @convention(c) (CFTypeRef, UInt32, UInt32, UnsafeMutableRawPointer, UInt32) -> IOReturn
+
+    private let avCreateFn: AVCreateFn?
+    private let avWriteI2CFn: AVWriteI2CFn?
+    private let avReadI2CFn: AVReadI2CFn?
+
+    /// True when all IOAVService symbols are available (Apple Silicon with compatible macOS).
+    private var hasAVService: Bool { avCreateFn != nil && avWriteI2CFn != nil && avReadI2CFn != nil }
 
     // Serial queue — all I2C operations go through here to prevent bus collisions.
     private let ddcQueue = DispatchQueue(label: "com.glint.ddc", qos: .userInteractive)
@@ -45,11 +57,19 @@ final class DDCService: @unchecked Sendable {
     private let cacheTTLNanos: UInt64 = 2_000_000_000 // 2 seconds
 
     private init() {
-        #if arch(arm64)
-        isAppleSilicon = true
-        #else
-        isAppleSilicon = false
-        #endif
+        if let create = dlsym(RTLD_DEFAULT, "IOAVServiceCreateWithService"),
+           let write = dlsym(RTLD_DEFAULT, "IOAVServiceWriteI2C"),
+           let read = dlsym(RTLD_DEFAULT, "IOAVServiceReadI2C") {
+            avCreateFn = unsafeBitCast(create, to: AVCreateFn.self)
+            avWriteI2CFn = unsafeBitCast(write, to: AVWriteI2CFn.self)
+            avReadI2CFn = unsafeBitCast(read, to: AVReadI2CFn.self)
+            log.log("DDC: IOAVService symbols resolved — Apple Silicon DDC available")
+        } else {
+            avCreateFn = nil
+            avWriteI2CFn = nil
+            avReadI2CFn = nil
+            log.log("DDC: IOAVService symbols not found — falling back to IOFramebuffer I2C")
+        }
     }
 
     // MARK: - Public API
@@ -141,7 +161,7 @@ final class DDCService: @unchecked Sendable {
             usleep(delay)
             log.log("DDC READ vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) attempt=\(attempt + 1)/\(maxRetries) delay=\(delay / 1000)ms")
             let result: DDCReadResult?
-            if isAppleSilicon {
+            if hasAVService {
                 result = avServiceRead(command: code.rawValue, displayID: displayID)
             } else {
                 guard let framebuffer = framebuffer(for: displayID) else {
@@ -165,7 +185,7 @@ final class DDCService: @unchecked Sendable {
         usleep(busCooldownMicros)
         log.log("DDC WRITE vcp=0x\(String(code.rawValue, radix: 16)) value=\(value) display=\(displayID)")
         let success: Bool
-        if isAppleSilicon {
+        if hasAVService {
             success = avServiceWrite(command: code.rawValue, value: value, displayID: displayID)
         } else {
             guard let framebuffer = framebuffer(for: displayID) else {
@@ -191,7 +211,9 @@ final class DDCService: @unchecked Sendable {
     /// Strategy: enumerate DCPAVServiceProxy services, skip those with Location=Embedded
     /// (built-in display), and return external services. For multi-monitor setups,
     /// caches a mapping of display ID to service index.
-    private func avService(for displayID: CGDirectDisplayID) -> IOAVService? {
+    private func avService(for displayID: CGDirectDisplayID) -> AnyObject? {
+        guard let createFn = avCreateFn else { return nil }
+
         // Built-in displays don't support DDC
         if CGDisplayIsBuiltin(displayID) != 0 {
             log.log("DDC: Skipping built-in display \(displayID)")
@@ -235,7 +257,7 @@ final class DDCService: @unchecked Sendable {
         let serviceIndex = min(targetIndex, externalServices.count - 1)
 
         let chosen = externalServices[serviceIndex]
-        let avService = IOAVServiceCreateWithService(kCFAllocatorDefault, chosen)?.takeRetainedValue()
+        let avService = createFn(kCFAllocatorDefault, chosen)?.takeRetainedValue()
 
         log.log("DDC: display=\(displayID) serviceIndex=\(serviceIndex)/\(externalServices.count) avService=\(avService != nil ? "found" : "nil")")
 
@@ -254,7 +276,8 @@ final class DDCService: @unchecked Sendable {
     }
 
     private func avServiceWrite(command: UInt8, value: UInt16, displayID: CGDirectDisplayID) -> Bool {
-        guard let service = avService(for: displayID) else {
+        guard let writeFn = avWriteI2CFn,
+              let service = avService(for: displayID) else {
             print("[Glint] DDC: No IOAVService found for display \(displayID)")
             return false
         }
@@ -274,7 +297,7 @@ final class DDCService: @unchecked Sendable {
         data.append(checksum)
 
         let result = data.withUnsafeMutableBufferPointer { buffer -> IOReturn in
-            IOAVServiceWriteI2C(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
+            writeFn(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
         }
 
         if result == KERN_SUCCESS {
@@ -286,7 +309,8 @@ final class DDCService: @unchecked Sendable {
     }
 
     private func avServiceRead(command: UInt8, displayID: CGDirectDisplayID) -> DDCReadResult? {
-        guard let service = avService(for: displayID) else {
+        guard let writeFn = avWriteI2CFn, let readFn = avReadI2CFn,
+              let service = avService(for: displayID) else {
             print("[Glint] DDC: No IOAVService found for display \(displayID)")
             return nil
         }
@@ -302,7 +326,7 @@ final class DDCService: @unchecked Sendable {
         sendData.append(checksum)
 
         let writeResult = sendData.withUnsafeMutableBufferPointer { buffer -> IOReturn in
-            IOAVServiceWriteI2C(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
+            writeFn(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
         }
 
         guard writeResult == KERN_SUCCESS else {
@@ -316,7 +340,7 @@ final class DDCService: @unchecked Sendable {
         // Step 2: Read response
         var replyData = [UInt8](repeating: 0, count: 12)
         let readResult = replyData.withUnsafeMutableBufferPointer { buffer -> IOReturn in
-            IOAVServiceReadI2C(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
+            readFn(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
         }
 
         guard readResult == KERN_SUCCESS else {
