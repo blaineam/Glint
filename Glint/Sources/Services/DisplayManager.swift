@@ -9,7 +9,7 @@ private enum DisplayServicesAPI {
     typealias SetBrightnessFn = @convention(c) (CGDirectDisplayID, Float) -> Int32
     typealias GetBrightnessFn = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Float>) -> Int32
 
-    private static let handle: UnsafeMutableRawPointer? = dlopen(
+    nonisolated(unsafe) private static let handle: UnsafeMutableRawPointer? = dlopen(
         "/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY
     )
 
