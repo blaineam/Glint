@@ -2,7 +2,7 @@ import AppKit
 import IOKit
 
 // RTLD_DEFAULT is a C macro ((void *) -2) that Swift cannot import directly.
-private let RTLD_DEFAULT = UnsafeMutableRawPointer(bitPattern: -2)
+private nonisolated(unsafe) let RTLD_DEFAULT = UnsafeMutableRawPointer(bitPattern: -2)
 
 // MARK: - DDC/CI VCP Codes
 
