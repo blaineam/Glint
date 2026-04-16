@@ -75,9 +75,11 @@ final class OSDOverlay {
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.3
                 self.window?.animator().alphaValue = 0
-            }, completionHandler: {
-                self.window?.orderOut(nil)
-                self.isVisible = false
+            }, completionHandler: { [weak self] in
+                MainActor.assumeIsolated {
+                    self?.window?.orderOut(nil)
+                    self?.isVisible = false
+                }
             })
         }
     }
