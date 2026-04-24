@@ -1,0 +1,31 @@
+# Drop this file at `.github/workflows/notify-portfolio.yml` in each app
+# repo (Blip, Glint, …) to trigger the portfolio's `mirror-app-docs`
+# workflow the moment the landing page changes, instead of waiting for
+# the portfolio's daily cron. No secrets required if the target
+# portfolio repo is public — `GITHUB_TOKEN` issued to a public-repo
+# workflow has `public_repo` scope, which is enough to POST a
+# `repository_dispatch` to another public repo.
+#
+# If later you make blaineam.github.io private, swap `GITHUB_TOKEN` for
+# a PAT stored as `PORTFOLIO_DISPATCH_TOKEN` in this repo's secrets.
+
+name: Notify portfolio to mirror docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger mirror-app-docs in portfolio
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X POST \
+            /repos/blaineam/blaineam.github.io/dispatches \
+            -f event_type=mirror-app-docs
