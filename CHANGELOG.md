@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.10
+
+### Build
+- **App icon now sourced from the asset catalog** — removed the post-build `.icns` injection from `Scripts/build-dmg.sh`; the icon now comes exclusively from `Assets.xcassets/AppIcon.appiconset` as compiled by `actool`, eliminating a duplicate icon source that could drift from the bundled catalog
+- **project.yml version aligned** — `CFBundleShortVersionString` had drifted to 1.3.8 in `project.yml` while shipped builds were 1.3.9; both `project.yml` and `Info.plist` are now in sync
+
 ## v1.3.9
 
 ### Icon

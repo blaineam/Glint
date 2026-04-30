@@ -152,15 +152,6 @@ APP_PATH="$STAGE_DIR/$APP_NAME.app"
 cp -R "$SRC_APP_PATH" "$APP_PATH"
 xattr -cr "$APP_PATH" 2>/dev/null || true
 
-# Replace icon with generated .icns
-if [ -f "$ASSETS_DIR/AppIcon.icns" ]; then
-    mkdir -p "$APP_PATH/Contents/Resources"
-    cp "$ASSETS_DIR/AppIcon.icns" "$APP_PATH/Contents/Resources/AppIcon.icns"
-    /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$APP_PATH/Contents/Info.plist" 2>/dev/null || \
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP_PATH/Contents/Info.plist"
-    echo "  Icon: replaced"
-fi
-
 # Sign the app with Developer ID
 if [ "$DEVELOPER_ID_APP" != "-" ]; then
     codesign --force --deep --sign "$DEVELOPER_ID_APP" --options runtime --timestamp "$APP_PATH"
