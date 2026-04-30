@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.9
+
+### Icon
+- **Refreshed app icon to match Apple's macOS guidelines** — removed the 10% inset that was making the squircle float in extra padding, and scaled the monitor-with-glint logo up to fill the icon properly; affects the in-app icon, the DMG installer, and all web/portfolio icons
+- **Bundle plist version aligned** — the Info.plist `CFBundleShortVersionString` had drifted to 1.3.2 across several releases; now correctly reflects the released version
+
 ## v1.3.8
 
 - **Fix Swift 6 strict concurrency errors**: Add `@MainActor` annotation to `promptAccessibility()` and wrap the OSD fade-out completion handler with `MainActor.assumeIsolated` to satisfy Sendable closure requirements

@@ -240,11 +240,9 @@ func generateAppIcon(size: CGFloat) -> NSImage {
     return renderImage(size: NSSize(width: size, height: size)) { ctx in
         let cg = ctx.cgContext
 
-        // macOS icon shape: rounded rect (continuous corners)
-        let inset = size * 0.1
-        let iconRect = CGRect(x: inset, y: inset,
-                              width: size - inset * 2, height: size - inset * 2)
-        let cornerRadius = (size - inset * 2) * 0.22
+        // macOS icon shape: rounded squircle filling the full canvas (no shadow padding)
+        let iconRect = CGRect(x: 0, y: 0, width: size, height: size)
+        let cornerRadius = size * 0.225
 
         let iconPath = CGPath(roundedRect: iconRect,
                               cornerWidth: cornerRadius, cornerHeight: cornerRadius,
@@ -262,13 +260,13 @@ func generateAppIcon(size: CGFloat) -> NSImage {
         if let bgGrad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
                                     colors: bgColors, locations: [0.0, 1.0]) {
             cg.drawLinearGradient(bgGrad,
-                                  start: CGPoint(x: size / 2, y: size - inset),
-                                  end: CGPoint(x: size / 2, y: inset),
+                                  start: CGPoint(x: size / 2, y: size),
+                                  end: CGPoint(x: size / 2, y: 0),
                                   options: [])
         }
 
-        // Draw the logo centered
-        let logoSize = (size - inset * 2) * 0.85
+        // Draw the logo centered, filling the canvas generously
+        let logoSize = size * 0.92
         drawGlintLogo(in: cg, center: CGPoint(x: size / 2, y: size / 2), size: logoSize)
         cg.restoreGState()
 
