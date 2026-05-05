@@ -240,18 +240,13 @@ func generateAppIcon(size: CGFloat) -> NSImage {
     return renderImage(size: NSSize(width: size, height: size)) { ctx in
         let cg = ctx.cgContext
 
-        // macOS icon shape: rounded squircle filling the full canvas (no shadow padding)
+        // Fill the full square — macOS applies its own squircle/rounding from the asset catalog.
+        // Never bake transparency or a rounded clip into the source PNG.
         let iconRect = CGRect(x: 0, y: 0, width: size, height: size)
-        let cornerRadius = size * 0.225
-
-        let iconPath = CGPath(roundedRect: iconRect,
-                              cornerWidth: cornerRadius, cornerHeight: cornerRadius,
-                              transform: nil)
 
         // Background gradient
         cg.saveGState()
-        cg.addPath(iconPath)
-        cg.clip()
+        cg.clip(to: iconRect)
 
         let bgColors = [
             CGColor(red: 0.12, green: 0.10, blue: 0.20, alpha: 1.0),
@@ -269,12 +264,6 @@ func generateAppIcon(size: CGFloat) -> NSImage {
         let logoSize = size * 0.92
         drawGlintLogo(in: cg, center: CGPoint(x: size / 2, y: size / 2), size: logoSize)
         cg.restoreGState()
-
-        // Subtle border
-        cg.setStrokeColor(CGColor(red: 1, green: 0.85, blue: 0.5, alpha: 0.15))
-        cg.setLineWidth(size * 0.005)
-        cg.addPath(iconPath)
-        cg.strokePath()
     }
 }
 
