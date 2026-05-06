@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.11
+
+### Icon
+- **App icon background fills the full square** — removed pre-baked rounded corners and transparency from icon generation scripts (`generate-assets.swift`, `generate-web-assets.swift`); the design now extends edge-to-edge and macOS applies its own squircle mask, eliminating visible transparent corners in Finder, Dock, and Spotlight
+
 ## v1.3.10
 
 ### Build

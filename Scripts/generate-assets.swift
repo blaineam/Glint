@@ -240,14 +240,9 @@ func generateAppIcon(size: CGFloat) -> NSImage {
     return renderImage(size: NSSize(width: size, height: size)) { ctx in
         let cg = ctx.cgContext
 
-        // Fill the full square — macOS applies its own squircle/rounding from the asset catalog.
-        // Never bake transparency or a rounded clip into the source PNG.
-        let iconRect = CGRect(x: 0, y: 0, width: size, height: size)
+        // Full-bleed square background — macOS applies its own rounded-rect mask
 
         // Background gradient
-        cg.saveGState()
-        cg.clip(to: iconRect)
-
         let bgColors = [
             CGColor(red: 0.12, green: 0.10, blue: 0.20, alpha: 1.0),
             CGColor(red: 0.06, green: 0.05, blue: 0.10, alpha: 1.0),
@@ -263,7 +258,6 @@ func generateAppIcon(size: CGFloat) -> NSImage {
         // Draw the logo centered, filling the canvas generously
         let logoSize = size * 0.92
         drawGlintLogo(in: cg, center: CGPoint(x: size / 2, y: size / 2), size: logoSize)
-        cg.restoreGState()
     }
 }
 

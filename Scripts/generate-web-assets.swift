@@ -183,29 +183,17 @@ func drawSparkle(in cg: CGContext, center: CGPoint, size: CGFloat, color: CGColo
 
 func generateIcon(size: CGFloat) -> NSImage {
     return renderImage(size: NSSize(width: size, height: size)) { cg in
-        let inset = size * 0.1
-        let iconRect = CGRect(x: inset, y: inset, width: size - inset * 2, height: size - inset * 2)
-        let cornerRadius = (size - inset * 2) * 0.22
-        let iconPath = CGPath(roundedRect: iconRect, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+        // Full-bleed square background — macOS applies its own rounded-rect mask
 
-        cg.saveGState()
-        cg.addPath(iconPath)
-        cg.clip()
         let bgColors = [
             CGColor(red: 0.12, green: 0.10, blue: 0.20, alpha: 1.0),
             CGColor(red: 0.06, green: 0.05, blue: 0.10, alpha: 1.0),
         ] as CFArray
         if let bgGrad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: bgColors, locations: [0.0, 1.0]) {
-            cg.drawLinearGradient(bgGrad, start: CGPoint(x: size / 2, y: size - inset), end: CGPoint(x: size / 2, y: inset), options: [])
+            cg.drawLinearGradient(bgGrad, start: CGPoint(x: size / 2, y: size), end: CGPoint(x: size / 2, y: 0), options: [])
         }
-        let logoSize = (size - inset * 2) * 0.85
+        let logoSize = size * 0.92
         drawGlintLogo(in: cg, center: CGPoint(x: size / 2, y: size / 2), size: logoSize)
-        cg.restoreGState()
-
-        cg.setStrokeColor(CGColor(red: 1, green: 0.85, blue: 0.5, alpha: 0.15))
-        cg.setLineWidth(size * 0.005)
-        cg.addPath(iconPath)
-        cg.strokePath()
     }
 }
 
