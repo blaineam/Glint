@@ -9,10 +9,12 @@
 /* Begin PBXBuildFile section */
 		30D103D38B5D3F8844D7FEF2 /* GlintApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */; };
 		31D50731B062DF56EED921D5 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F871A5D2864AB32F025196 /* DisplayManager.swift */; };
+		349BB3D556AF44229544299D /* Glint.icon in Resources */ = {isa = PBXBuildFile; fileRef = 970B904762E8A35DC16ECACA /* Glint.icon */; };
 		644BAA10D4A2E62C4B479AE4 /* MediaKeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300605DA6ABBB04FAE37DD1B /* MediaKeyInterceptor.swift */; };
 		888CC26DF19E4F218B94FE47 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B392AF935EBF332BE851397 /* Assets.xcassets */; };
 		97BCF0C2163D7B620F890FF1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82A8057ECF1F6FA17690EAFB /* SettingsView.swift */; };
 		A6F09635614F2ED6D668657B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8270790A03573066AEA43219 /* CoreAudio.framework */; };
+		B70CAFEBB2416E25B0FFED97 /* MillerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 33E23FBE72BA4F41DE8F8565 /* MillerKit */; };
 		BDB4EFCB21435B86D4CF01A2 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C1E83CE4CDABC4F0038185 /* Preferences.swift */; };
 		BDE625CBD0C63680B0EAE3DC /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */; };
 		BFB4C9E4BF4E452E3ACF8ED9 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */; };
@@ -32,6 +34,8 @@
 		82A8057ECF1F6FA17690EAFB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		90C1E83CE4CDABC4F0038185 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		91F871A5D2864AB32F025196 /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
+		970B904762E8A35DC16ECACA /* Glint.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = Glint.icon; sourceTree = "<group>"; };
+		A6EE5D905091620A0A583D6D /* MillerKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MillerKit; path = ../Libraries/MillerKit; sourceTree = SOURCE_ROOT; };
 		B782F26D30192C2F6180E26A /* OSDOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSDOverlay.swift; sourceTree = "<group>"; };
 		C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
@@ -43,6 +47,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B70CAFEBB2416E25B0FFED97 /* MillerKit in Frameworks */,
 				EE884A591152F0EF72D43C20 /* IOKit.framework in Frameworks */,
 				A6F09635614F2ED6D668657B /* CoreAudio.framework in Frameworks */,
 			);
@@ -93,6 +98,14 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		BE94CBFFEC9EC5F38A0B73F1 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				A6EE5D905091620A0A583D6D /* MillerKit */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
 		D801533C6FB33EF2E2274FBC /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -105,6 +118,7 @@
 		EA6921C9B6CB486D18C07534 = {
 			isa = PBXGroup;
 			children = (
+				BE94CBFFEC9EC5F38A0B73F1 /* Packages */,
 				FD569EF777D164901CEB4F30 /* Resources */,
 				2737906091E3FF8EFD782CD1 /* Sources */,
 				846EE2A0E01AF110EE275AFD /* Frameworks */,
@@ -124,6 +138,7 @@
 			isa = PBXGroup;
 			children = (
 				0B392AF935EBF332BE851397 /* Assets.xcassets */,
+				970B904762E8A35DC16ECACA /* Glint.icon */,
 			);
 			name = Resources;
 			path = Glint/Resources;
@@ -146,6 +161,7 @@
 			);
 			name = Glint;
 			packageProductDependencies = (
+				33E23FBE72BA4F41DE8F8565 /* MillerKit */,
 			);
 			productName = Glint;
 			productReference = 3E2E78BBA22734DD486C760B /* Glint.app */;
@@ -174,6 +190,9 @@
 			);
 			mainGroup = EA6921C9B6CB486D18C07534;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				48B3FB1838BE9F1C593AA454 /* XCLocalSwiftPackageReference "../Libraries/MillerKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F0DEBFD467843DF4F582D172 /* Products */;
 			projectDirPath = "";
@@ -190,6 +209,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				888CC26DF19E4F218B94FE47 /* Assets.xcassets in Resources */,
+				349BB3D556AF44229544299D /* Glint.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -218,7 +238,7 @@
 		2FF28DB47A88D5C96B620971 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Glint;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Glint/Resources/Glint.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -229,11 +249,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
-				);
-				OTHER_LDFLAGS = (
-					"-F/System/Library/PrivateFrameworks",
-					"-framework",
-					DisplayServices,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.Glint;
 				SDKROOT = macosx;
@@ -308,7 +323,7 @@
 		D716E255757C327EE86E1B65 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Glint;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Glint/Resources/Glint.entitlements;
 				CODE_SIGN_IDENTITY = "-";
@@ -319,11 +334,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
-				);
-				OTHER_LDFLAGS = (
-					"-F/System/Library/PrivateFrameworks",
-					"-framework",
-					DisplayServices,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.Glint;
 				SDKROOT = macosx;
@@ -410,6 +420,20 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		48B3FB1838BE9F1C593AA454 /* XCLocalSwiftPackageReference "../Libraries/MillerKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Libraries/MillerKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		33E23FBE72BA4F41DE8F8565 /* MillerKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MillerKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BE6DB378EC4FB00E8DB46BA7 /* Project object */;
 }
