@@ -11,6 +11,11 @@ settings:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
 
+packages:
+  # Shared feedback / rating / "other apps" kit (Libraries/MillerKit).
+  MillerKit:
+    path: ../Libraries/MillerKit
+
 targets:
   Glint:
     type: application
@@ -33,6 +38,7 @@ targets:
       properties:
         com.apple.security.app-sandbox: false
     dependencies:
+      - package: MillerKit
       - sdk: IOKit.framework
       - sdk: CoreAudio.framework
     settings:

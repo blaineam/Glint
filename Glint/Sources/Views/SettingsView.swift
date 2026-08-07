@@ -1,5 +1,6 @@
 import SwiftUI
 
+import MillerKit
 struct SettingsView: View {
     @ObservedObject var prefs = Preferences.shared
     @ObservedObject var interceptor = MediaKeyInterceptor.shared
@@ -100,6 +101,9 @@ struct SettingsView: View {
                 }
                 .foregroundStyle(.red)
             }
+
+            SupportSection(app: .glint)
+            LoveThisAppSection(app: .glint)
         }
         .formStyle(.grouped)
         .frame(width: 400, height: 500)
