@@ -1,0 +1,22 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.09020,0.09020,0.10196,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "image-name" : "glint-icon.png",
+          "name" : "glint-icon"
+        }
+      ]
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
