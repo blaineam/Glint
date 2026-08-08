@@ -37,7 +37,6 @@
 		90C1E83CE4CDABC4F0038185 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		91F871A5D2864AB32F025196 /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
 		970B904762E8A35DC16ECACA /* Glint.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = Glint.icon; sourceTree = "<group>"; };
-		A6EE5D905091620A0A583D6D /* MillerKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = MillerKit; path = ../Libraries/MillerKit; sourceTree = SOURCE_ROOT; };
 		B782F26D30192C2F6180E26A /* OSDOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSDOverlay.swift; sourceTree = "<group>"; };
 		C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
@@ -102,14 +101,6 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		BE94CBFFEC9EC5F38A0B73F1 /* Packages */ = {
-			isa = PBXGroup;
-			children = (
-				A6EE5D905091620A0A583D6D /* MillerKit */,
-			);
-			name = Packages;
-			sourceTree = "<group>";
-		};
 		D801533C6FB33EF2E2274FBC /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -123,7 +114,6 @@
 		EA6921C9B6CB486D18C07534 = {
 			isa = PBXGroup;
 			children = (
-				BE94CBFFEC9EC5F38A0B73F1 /* Packages */,
 				FD569EF777D164901CEB4F30 /* Resources */,
 				2737906091E3FF8EFD782CD1 /* Sources */,
 				846EE2A0E01AF110EE275AFD /* Frameworks */,
@@ -197,7 +187,7 @@
 			mainGroup = EA6921C9B6CB486D18C07534;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				48B3FB1838BE9F1C593AA454 /* XCLocalSwiftPackageReference "../Libraries/MillerKit" */,
+				D190B08B9E735F4FC78932B3 /* XCRemoteSwiftPackageReference "MillerKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F0DEBFD467843DF4F582D172 /* Products */;
@@ -431,16 +421,21 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		48B3FB1838BE9F1C593AA454 /* XCLocalSwiftPackageReference "../Libraries/MillerKit" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../Libraries/MillerKit;
+/* Begin XCRemoteSwiftPackageReference section */
+		D190B08B9E735F4FC78932B3 /* XCRemoteSwiftPackageReference "MillerKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/blaineam/MillerKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		33E23FBE72BA4F41DE8F8565 /* MillerKit */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = D190B08B9E735F4FC78932B3 /* XCRemoteSwiftPackageReference "MillerKit" */;
 			productName = MillerKit;
 		};
 /* End XCSwiftPackageProductDependency section */

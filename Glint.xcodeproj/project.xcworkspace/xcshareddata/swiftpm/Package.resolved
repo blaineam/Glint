@@ -1,0 +1,15 @@
+{
+  "originHash" : "38ba1fabdd4275deabe2fa259dcdaa6c86c65b1f17eea1a5a4323082ae764960",
+  "pins" : [
+    {
+      "identity" : "millerkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/blaineam/MillerKit",
+      "state" : {
+        "revision" : "43ee15c6f95fd5f72527d2d7a6520b98c12b0050",
+        "version" : "1.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}

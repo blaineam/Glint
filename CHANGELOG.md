@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.0
+
+### Localization
+- **Fully localized in 8 languages** — German, Spanish, French, Italian, Japanese, Korean, Portuguese (Brazil), and Simplified Chinese, across the menu bar UI, settings, and support window
+
+### Added
+- **Dedicated support window** — help, feedback, and the rest of the app family in one place (via the shared MillerKit support kit)
+
+### Build
+- **MillerKit now resolves from GitHub** (`blaineam/MillerKit` 1.0.0) instead of a local sibling checkout, so CI builds no longer depend on the machine layout
+
 ## v1.3.11
 
 ### Icon
