@@ -236,23 +236,27 @@ func drawSparkle(in cg: CGContext, center: CGPoint, size: CGFloat, color: CGColo
 // MARK: - App Icon Generation
 // ---------------------------------------------------------------------------
 
-func generateAppIcon(size: CGFloat) -> NSImage {
+func generateAppIcon(size: CGFloat, includeBackground: Bool = true) -> NSImage {
     return renderImage(size: NSSize(width: size, height: size)) { ctx in
         let cg = ctx.cgContext
 
-        // Full-bleed square background — macOS applies its own rounded-rect mask
-
-        // Background gradient
-        let bgColors = [
-            CGColor(red: 0.12, green: 0.10, blue: 0.20, alpha: 1.0),
-            CGColor(red: 0.06, green: 0.05, blue: 0.10, alpha: 1.0),
-        ] as CFArray
-        if let bgGrad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                                    colors: bgColors, locations: [0.0, 1.0]) {
-            cg.drawLinearGradient(bgGrad,
-                                  start: CGPoint(x: size / 2, y: size),
-                                  end: CGPoint(x: size / 2, y: 0),
-                                  options: [])
+        // Full-bleed square background — macOS applies its own rounded-rect mask.
+        // Skipped for the Icon Composer glyph layer: Glint.icon/icon.json supplies
+        // the fill, and the layer must stay transparent so the system's
+        // liquid-glass depth has something to render against.
+        if includeBackground {
+            // Background gradient
+            let bgColors = [
+                CGColor(red: 0.12, green: 0.10, blue: 0.20, alpha: 1.0),
+                CGColor(red: 0.06, green: 0.05, blue: 0.10, alpha: 1.0),
+            ] as CFArray
+            if let bgGrad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                        colors: bgColors, locations: [0.0, 1.0]) {
+                cg.drawLinearGradient(bgGrad,
+                                      start: CGPoint(x: size / 2, y: size),
+                                      end: CGPoint(x: size / 2, y: 0),
+                                      options: [])
+            }
         }
 
         // Draw the logo centered, filling the canvas generously
@@ -452,5 +456,15 @@ let bgPath = "\(outputDir)/dmg-background.jpg"
 let bgData = jpegData(from: bg, quality: 0.5)
 try! bgData.write(to: URL(fileURLWithPath: bgPath))
 fputs("Created: \(bgPath) (\(bgData.count / 1024)KB)\n", stderr)
+
+// Icon Composer layer: transparent glyph only (monitor + sun glint, no
+// background). The purple fill lives in Glint.icon/icon.json; keeping this
+// layer transparent is what lets macOS render the glass depth treatment.
+let glyph = generateAppIcon(size: 1024, includeBackground: false)
+let glyphPath = "Glint/Resources/Glint.icon/Assets/glint-icon.png"
+if FileManager.default.fileExists(atPath: "Glint/Resources/Glint.icon/Assets") {
+    try! pngData(from: glyph).write(to: URL(fileURLWithPath: glyphPath))
+    fputs("Created: \(glyphPath) (transparent glyph layer)\n", stderr)
+}
 
 fputs("Done.\n", stderr)

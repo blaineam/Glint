@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.1
+
+### Icon
+- **Liquid-glass app icon** — the monitor-and-sun glyph is now a transparent Icon Composer layer over a purple manifest fill (taken from the original artwork's gradient), so macOS renders the same glass depth (shadow + translucency) as the rest of the suite. Previously the layer was a fully opaque square that occluded the fill and read as a flat tile.
+- `Scripts/generate-assets.swift` now emits the transparent glyph layer alongside the .icns and DMG assets
+
 ## v1.4.0
 
 ### Localization
