@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Grant access to private MillerKit
+        run: git config --global url."https://x-access-token:${{ secrets.GH_MILLERKIT }}@github.com/blaineam/".insteadOf "https://github.com/blaineam/"
+
       - name: Install xcodegen
         run: brew install xcodegen
 
