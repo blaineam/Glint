@@ -84,6 +84,18 @@ struct MenuBarView: View {
 
             Spacer()
 
+            // Opens the dedicated support window — a real window, never a
+            // sheet: a sheet would attach to this transient popover and be
+            // torn down with it.
+            Button("Support...") {
+                SupportWindowController.shared.show()
+                NSApp.deactivate()
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+
+            Spacer()
+
             Button("Refresh") {
                 displayManager.refresh()
             }

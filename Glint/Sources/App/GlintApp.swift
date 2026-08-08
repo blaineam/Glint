@@ -97,10 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func promptAccessibility() {
         let alert = NSAlert()
-        alert.messageText = "Accessibility Access Required"
-        alert.informativeText = "Glint needs Accessibility access to intercept media keys and control your display brightness and volume via DDC.\n\nPlease add Glint in System Settings > Privacy & Security > Accessibility.\n\nAfter enabling access, you will need to quit and relaunch Glint for it to take effect."
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Later")
+        alert.messageText = String(localized: "Accessibility Access Required", comment: "Title of the alert asking for Accessibility permission")
+        alert.informativeText = String(localized: "Glint needs Accessibility access to intercept media keys and control your display brightness and volume via DDC.\n\nPlease add Glint in System Settings > Privacy & Security > Accessibility.\n\nAfter enabling access, you will need to quit and relaunch Glint for it to take effect.", comment: "Body of the alert asking for Accessibility permission")
+        alert.addButton(withTitle: String(localized: "Open System Settings", comment: "Alert button that opens System Settings"))
+        alert.addButton(withTitle: String(localized: "Later", comment: "Alert button that dismisses the permission prompt"))
         alert.alertStyle = .informational
 
         if alert.runModal() == .alertFirstButtonReturn {

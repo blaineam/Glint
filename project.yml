@@ -5,11 +5,17 @@ options:
     macOS: "13.0"
   xcodeVersion: "16.3"
   minimumXcodeGenVersion: "2.38.0"
+  # In-app localization: en is the development language; translations live in
+  # Glint/Resources/Localizable.xcstrings.
+  developmentLanguage: en
 
 settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
+    # Emit .stringsdata for every compiled file so `xcodebuild
+    # -exportLocalizations` can see string literals in SwiftUI views.
+    SWIFT_EMIT_LOC_STRINGS: YES
 
 packages:
   # Shared feedback / rating / "other apps" kit (Libraries/MillerKit).
@@ -24,6 +30,7 @@ targets:
       - Glint/Sources
       - Glint/Resources/Assets.xcassets
       - Glint/Resources/Glint.icon
+      - Glint/Resources/Localizable.xcstrings
     info:
       path: Glint/Resources/Info.plist
       properties:

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		211225BAF03651FC861727AF /* SupportWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60B0D2383D4DB7401DA7F9C /* SupportWindow.swift */; };
 		30D103D38B5D3F8844D7FEF2 /* GlintApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */; };
 		31D50731B062DF56EED921D5 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F871A5D2864AB32F025196 /* DisplayManager.swift */; };
 		349BB3D556AF44229544299D /* Glint.icon in Resources */ = {isa = PBXBuildFile; fileRef = 970B904762E8A35DC16ECACA /* Glint.icon */; };
@@ -17,6 +18,7 @@
 		B70CAFEBB2416E25B0FFED97 /* MillerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 33E23FBE72BA4F41DE8F8565 /* MillerKit */; };
 		BDB4EFCB21435B86D4CF01A2 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C1E83CE4CDABC4F0038185 /* Preferences.swift */; };
 		BDE625CBD0C63680B0EAE3DC /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */; };
+		BF46C11E1A471E28DEAB01D8 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D80235222F8408AF3392684D /* Localizable.xcstrings */; };
 		BFB4C9E4BF4E452E3ACF8ED9 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */; };
 		EE884A591152F0EF72D43C20 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B1FD40AB8D03FF3FDCA0E3B /* IOKit.framework */; };
 		F1DC01014450ED71DC1B5E5C /* DDCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF93EB90A6AE593A6393654 /* DDCService.swift */; };
@@ -40,6 +42,8 @@
 		C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		D280CA78B805CF0C47F15519 /* Glint-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Glint-Bridging-Header.h"; sourceTree = "<group>"; };
+		D80235222F8408AF3392684D /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		F60B0D2383D4DB7401DA7F9C /* SupportWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,6 +115,7 @@
 			children = (
 				C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */,
 				82A8057ECF1F6FA17690EAFB /* SettingsView.swift */,
+				F60B0D2383D4DB7401DA7F9C /* SupportWindow.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -139,6 +144,7 @@
 			children = (
 				0B392AF935EBF332BE851397 /* Assets.xcassets */,
 				970B904762E8A35DC16ECACA /* Glint.icon */,
+				D80235222F8408AF3392684D /* Localizable.xcstrings */,
 			);
 			name = Resources;
 			path = Glint/Resources;
@@ -210,6 +216,7 @@
 			files = (
 				888CC26DF19E4F218B94FE47 /* Assets.xcassets in Resources */,
 				349BB3D556AF44229544299D /* Glint.icon in Resources */,
+				BF46C11E1A471E28DEAB01D8 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -229,6 +236,7 @@
 				F59E5DDF0D70C6AB5215DFFD /* OSDOverlay.swift in Sources */,
 				BDB4EFCB21435B86D4CF01A2 /* Preferences.swift in Sources */,
 				97BCF0C2163D7B620F890FF1 /* SettingsView.swift in Sources */,
+				211225BAF03651FC861727AF /* SupportWindow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -315,6 +323,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
 			};
@@ -393,6 +402,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
 			};

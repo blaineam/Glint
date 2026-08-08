@@ -104,6 +104,16 @@ struct SettingsView: View {
 
             SupportSection(app: .glint)
             LoveThisAppSection(app: .glint)
+
+            Section {
+                Button {
+                    SupportWindowController.shared.show()
+                } label: {
+                    Label("Open Support in Its Own Window", systemImage: "macwindow")
+                }
+            } footer: {
+                Text("The same support and feedback options, in a window you can keep around while writing.")
+            }
         }
         .formStyle(.grouped)
         .frame(width: 400, height: 500)
@@ -130,7 +140,7 @@ final class SettingsWindowController: @unchecked Sendable {
         let hostingController = NSHostingController(rootView: settingsView)
 
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "Glint Settings"
+        window.title = String(localized: "Glint Settings", comment: "Title of the settings window")
         window.styleMask = [.titled, .closable]
         window.center()
         window.isReleasedWhenClosed = false
