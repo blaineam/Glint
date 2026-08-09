@@ -21,7 +21,7 @@ packages:
   # Shared feedback / rating / "other apps" kit (Libraries/MillerKit).
   MillerKit:
     url: https://github.com/blaineam/MillerKit
-    from: "1.0.0"
+    from: "1.1.0"
 
 targets:
   Glint:

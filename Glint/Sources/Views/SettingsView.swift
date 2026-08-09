@@ -77,13 +77,8 @@ struct SettingsView: View {
             }
 
             Section("About") {
-                HStack {
-                    Text("Glint")
-                        .font(.headline)
-                    Spacer()
-                    Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")")
-                        .foregroundStyle(.secondary)
-                }
+                Text("Glint")
+                    .font(.headline)
                 Text("DDC display control from your keyboard.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -104,6 +99,9 @@ struct SettingsView: View {
 
             SupportSection(app: .glint)
             LoveThisAppSection(app: .glint)
+            // The version had been a raw `Bundle.main` Info.plist read that fell
+            // back to "?", and there was no privacy row. AboutSection owns both.
+            AboutSection(app: .glint)
 
             Section {
                 Button {
