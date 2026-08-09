@@ -97,21 +97,14 @@ struct SettingsView: View {
                 .foregroundStyle(.red)
             }
 
+            // Support is already fully usable inline via SupportSection above —
+            // no second "open in its own window" control (menu bar still has
+            // Support… → SupportWindowController for a detachable window).
             SupportSection(app: .glint)
             LoveThisAppSection(app: .glint)
             // The version had been a raw `Bundle.main` Info.plist read that fell
             // back to "?", and there was no privacy row. AboutSection owns both.
             AboutSection(app: .glint)
-
-            Section {
-                Button {
-                    SupportWindowController.shared.show()
-                } label: {
-                    Label("Open Support in Its Own Window", systemImage: "macwindow")
-                }
-            } footer: {
-                Text("The same support and feedback options, in a window you can keep around while writing.")
-            }
         }
         .formStyle(.grouped)
         .frame(width: 400, height: 500)

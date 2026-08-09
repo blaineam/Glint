@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.3
+
+### Fixed
+- **Settings no longer duplicates Support** — removed the redundant “Open Support in Its Own Window” button; support/feedback stay inline via MillerKit’s `SupportSection`. The detachable support window remains available from the menu bar **Support…** item.
+
+## v1.4.2
+
+### Changed
+- **MillerKit 1.1.0** — real version display, working privacy link, and shared About presentation
+
 ## v1.4.1
 
 ### Icon

@@ -31,7 +31,8 @@ ddc,brightness,monitor,display,volume,external,menu bar,media keys,backlight,con
 Your brightness and volume keys, finally working with your external monitor.
 
 ## whats_new
-Initial release.
+• Settings cleanup: support options stay inline (no redundant second window button)
+• Polish and stability improvements
 
 ## marketing_url
 https://wemiller.com/apps/glint
