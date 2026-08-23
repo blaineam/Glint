@@ -1,0 +1,57 @@
+# Cut a Glint release from the Actions dialog (Haven's pattern).
+#   version: X.Y.Z → full release: notarized DMG on the GitHub Release
+#   rc: N          → vX.Y.Z-rc.N: prerelease DMG
+# No App Store lane by design: Glint uses private APIs and never sandboxes — it ships as a
+# notarized direct download only. The tag is pushed with the default token (never
+# auto-triggers), then release.yml is dispatched AT THE TAG REF.
+name: cut-release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "X.Y.Z (stamped into project.yml if not already)"
+        required: true
+      rc:
+        description: "RC number — leave empty for a full release"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Validate + stamp + tag
+        id: cut
+        env:
+          V: ${{ inputs.version }}
+          RC: ${{ inputs.rc }}
+        run: |
+          set -euo pipefail
+          [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::version must be X.Y.Z"; exit 1; }
+          [[ -z "$RC" || "$RC" =~ ^[0-9]+$ ]] || { echo "::error::rc must be a number"; exit 1; }
+          TAG="v$V"; [ -n "$RC" ] && TAG="v$V-rc.$RC"
+          git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && { echo "::error::$TAG already exists"; exit 1; }
+          python3 - <<PY
+          import re
+          p='project.yml'; s=open(p).read()
+          s=re.sub(r'CFBundleShortVersionString: "[0-9.]+"', f'CFBundleShortVersionString: "$V"', s)
+          open(p,'w').write(s); print("stamped $V")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add -A && git commit -m "release: stamp $V (cut-release dialog)" && git push origin HEAD:main
+          fi
+          git tag "$TAG" && git push origin "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Dispatch the release pipeline at the tag ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.cut.outputs.tag }}
+        run: gh workflow run release.yml --ref "refs/tags/$TAG"

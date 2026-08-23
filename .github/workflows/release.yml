@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch: {}   # cut-release dispatches this at the tag ref
 
 permissions:
   contents: write
@@ -163,4 +164,4 @@ jobs:
             _See [CHANGELOG](../../blob/main/CHANGELOG.md) for details._
           files: dist/Glint.dmg
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref, '-rc') }}
