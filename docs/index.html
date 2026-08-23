@@ -440,6 +440,46 @@
             font-size: 1.1rem;
         }
 
+        /* SUPPORT */
+        .support {
+            text-align: center;
+            padding: 20px 0 40px;
+        }
+        .support-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 48px 32px;
+            backdrop-filter: blur(12px);
+        }
+        .support h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .support p {
+            color: var(--text-muted);
+            max-width: 520px;
+            margin: 0 auto 28px;
+            font-size: 1.05rem;
+        }
+        .support-buttons {
+            display: inline-flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .support .support-more {
+            margin: 20px auto 0;
+            font-size: 0.9rem;
+        }
+        .support-more a {
+            color: var(--gold);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .support-more a:hover { text-decoration: underline; }
+
         /* FAQ */
         .faq {
             padding: 80px 0;
@@ -648,6 +688,19 @@
             <div class="size-number">&lt;1</div>
             <div class="size-unit" data-i18n="megabyte.003b8a">megabyte</div>
             <p data-i18n="no-electron-no-frameworks.5c8180">No Electron. No frameworks. Just your keyboard and your display.</p>
+        </section>
+
+        <!-- SUPPORT -->
+        <section class="support" id="support">
+            <div class="support-card">
+                <h2 data-i18n="support-future-development.921741">Support future development</h2>
+                <p data-i18n="glint-is-free-no.732582">Glint is free — no ads, no tracking, no subscription. If it earns a place on your Mac, you can help fund what comes next.</p>
+                <div class="support-buttons">
+                    <a href="https://github.com/sponsors/blaineam" class="btn btn-primary" target="_blank" rel="noopener" data-i18n="sponsor-on-github.f22fdf">Sponsor on GitHub</a>
+                    <a href="https://ko-fi.com/wemiller" class="btn btn-secondary" target="_blank" rel="noopener" data-i18n="buy-me-a-coffee.149bea">Buy me a coffee on Ko-fi</a>
+                </div>
+                <p class="support-more"><a href="https://wemiller.com/support/" target="_blank" rel="noopener" data-i18n="all-the-ways-to.53ba1c">All the ways to support →</a></p>
+            </div>
         </section>
 
         <!-- FAQ -->

@@ -69,6 +69,16 @@ xcodebuild -scheme Glint -configuration Release build
 
 ---
 
+## ❤️ Support future development
+
+Glint is free — no ads, no tracking, no subscription. If it earns a place on your Mac, you can help fund what comes next.
+
+[**Sponsor on GitHub**](https://github.com/sponsors/blaineam) · [**Buy me a coffee on Ko-fi**](https://ko-fi.com/wemiller)
+
+[All the ways to support →](https://wemiller.com/support/)
+
+---
+
 ## 🛠️ Setup
 
 1. **Open Glint** — it appears in your menu bar as a ☀️ icon

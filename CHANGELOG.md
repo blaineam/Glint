@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Docs
+- **Support future development** — the landing page and README gained a support block with GitHub Sponsors and Ko-fi links (plus a link to every way to support at wemiller.com/support). Glint stays free: no ads, no tracking, no subscription
+
 ## v1.4.3
 
 ### Fixed
