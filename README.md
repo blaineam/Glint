@@ -54,6 +54,11 @@ brew install --cask blaineam/tap/glint
 
 Grab the latest **notarized DMG** from [Releases](../../releases) — drag to Applications, done.
 
+Requires **macOS 13 Ventura or later on Apple silicon**. Glint builds are
+arm64-only (Apple's September 2026 guidance lets apps that require macOS 13+
+drop Intel, and macOS 27 runs only on Apple silicon); Intel Macs should stay on
+v1.4.3.
+
 ### Build from source
 
 ```bash

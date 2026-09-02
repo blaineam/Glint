@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+- **Apple silicon only** — release builds are now arm64-only (`ARCHS[sdk=macosx*] = arm64`, `EXCLUDED_ARCHS[sdk=macosx*] = x86_64` in `project.yml`). Apple's September 2026 guidance lets apps that require macOS 13+ drop Intel, and macOS 27 runs only on Apple silicon. Intel Macs should stay on v1.4.3.
+
+### Fixed
+- **Two compiler warnings cleared** — the menu-bar visibility observer now asserts main-actor isolation (`MainActor.assumeIsolated`) instead of calling MainActor-isolated methods from a nonisolated closure, and the CoreAudio device-name lookup receives its +1 `CFString` as `Unmanaged` instead of forming a raw pointer to a `CFString` variable.
+
 ### Added
 - **Settings → "Support Future Development"** (MillerKit 1.2.0): a heart row in the *Enjoying Glint?* block that opens wemiller.com/support — GitHub Sponsors, Ko-fi, a one-time tip.
 

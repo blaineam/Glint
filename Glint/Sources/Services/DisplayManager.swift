@@ -252,12 +252,16 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        var name: CFString = "" as CFString
-        var size = UInt32(MemoryLayout<CFString>.size)
-        guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &name) == noErr else {
+        // CoreAudio hands back a +1 CFStringRef. Receive it as Unmanaged so the
+        // raw-pointer write never aliases an ARC-managed reference (the compiler
+        // warns about forming an UnsafeMutableRawPointer to a CFString variable).
+        var name: Unmanaged<CFString>? = nil
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &name) == noErr,
+              let cfName = name?.takeRetainedValue() else {
             return nil
         }
-        return name as String
+        return cfName as String
     }
 
     // MARK: - Brightness

@@ -37,10 +37,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            if Preferences.shared.hideMenuBarIcon {
-                self?.removeMenuBar()
-            } else {
-                self?.setupMenuBar()
+            // Delivered on `.main`, so this is already the main actor — assert
+            // it instead of calling MainActor-isolated methods from a
+            // nonisolated closure (a Swift 6 warning today, an error later).
+            MainActor.assumeIsolated {
+                if Preferences.shared.hideMenuBarIcon {
+                    self?.removeMenuBar()
+                } else {
+                    self?.setupMenuBar()
+                }
             }
         }
     }
