@@ -75,6 +75,8 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     func refresh() {
         let log = DebugLogger.shared
+        // Displays may have moved to a different physical port — re-discover which port answers.
+        ddc.invalidateServiceCache()
         var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
         var displayCount: UInt32 = 0
         CGGetActiveDisplayList(16, &displayIDs, &displayCount)

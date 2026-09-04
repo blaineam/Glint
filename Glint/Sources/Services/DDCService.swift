@@ -210,62 +210,151 @@ final class DDCService: @unchecked Sendable {
 
     // MARK: - Apple Silicon: IOAVService
 
-    /// Finds the IOAVService for a given display.
-    /// Strategy: enumerate DCPAVServiceProxy services, skip those with Location=Embedded
-    /// (built-in display), and return external services. For multi-monitor setups,
-    /// caches a mapping of display ID to service index.
-    private func avService(for displayID: CGDirectDisplayID) -> AnyObject? {
-        guard let createFn = avCreateFn else { return nil }
+    /// One external DCPAVServiceProxy (a physical HDMI / Thunderbolt display port) wrapped
+    /// in an IOAVService, plus what the registry says about the display behind it.
+    private struct AVServiceCandidate {
+        let registryID: UInt64
+        let service: AnyObject
+        let index: Int
+    }
+
+    /// Registry entry ID of the DCPAVServiceProxy that last answered DDC for each display.
+    /// Machines such as the Mac mini publish one proxy per physical port even when the
+    /// port is empty, so the display→port mapping has to be discovered, not assumed by index.
+    private var resolvedProxyIDs: [CGDirectDisplayID: UInt64] = [:]
+
+    /// Forgets which port each display answered on. Call when displays are (re)connected —
+    /// a display ID can come back on a different physical port.
+    func invalidateServiceCache() {
+        ddcQueue.sync { resolvedProxyIDs.removeAll() }
+    }
+
+    /// Enumerates the external DCPAVServiceProxy services, ordered by how likely each is to
+    /// be the port `displayID` is attached to:
+    ///   1. the proxy that already answered DDC for this display (cached),
+    ///   2. proxies whose dcp subtree publishes this display's EDID UUID,
+    ///   3. the proxy at the display's position in CoreGraphics' external-display order
+    ///      (the historical guess),
+    ///   4. proxies no other connected display would claim by that positional rule.
+    /// Ports another display would claim positionally are left out unless the EDID says
+    /// otherwise, so a display without DDC support can't fall through to its neighbour.
+    private func avServiceCandidates(for displayID: CGDirectDisplayID) -> [AVServiceCandidate] {
+        guard let createFn = avCreateFn else { return [] }
 
         // Built-in displays don't support DDC
         if CGDisplayIsBuiltin(displayID) != 0 {
             log.log("DDC: Skipping built-in display \(displayID)")
-            return nil
+            return []
         }
 
         var iter: io_iterator_t = 0
-        guard let matching = IOServiceMatching("DCPAVServiceProxy") else { return nil }
-        guard IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iter) == KERN_SUCCESS else {
-            return nil
+        guard let matching = IOServiceMatching("DCPAVServiceProxy"),
+              IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iter) == KERN_SUCCESS else {
+            return []
         }
         defer { IOObjectRelease(iter) }
 
-        // Collect all external (non-Embedded) services
-        var externalServices: [io_service_t] = []
+        // Collect all external (non-Embedded) proxies with their registry IDs and nearby EDID UUIDs.
+        var externals: [(service: io_service_t, registryID: UInt64, edidUUIDs: Set<String>)] = []
         var service = IOIteratorNext(iter)
         while service != 0 {
             let location = registryString(for: "Location", in: service)
-            let isEmbedded = location?.lowercased() == "embedded"
-
-            if !isEmbedded {
-                externalServices.append(service)
-            } else {
+            if location?.lowercased() == "embedded" {
                 IOObjectRelease(service)
+            } else {
+                var registryID: UInt64 = 0
+                _ = IORegistryEntryGetRegistryEntryID(service, &registryID)
+                externals.append((service, registryID, edidUUIDs(near: service)))
             }
             service = IOIteratorNext(iter)
         }
+        defer { for external in externals { IOObjectRelease(external.service) } }
 
-        // If no external services found, return nil
-        guard !externalServices.isEmpty else {
+        guard !externals.isEmpty else {
             log.log("DDC: No external DCPAVServiceProxy services found")
-            return nil
+            return []
         }
 
-        // For single external display, just use it
-        // For multiple externals, try to match by probing DDC — each display
-        // reports its own EDID vendor/model via VCP, so we pick the first that works
-        // (multi-monitor matching by index: external display order matches CGDisplay order)
         let externalDisplayIDs = Self.externalDisplayIDs()
-        let targetIndex = externalDisplayIDs.firstIndex(of: displayID) ?? 0
-        let serviceIndex = min(targetIndex, externalServices.count - 1)
+        let guessIndex = min(externalDisplayIDs.firstIndex(of: displayID) ?? 0, externals.count - 1)
+        // Indices the other connected displays would pick by the same positional rule.
+        let claimedByOthers = Set((0..<min(externalDisplayIDs.count, externals.count)).filter { $0 != guessIndex })
+        let targetUUID = Self.edidUUID(for: displayID)
 
-        let chosen = externalServices[serviceIndex]
-        let avService = createFn(kCFAllocatorDefault, chosen)?.takeRetainedValue()
+        var order: [Int] = []
+        func append(_ index: Int) {
+            if !order.contains(index) { order.append(index) }
+        }
+        if let cached = resolvedProxyIDs[displayID],
+           let cachedIndex = externals.firstIndex(where: { $0.registryID == cached }) {
+            append(cachedIndex)
+        }
+        if let uuid = targetUUID {
+            for (index, external) in externals.enumerated() where external.edidUUIDs.contains(uuid) {
+                append(index)
+            }
+        }
+        append(guessIndex)
+        for index in externals.indices where !claimedByOthers.contains(index) {
+            append(index)
+        }
 
-        log.log("DDC: display=\(displayID) serviceIndex=\(serviceIndex)/\(externalServices.count) avService=\(avService != nil ? "found" : "nil")")
+        log.log("DDC: display=\(displayID) uuid=\(targetUUID ?? "n/a") externalProxies=\(externals.count) externalDisplays=\(externalDisplayIDs.count) candidateOrder=\(order) proxyEDIDs=\(externals.map { Array($0.edidUUIDs).sorted() })")
 
-        for s in externalServices { IOObjectRelease(s) }
-        return avService
+        return order.compactMap { index -> AVServiceCandidate? in
+            let external = externals[index]
+            guard let avService = createFn(kCFAllocatorDefault, external.service)?.takeRetainedValue() else {
+                log.log("DDC: IOAVServiceCreateWithService failed for proxy #\(index)")
+                return nil
+            }
+            return AVServiceCandidate(registryID: external.registryID, service: avService, index: index)
+        }
+    }
+
+    /// EDID UUIDs published in the registry subtree `proxy` belongs to (walking up to three
+    /// ancestors). Each physical display port lives in its own dcp subtree, so a shared
+    /// ancestor identifies the port; once an ancestor's subtree holds more than one proxy the
+    /// walk has left the port and stops.
+    private func edidUUIDs(near proxy: io_service_t) -> Set<String> {
+        var current: io_registry_entry_t = proxy
+        IOObjectRetain(current)
+        defer { IOObjectRelease(current) }
+
+        for _ in 0..<3 {
+            var parent: io_registry_entry_t = 0
+            guard IORegistryEntryGetParentEntry(current, kIOServicePlane, &parent) == KERN_SUCCESS,
+                  parent != 0 else { break }
+            IOObjectRelease(current)
+            current = parent
+
+            var iter: io_iterator_t = 0
+            guard IORegistryEntryCreateIterator(current, kIOServicePlane, IOOptionBits(kIORegistryIterateRecursively), &iter) == KERN_SUCCESS else { break }
+            var proxyCount = 0
+            var found = Set<String>()
+            var child = IOIteratorNext(iter)
+            while child != 0 {
+                if IOObjectConformsTo(child, "DCPAVServiceProxy") != 0 {
+                    proxyCount += 1
+                } else if let uuid = registryString(for: "EDID UUID", in: child) {
+                    found.insert(uuid.uppercased())
+                }
+                IOObjectRelease(child)
+                child = IOIteratorNext(iter)
+            }
+            IOObjectRelease(iter)
+
+            if proxyCount > 1 { break } // ancestor spans several ports — no longer port-specific
+            if !found.isEmpty { return found }
+        }
+        return []
+    }
+
+    /// CoreGraphics' UUID for a display. It is derived from the EDID, so it matches the
+    /// "EDID UUID" the DCP driver publishes in the IORegistry.
+    private static func edidUUID(for displayID: CGDirectDisplayID) -> String? {
+        guard let uuid = CGDisplayCreateUUIDFromDisplayID(displayID)?.takeRetainedValue(),
+              let string = CFUUIDCreateString(kCFAllocatorDefault, uuid) else { return nil }
+        return (string as String).uppercased()
     }
 
     /// Returns ordered list of external display IDs (non-built-in).
@@ -278,10 +367,48 @@ final class DDCService: @unchecked Sendable {
             .filter { CGDisplayIsBuiltin($0) == 0 }
     }
 
+    private func remember(_ candidate: AVServiceCandidate, for displayID: CGDirectDisplayID) {
+        guard resolvedProxyIDs[displayID] != candidate.registryID else { return }
+        resolvedProxyIDs[displayID] = candidate.registryID
+        log.log("DDC: display=\(displayID) answers on DCPAVServiceProxy #\(candidate.index) (registryID=0x\(String(candidate.registryID, radix: 16)))")
+    }
+
+    /// Picks the port a write should go to. Prefers the port that already answered a read for
+    /// this display; otherwise probes the candidates with a read (the VCP being written, then
+    /// brightness) so the write can't land on an empty or neighbouring port. Falls back to the
+    /// first candidate when nothing answers (write-only monitors).
+    private func resolveWriteTarget(
+        from candidates: [AVServiceCandidate],
+        for displayID: CGDirectDisplayID,
+        command: UInt8
+    ) -> AVServiceCandidate? {
+        guard let first = candidates.first else { return nil }
+        if let cached = resolvedProxyIDs[displayID],
+           let candidate = candidates.first(where: { $0.registryID == cached }) {
+            return candidate
+        }
+        if candidates.count == 1 { return first }
+
+        var probes = [command]
+        if command != VCPCode.brightness.rawValue { probes.append(VCPCode.brightness.rawValue) }
+        for vcp in probes {
+            for candidate in candidates {
+                if avServiceRead(command: vcp, on: candidate.service) != nil {
+                    remember(candidate, for: displayID)
+                    usleep(busCooldownMicros)
+                    return candidate
+                }
+            }
+        }
+        log.log("DDC: no port answered a probe read for display \(displayID) — writing to candidate #\(first.index)")
+        return first
+    }
+
     private func avServiceWrite(command: UInt8, value: UInt16, displayID: CGDirectDisplayID) -> Bool {
-        guard let writeFn = avWriteI2CFn,
-              let service = avService(for: displayID) else {
-            print("[Glint] DDC: No IOAVService found for display \(displayID)")
+        guard let writeFn = avWriteI2CFn else { return false }
+        let candidates = avServiceCandidates(for: displayID)
+        guard let target = resolveWriteTarget(from: candidates, for: displayID, command: command) else {
+            log.log("DDC: No IOAVService found for display \(displayID)")
             return false
         }
 
@@ -300,23 +427,38 @@ final class DDCService: @unchecked Sendable {
         data.append(checksum)
 
         let result = data.withUnsafeMutableBufferPointer { buffer -> IOReturn in
-            writeFn(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
+            writeFn(target.service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
         }
 
         if result == KERN_SUCCESS {
             usleep(50_000)
             return true
         }
-        print("[Glint] DDC write failed: \(result)")
+        log.log("DDC write failed on proxy #\(target.index): \(result)")
         return false
     }
 
+    /// Reads a VCP from whichever external port answers for `displayID`, trying the
+    /// candidates in likelihood order and remembering the one that replied.
     private func avServiceRead(command: UInt8, displayID: CGDirectDisplayID) -> DDCReadResult? {
-        guard let writeFn = avWriteI2CFn, let readFn = avReadI2CFn,
-              let service = avService(for: displayID) else {
-            print("[Glint] DDC: No IOAVService found for display \(displayID)")
+        let candidates = avServiceCandidates(for: displayID)
+        guard !candidates.isEmpty else {
+            log.log("DDC: No IOAVService found for display \(displayID)")
             return nil
         }
+        for candidate in candidates {
+            if let result = avServiceRead(command: command, on: candidate.service) {
+                remember(candidate, for: displayID)
+                return result
+            }
+        }
+        return nil
+    }
+
+    /// One DDC GET VCP round-trip on a specific IOAVService. Returns nil when the port has no
+    /// display, the display doesn't answer, or the reply doesn't echo the requested VCP.
+    private func avServiceRead(command: UInt8, on service: AnyObject) -> DDCReadResult? {
+        guard let writeFn = avWriteI2CFn, let readFn = avReadI2CFn else { return nil }
 
         // Step 1: Send GET VCP Feature request
         var sendData: [UInt8] = [
@@ -333,7 +475,7 @@ final class DDCService: @unchecked Sendable {
         }
 
         guard writeResult == KERN_SUCCESS else {
-            print("[Glint] DDC read (write phase) failed: \(writeResult)")
+            log.log("DDC read (write phase) failed: \(writeResult)")
             return nil
         }
 
@@ -347,7 +489,7 @@ final class DDCService: @unchecked Sendable {
         }
 
         guard readResult == KERN_SUCCESS else {
-            print("[Glint] DDC read (read phase) failed: \(readResult)")
+            log.log("DDC read (read phase) failed: \(readResult)")
             return nil
         }
 
@@ -357,7 +499,7 @@ final class DDCService: @unchecked Sendable {
         guard let replyStart = replyData.firstIndex(of: 0x02),
               replyStart + 8 <= replyData.count,
               replyData[replyStart + 2] == command else {
-            print("[Glint] DDC read: invalid reply for VCP 0x\(String(command, radix: 16))")
+            log.log("DDC read: invalid reply for VCP 0x\(String(command, radix: 16)): \(replyData.map { String($0, radix: 16) })")
             return nil
         }
 
