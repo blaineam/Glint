@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.4.4
 
 ### Changed
 - **Apple silicon only** — release builds are now arm64-only (`ARCHS[sdk=macosx*] = arm64`, `EXCLUDED_ARCHS[sdk=macosx*] = x86_64` in `project.yml`). Apple's September 2026 guidance lets apps that require macOS 13+ drop Intel, and macOS 27 runs only on Apple silicon. Intel Macs should stay on v1.4.3.
