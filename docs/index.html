@@ -6,12 +6,11 @@
     <title>Glint — DDC Display Control for Mac</title>
     <meta name="description" content="Control your external monitor's brightness and volume with your Mac keyboard. Tiny, invisible, free.">
 
-    <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
     <link rel="icon" type="image/png" sizes="96x96" href="favicon-96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <meta name="theme-color" content="#0d0b14">
 
-    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://glint.wemiller.com/">
     <meta property="og:title" content="Glint — DDC Display Control for Mac">
@@ -21,188 +20,223 @@
     <meta property="og:image:height" content="630">
     <meta property="og:image:type" content="image/jpeg">
 
-    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Glint — DDC Display Control for Mac">
     <meta name="twitter:description" content="Control your external monitor's brightness and volume with your Mac keyboard. Tiny, invisible, free.">
     <meta name="twitter:image" content="https://glint.wemiller.com/og-poster.jpg">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
+        /* Glint — a sun rising on a dark desk: gold on night. Set like a
+           magazine: one promise, three stories, one download. Glint has no
+           window worth photographing (it is a key and a pill of light), so the
+           hero is the live desk demo and each story draws its one moment in
+           the same vocabulary: a monitor, a key, the on-screen pill. */
         :root {
-            --gold: #FFC238;
-            --amber: #FF991A;
-            --deep: #D97308;
-            --bg-dark: #0a0a12;
-            --bg-card: rgba(255, 255, 255, 0.04);
-            --border: rgba(255, 255, 255, 0.08);
-            --text: #e8e4f0;
-            --text-muted: rgba(255, 255, 255, 0.5);
-            --glass-bg: rgba(255, 255, 255, 0.06);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            --glow-opacity: 0.08;
-            --monitor-bg: #111118;
-            --monitor-border: #2a2a35;
-            --monitor-screen: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
-            --code-bg: rgba(0, 0, 0, 0.3);
-            --key-bg: rgba(255, 255, 255, 0.06);
-            --key-border: rgba(255, 255, 255, 0.15);
+            --gl-gold: #FFC238;
+            --gl-amber: #FF991A;
+            --gl-night: linear-gradient(172deg, #0B0A12 0%, #15121F 55%, #221A26 100%);
+            --gl-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "Segoe UI", sans-serif;
+            --gl-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+            --gl-paper: #FAF8F4;
+            --gl-paper-2: #F2EEE6;
+            --gl-ink: #221A10;          /* headlines on paper */
+            --gl-body: #463F35;
+            --gl-quiet: #6B6254;
+            --gl-accent: #9A5A00;       /* eyebrows and links on paper (AA) */
+            --gl-rule: rgba(34, 26, 16, 0.13);
+            --gl-bezel: #1c1a22;
+            --gl-bezel-edge: #34303d;
+            --gl-screen: linear-gradient(180deg, #2a2640 0%, #15131f 100%);
+            --gl-shadow: 0 30px 50px rgba(40, 28, 10, 0.18), 0 6px 12px rgba(40, 28, 10, 0.10);
+            --gl-measure: 1120px;
         }
-
-        @media (prefers-color-scheme: light) {
+        @media (prefers-color-scheme: dark) {
             :root {
-                --gold: #D9960A;
-                --amber: #CC7A00;
-                --deep: #A85C00;
-                --bg-dark: #f5f3f0;
-                --bg-card: rgba(0, 0, 0, 0.03);
-                --border: rgba(0, 0, 0, 0.08);
-                --text: #1a1820;
-                --text-muted: rgba(0, 0, 0, 0.5);
-                --glass-bg: rgba(255, 255, 255, 0.7);
-                --glass-border: rgba(0, 0, 0, 0.08);
-                --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-                --glow-opacity: 0.04;
-                --monitor-bg: #e8e6e3;
-                --monitor-border: #c8c5c0;
-                --monitor-screen: linear-gradient(180deg, #2a2a3e 0%, #1a1a2a 100%);
-                --code-bg: rgba(0, 0, 0, 0.06);
-                --key-bg: rgba(0, 0, 0, 0.06);
-                --key-border: rgba(0, 0, 0, 0.2);
+                --gl-paper: #0D0B14;
+                --gl-paper-2: #13101C;
+                --gl-ink: #F6F1E7;
+                --gl-body: #D6D0C4;
+                --gl-quiet: #A39C8F;
+                --gl-accent: #FFC238;
+                --gl-rule: rgba(246, 241, 231, 0.12);
+                --gl-shadow: 0 30px 50px rgba(0, 0, 0, 0.55), 0 6px 12px rgba(0, 0, 0, 0.3);
             }
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--gl-sans); background: var(--gl-paper); color: var(--gl-body); line-height: 1.6; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--gl-gold); outline-offset: 3px; border-radius: 6px; }
 
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            overflow-x: hidden;
-            line-height: 1.6;
-        }
+        /* ---- Nav ------------------------------------------------------------ */
+        .gl-nav { position: absolute; top: 0; left: 0; right: 0; z-index: 20; color: #fff; }
+        .gl-nav-row { max-width: var(--gl-measure); margin: 0 auto; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+        .gl-logo { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; }
+        .gl-nav-dl { margin-left: auto; color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 600; padding: 0.45rem 0.95rem; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.28); white-space: nowrap; }
+        .gl-nav-dl:hover { background: rgba(255, 255, 255, 0.08); }
 
-        /* Ambient glow */
-        body::before {
-            content: '';
-            position: fixed;
-            top: -30%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(255, 194, 56, var(--glow-opacity)) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
+        /* ---- Shared type ---------------------------------------------------- */
+        .gl-eyebrow { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gl-accent); margin: 0 0 1rem; }
+        .gl-eyebrow .gl-num { font-family: var(--gl-mono); font-weight: 500; letter-spacing: 0.04em; margin-right: 0.8em; opacity: 0.85; }
+        .gl-display { font-weight: 700; color: var(--gl-ink); font-size: clamp(2.1rem, 5.2vw, 3.6rem); line-height: 1.06; letter-spacing: -0.03em; margin: 0 0 1.4rem; text-wrap: balance; }
+        .gl-lede { font-size: clamp(1.12rem, 1.9vw, 1.36rem); line-height: 1.62; color: var(--gl-body); margin: 0 0 1.2rem; text-wrap: pretty; }
+        .gl-faq-answer a, .gl-lede a { color: var(--gl-accent); }
 
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-            padding: 0 24px;
-            position: relative;
-            z-index: 1;
+        /* ---- Buttons -------------------------------------------------------- */
+        .gl-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+        .gl-btn {
+            display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
+            padding: 0.8rem 1.6rem; border-radius: 999px; font: 600 1.02rem/1.2 var(--gl-sans); text-decoration: none;
+            background: linear-gradient(180deg, #FFD36B, #FFB02E); color: #2A1A00;
+            box-shadow: 0 10px 28px rgba(255, 176, 46, 0.28); transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+        .gl-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(255, 176, 46, 0.38); }
+        .gl-alt-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem 0.7rem; margin: 1.1rem 0 0; font-size: 0.95rem; color: rgba(255, 255, 255, 0.55); }
+        .gl-alt-links a { color: rgba(255, 255, 255, 0.86); text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.3); }
+        .gl-alt-links a:hover { border-bottom-color: rgba(255, 255, 255, 0.85); }
+        .gl-requires { margin: 0.9rem 0 0; font-size: 0.85rem; color: rgba(255, 255, 255, 0.5); }
 
-        /* NAV */
-        nav {
-            padding: 20px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* ---- Hero ----------------------------------------------------------- */
+        .gl-hero {
+            position: relative; overflow: hidden; text-align: center; color: #fff;
+            padding: calc(64px + clamp(2.5rem, 7vw, 5.5rem)) 16px clamp(3rem, 7vw, 5rem);
+            background:
+                radial-gradient(ellipse 55% 45% at 50% 0%, rgba(255, 194, 56, 0.22) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255, 153, 26, 0.12) 0%, transparent 70%),
+                var(--gl-night);
         }
-        .logo {
-            font-size: 1.4rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--gold), var(--amber));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.02em;
-        }
-        nav a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        nav a:hover { color: var(--gold); }
-        .nav-links { display: flex; gap: 24px; }
+        .gl-hero-icon { width: 84px; height: 84px; display: block; margin: 0 auto 1.3rem; filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.5)); }
+        .gl-hero-kicker { font-size: 0.82rem; letter-spacing: 0.26em; text-transform: uppercase; color: rgba(255, 194, 56, 0.92); margin: 0 0 1.1rem; font-weight: 600; }
+        .gl-hero h1 { font-weight: 800; color: #fff; font-size: clamp(2.6rem, 8.4vw, 6.2rem); line-height: 1.02; letter-spacing: -0.035em; max-width: 13ch; margin: 0 auto 1.5rem; text-wrap: balance; }
+        .gl-hero h1 span { background: linear-gradient(180deg, #FFD36B, #FF991A); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .gl-hero-standfirst { font-size: clamp(1.08rem, 2vw, 1.34rem); line-height: 1.6; color: rgba(255, 255, 255, 0.8); max-width: 44ch; margin: 0 auto 2.1rem; text-wrap: pretty; }
+        .gl-hero-demo { margin: clamp(2.5rem, 6vw, 4rem) auto 0; max-width: 720px; }
+        .gl-hero-caption { text-align: center; font-size: 0.88rem; color: rgba(255, 255, 255, 0.55); margin: 1rem 0 0; }
+        .gl-hero-caption::before { content: ""; display: block; width: 18px; height: 1px; margin: 0 auto 0.6rem; background: var(--gl-gold); }
 
-        /* HERO */
-        .hero {
-            text-align: center;
-            padding: 80px 0 60px;
-        }
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            margin-bottom: 16px;
-            line-height: 1.1;
-        }
-        .hero h1 span {
-            background: linear-gradient(135deg, var(--gold), var(--amber), var(--deep));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .hero .subtitle {
-            font-size: 1.25rem;
-            color: var(--text-muted);
-            max-width: 520px;
-            margin: 0 auto 32px;
-            font-weight: 400;
-        }
-        .hero-cta {
-            display: inline-flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            text-decoration: none;
-            transition: all 0.2s;
-            cursor: pointer;
-            border: none;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, var(--gold), var(--amber));
-            color: #1a1000;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(255, 194, 56, 0.3);
-        }
-        .btn-secondary {
-            background: var(--glass-bg);
-            color: var(--text);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(12px);
-        }
-        .btn-secondary:hover {
-            background: var(--glass-bg);
-            border-color: var(--glass-border);
-        }
-        .badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: rgba(255, 194, 56, 0.12);
-            color: var(--gold);
-            border: 1px solid rgba(255, 194, 56, 0.2);
-            margin-bottom: 20px;
-        }
+        /* ---- Statement ------------------------------------------------------ */
+        .gl-statement { max-width: 900px; margin: 0 auto; padding: clamp(4rem, 10vw, 7rem) 16px; text-align: center; }
+        .gl-statement p { font-size: clamp(1.5rem, 3.6vw, 2.5rem); line-height: 1.28; font-weight: 600; letter-spacing: -0.02em; color: var(--gl-ink); margin: 0; text-wrap: balance; }
+        .gl-sun { display: block; width: 44px; height: 22px; margin: 0 auto 1.8rem; border-radius: 44px 44px 0 0; background: radial-gradient(circle at 50% 100%, #FFE29A 0%, #FFC238 55%, #FF991A 100%); }
 
+        /* ---- Chapters ------------------------------------------------------- */
+        .gl-chapter { max-width: var(--gl-measure); margin: 0 auto; padding: clamp(4rem, 9vw, 7rem) 16px; border-top: 1px solid var(--gl-rule); }
+        .gl-spread { display: grid; gap: clamp(2.5rem, 6vw, 5rem); align-items: center; }
+        .gl-copy { max-width: 34rem; }
+        @media (min-width: 900px) {
+            .gl-spread { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
+            .gl-chapter.is-flipped .gl-spread { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+            .gl-chapter.is-flipped .gl-copy { order: 2; }
+        }
+        .gl-figure { margin: 0 auto; width: min(92vw, 520px); max-width: 100%; text-align: center; }
+        .gl-figure figcaption { font-size: 0.88rem; line-height: 1.45; color: var(--gl-quiet); margin-top: 1.1rem; }
+        .gl-figure figcaption::before { content: ""; display: block; width: 18px; height: 1px; margin: 0 auto 0.6rem; background: var(--gl-accent); }
+
+        /* ---- Story vignettes: a monitor, its pill, a key -------------------- */
+        .gl-scene { position: relative; display: flex; justify-content: center; align-items: flex-end; gap: 6%; padding: 4% 0 0; }
+        .gl-mon { position: relative; width: 78%; }
+        .gl-scene.is-pair .gl-mon { width: 47%; }
+        .gl-mon-screen {
+            position: relative; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden;
+            background: var(--gl-screen); border: 5px solid var(--gl-bezel); box-shadow: var(--gl-shadow);
+            outline: 1px solid var(--gl-bezel-edge); outline-offset: -1px;
+        }
+        .gl-mon-screen::after { content: ""; position: absolute; inset: 0; background: #fff; opacity: var(--lit, 0); }
+        .gl-mon-neck { width: 10%; height: 18px; margin: 0 auto; background: var(--gl-bezel-edge); }
+        .gl-mon-foot { width: 32%; height: 5px; margin: 0 auto; border-radius: 3px; background: var(--gl-bezel-edge); }
+        .gl-pill {
+            position: absolute; z-index: 1; top: 12%; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 100px;
+            background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            color: #fff; font-size: 11px; white-space: nowrap;
+        }
+        .gl-pill-bar { width: 64px; height: 4px; border-radius: 100px; background: rgba(255, 255, 255, 0.18); overflow: hidden; }
+        .gl-pill-bar i { display: block; height: 100%; border-radius: 100px; background: rgba(255, 255, 255, 0.88); }
+        .gl-pill b { font: 500 9px/1 var(--gl-sans); color: rgba(255, 255, 255, 0.6); font-variant-numeric: tabular-nums; }
+        .gl-cursor { position: absolute; z-index: 2; width: 16px; height: 22px; right: 22%; bottom: 26%; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+        .gl-keys { display: flex; justify-content: center; gap: 8px; margin-top: 1.4rem; }
+        .gl-key {
+            width: 40px; height: 34px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px;
+            background: var(--gl-paper-2); border: 1px solid var(--gl-rule); box-shadow: 0 2px 0 var(--gl-rule);
+        }
+        .gl-key.is-down { background: rgba(255, 194, 56, 0.22); border-color: var(--gl-gold); box-shadow: 0 0 14px rgba(255, 194, 56, 0.35); }
+        .gl-waves { position: absolute; z-index: 1; right: 7%; bottom: 12%; width: 22%; color: rgba(255, 210, 120, 0.9); }
+
+        /* ---- Trust ---------------------------------------------------------- */
+        .gl-trust { background: radial-gradient(ellipse 50% 40% at 50% 0%, rgba(255, 194, 56, 0.14) 0%, transparent 70%), var(--gl-night); color: #fff; padding: clamp(4.5rem, 10vw, 8rem) 16px; }
+        .gl-trust-inner { max-width: var(--gl-measure); margin: 0 auto; text-align: center; }
+        .gl-trust .gl-eyebrow { color: var(--gl-gold); }
+        .gl-trust .gl-display { color: #fff; font-size: clamp(2.3rem, 6.4vw, 4.6rem); max-width: 14ch; margin: 0 auto 3rem; }
+        .gl-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); border-top: 1px solid rgba(255, 255, 255, 0.18); }
+        .gl-badge { border-bottom: 1px solid rgba(255, 255, 255, 0.18); padding: 1.1rem 0.4rem; font-size: 1.08rem; font-weight: 500; color: rgba(255, 255, 255, 0.92); }
+        .gl-badge .gl-mono { font-family: var(--gl-mono); color: var(--gl-gold); margin-right: 0.45em; }
+        .gl-trust-note { font-size: clamp(1.08rem, 2.1vw, 1.26rem); line-height: 1.6; color: rgba(255, 255, 255, 0.82); max-width: 40ch; margin: 2.6rem auto 0; text-wrap: pretty; }
+        .gl-trust-link { margin: 1.4rem 0 0; }
+        .gl-trust-link a { color: var(--gl-gold); text-decoration: none; border-bottom: 1px solid rgba(255, 194, 56, 0.4); }
+        .gl-trust-link a:hover { border-bottom-color: var(--gl-gold); }
+
+        /* ---- FAQ ------------------------------------------------------------ */
+        .gl-faq { max-width: 820px; margin: 0 auto; padding: clamp(4rem, 9vw, 6rem) 16px; }
+        .gl-faq .gl-eyebrow, .gl-faq h2 { text-align: center; }
+        .gl-faq h2 { font-weight: 700; color: var(--gl-ink); font-size: clamp(1.9rem, 4vw, 2.8rem); letter-spacing: -0.025em; margin: 0 0 2.5rem; }
+        .gl-faq-item { border-top: 1px solid var(--gl-rule); scroll-margin-top: 24px; }
+        .gl-faq-item:last-child { border-bottom: 1px solid var(--gl-rule); }
+        .gl-faq-item summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 1rem; font-size: 1.1rem; font-weight: 600; color: var(--gl-ink); padding: 1.25rem 0; }
+        .gl-faq-item summary::-webkit-details-marker { display: none; }
+        .gl-faq-item summary::after { content: "+"; font: 400 1.4rem/1 var(--gl-mono); color: var(--gl-accent); flex: none; transition: transform 0.2s ease; }
+        .gl-faq-item[open] summary::after { transform: rotate(45deg); }
+        .gl-faq-item summary:hover { color: var(--gl-accent); }
+        .gl-faq-answer { padding: 0 0 1.4rem; font-size: 1rem; line-height: 1.68; color: var(--gl-body); }
+        .gl-faq-answer code { font-family: var(--gl-mono); font-size: 0.92em; background: var(--gl-paper-2); padding: 0.1em 0.35em; border-radius: 5px; }
+
+        /* ---- Closing -------------------------------------------------------- */
+        .gl-closing { text-align: center; padding: clamp(4.5rem, 10vw, 7rem) 16px; background: radial-gradient(ellipse 55% 60% at 50% 100%, rgba(255, 194, 56, 0.14) 0%, transparent 70%), var(--gl-paper-2); border-top: 1px solid var(--gl-rule); }
+        .gl-closing img { width: 96px; height: 96px; display: block; margin: 0 auto 1.6rem; filter: drop-shadow(0 16px 26px rgba(40, 28, 10, 0.3)); }
+        .gl-closing .gl-display { font-size: clamp(2rem, 5vw, 3.4rem); max-width: 14ch; margin: 0 auto 1.8rem; }
+        .gl-closing .gl-display span { color: var(--gl-accent); }
+        .gl-closing .gl-alt-links, .gl-closing .gl-requires { color: var(--gl-quiet); }
+        .gl-closing .gl-alt-links a { color: var(--gl-ink); border-bottom-color: var(--gl-rule); }
+
+        footer { padding: 2.2rem 16px 5.5rem; text-align: center; font-size: 0.85rem; color: var(--gl-quiet); }
+        footer a { color: var(--gl-accent); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        /* ---- Reveal --------------------------------------------------------- */
+        .gl-motion [data-reveal] { opacity: 0; transform: translateY(24px); transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+        .gl-motion [data-reveal].is-in { opacity: 1; transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            .gl-btn, .gl-faq-item summary::after, .key, .osd, .osd-fill, .brightness-overlay { transition: none; }
+            .gl-btn:hover { transform: none; }
+        }
+        @media (max-width: 600px) {
+            .gl-hero-icon { width: 68px; height: 68px; }
+            .gl-cta { flex-direction: column; align-items: stretch; max-width: 22rem; margin: 0 auto; }
+            .gl-alt-links { flex-direction: column; align-items: center; gap: 0.6rem; }
+            .gl-alt-links span[aria-hidden] { display: none; }
+            .gl-pill { font-size: 9px; gap: 6px; padding: 4px 9px; }
+            .gl-pill-bar { width: 44px; }
+        }
+        .gl-hero h1, .gl-display, .gl-statement p { word-break: auto-phrase; }
+        /* The Japanese headline is two full clauses; set CJK a size down so each fits one line. */
+        :lang(ja) .gl-hero h1, :lang(zh) .gl-hero h1, :lang(ko) .gl-hero h1 { max-width: 12em; font-size: clamp(2.2rem, 6.2vw, 4.8rem); }
+        :lang(ja) .gl-trust .gl-display, :lang(zh) .gl-trust .gl-display, :lang(ko) .gl-trust .gl-display,
+        :lang(ja) .gl-closing .gl-display, :lang(zh) .gl-closing .gl-display, :lang(ko) .gl-closing .gl-display { max-width: 10em; }
+        :lang(ja) .gl-hero-standfirst, :lang(zh) .gl-hero-standfirst, :lang(ko) .gl-hero-standfirst,
+        :lang(ja) .gl-trust-note, :lang(zh) .gl-trust-note, :lang(ko) .gl-trust-note { max-width: 26em; }
+
+        /* ═══════════════ The live desk demo (hero) ═══════════════ */
+        .gl-hero {
+            --gold: #FFC238;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.10);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --monitor-bg: #111118;
+            --monitor-border: #2a2a35;
+            --monitor-screen: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+            --key-bg: rgba(255, 255, 255, 0.06);
+            --key-border: rgba(255, 255, 255, 0.15);
+            --text-muted: rgba(255, 255, 255, 0.5);
+        }
         /* DEMO SECTION */
         .demo-section {
             padding: 40px 0 80px;
@@ -372,182 +406,8 @@
             transition: opacity 0.5s;
             pointer-events: none;
         }
-
-        /* FEATURES */
-        .features {
-            padding: 80px 0;
-        }
-        .features h2 {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 48px;
-        }
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-        }
-        .feature-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 24px;
-            backdrop-filter: blur(12px);
-            transition: all 0.3s;
-        }
-        .feature-card:hover {
-            border-color: rgba(255, 194, 56, 0.2);
-            background: var(--glass-bg);
-            transform: translateY(-2px);
-        }
-        .feature-icon {
-            font-size: 1.8rem;
-            margin-bottom: 12px;
-        }
-        .feature-card h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-        .feature-card p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-
-        /* SIZE CALLOUT */
-        .size-callout {
-            text-align: center;
-            padding: 60px 0;
-        }
-        .size-number {
-            font-size: 5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--gold), var(--amber));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            line-height: 1;
-        }
-        .size-unit {
-            font-size: 2rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-        .size-callout p {
-            color: var(--text-muted);
-            margin-top: 8px;
-            font-size: 1.1rem;
-        }
-
-        /* SUPPORT */
-        .support {
-            text-align: center;
-            padding: 20px 0 40px;
-        }
-        .support-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 48px 32px;
-            backdrop-filter: blur(12px);
-        }
-        .support h2 {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-        }
-        .support p {
-            color: var(--text-muted);
-            max-width: 520px;
-            margin: 0 auto 28px;
-            font-size: 1.05rem;
-        }
-        .support-buttons {
-            display: inline-flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .support .support-more {
-            margin: 20px auto 0;
-            font-size: 0.9rem;
-        }
-        .support-more a {
-            color: var(--gold);
-            text-decoration: none;
-            font-weight: 600;
-        }
-        .support-more a:hover { text-decoration: underline; }
-
-        /* FAQ */
-        .faq {
-            padding: 80px 0;
-        }
-        .faq h2 {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 40px;
-        }
-        .faq-item {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            margin-bottom: 8px;
-            overflow: hidden;
-            backdrop-filter: blur(12px);
-        }
-        .faq-question {
-            padding: 18px 24px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 600;
-            font-size: 0.95rem;
-            user-select: none;
-        }
-        .faq-question:hover { background: var(--bg-card); }
-        .faq-arrow {
-            transition: transform 0.3s;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-        .faq-item.open .faq-arrow { transform: rotate(180deg); }
-        .faq-answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease, padding 0.3s;
-            padding: 0 24px;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            line-height: 1.7;
-        }
-        .faq-item.open .faq-answer {
-            max-height: 300px;
-            padding: 0 24px 18px;
-        }
-
-        /* FOOTER */
-        footer {
-            text-align: center;
-            padding: 60px 0 40px;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            border-top: 1px solid var(--border);
-        }
-        footer a {
-            color: var(--gold);
-            text-decoration: none;
-        }
-
-        @media (max-width: 640px) {
-            .hero h1 { font-size: 2.2rem; }
-            .hero .subtitle { font-size: 1rem; }
-            .size-number { font-size: 3.5rem; }
-            .demo-container { padding: 20px; }
-        }
+        .osd-value { font-family: var(--gl-sans); }
+        @media (max-width: 640px) { .demo-container { padding: 18px; } .key { width: 24px; height: 21px; } }
     </style>
   <link rel="alternate" hreflang="x-default" href="https://glint.wemiller.com/">
   <link rel="alternate" hreflang="en" href="https://glint.wemiller.com/">
@@ -559,39 +419,33 @@
   <link rel="alternate" hreflang="ko" href="https://glint.wemiller.com/?lang=ko">
   <link rel="alternate" hreflang="pt-BR" href="https://glint.wemiller.com/?lang=pt-BR">
   <link rel="alternate" hreflang="it" href="https://glint.wemiller.com/?lang=it">
-  <script src="i18n/i18n.js" defer data-page="index" data-pos="bottom-left"></script>
+  <script src="i18n/i18n.js?v=2" defer data-page="index" data-pos="bottom-left"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- NAV -->
-        <nav>
-            <div class="logo" data-i18n="glint.ba6f87">✨ Glint</div>
-            <div class="nav-links">
-                <a href="#features" data-i18n="features.fc338f">Features</a>
-                <a href="#faq" data-i18n="faq.03688b">FAQ</a>
-                <a href="https://github.com/blaineam/Glint">GitHub</a>
-            </div>
-        </nav>
 
-        <!-- HERO -->
-        <section class="hero">
-            <div class="badge" data-i18n="under-1-mb-zero.014232">🪶 Under 1 MB — zero dependencies</div>
-            <h1 data-i18n-html="your-keyboard-your-monitor.69fac5">Your keyboard.<br><span>Your monitor.</span></h1>
-            <p class="subtitle" data-i18n="control-your-external-display.5532e9">
-                Control your external display's brightness and volume with the keys that should have worked all along. Free, open source, invisible.
-            </p>
-            <div class="hero-cta">
-                <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="btn btn-primary" data-i18n="download-for-mac.ec8653">
-                    ⬇ Download for Mac
-                </a>
-                <a href="https://github.com/blaineam/Glint" class="btn btn-secondary" data-i18n="view-on-github.0c7799">
-                    View on GitHub
-                </a>
-            </div>
-        </section>
+<nav class="gl-nav">
+    <div class="gl-nav-row">
+        <a href="#" class="gl-logo" data-i18n="glint.ba6f87">✨ Glint</a>
+        <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="gl-nav-dl" data-i18n="download.a479c9">Download</a>
+    </div>
+</nav>
 
-        <!-- DEMO -->
-        <section class="demo-section">
+<!-- Hero: the promise, one download, and the desk the keys finally reach. -->
+<header class="gl-hero">
+    <img class="gl-hero-icon" src="apple-touch-icon.png" alt="Glint app icon" width="360" height="360">
+    <p class="gl-hero-kicker">Glint</p>
+    <h1 data-i18n-html="your-keyboard-your-monitor.69fac5">Your keyboard.<br><span>Your monitor.</span></h1>
+    <p class="gl-hero-standfirst" data-i18n="the-brightness-and-volume.07301d">The brightness and volume keys on your Mac finally work on your external display. Free, open source and under 1 MB.</p>
+    <div class="gl-cta">
+        <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="gl-btn" data-cta data-i18n="download-for-mac.752ca6">Download for Mac</a>
+    </div>
+    <p class="gl-alt-links">
+        <a href="#homebrew" data-i18n="install-with-homebrew.59d2db">Install with Homebrew</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/blaineam/Glint" target="_blank" rel="noopener noreferrer" data-i18n="source-on-github.c60f2f">Source on GitHub</a>
+    </p>
+    <p class="gl-requires" data-i18n="macos-13-or-later.9e06e8">macOS 13 or later on Apple silicon · notarized by Apple</p>
+    <div class="gl-hero-demo">
             <div class="demo-container">
                 <div class="desk-scene" id="deskScene">
                     <!-- Monitor -->
@@ -629,171 +483,163 @@
                     </div>
                 </div>
             </div>
-        </section>
-
-        <!-- FEATURES -->
-        <section class="features" id="features">
-            <h2 data-i18n="everything-you-need-nothing.4ebce7">Everything you need. Nothing you don't.</h2>
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🔆</div>
-                    <h3 data-i18n="hardware-brightness.dc33d0">Hardware Brightness</h3>
-                    <p data-i18n="controls-your-monitor-s.4cf378">Controls your monitor's actual backlight via DDC — not a software overlay or gamma trick.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔊</div>
-                    <h3 data-i18n="smart-volume.80612c">Smart Volume</h3>
-                    <p data-i18n="uses-ddc-when-audio.942959">Uses DDC when audio goes to HDMI, DisplayPort, or USB-C (even through hubs). Falls back to system volume for built-in speakers, headphones, or Bluetooth.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3 data-i18n="cursor-aware.0b8448">Cursor-Aware</h3>
-                    <p data-i18n="brightness-keys-adjust-only.12d4eb">Brightness keys adjust only the display your cursor is on. No more changing every screen at once.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔄</div>
-                    <h3 data-i18n="sync-mode.5b91e2">Sync Mode</h3>
-                    <p data-i18n="syncs-all-displays-to.6b1b52">Syncs all displays to the same brightness on first press, then adjusts every screen in lockstep.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">👻</div>
-                    <h3 data-i18n="invisible-mode.5d78f0">Invisible Mode</h3>
-                    <p data-i18n="hide-from-the-menu.bcff77">Hide from the menu bar and dock entirely. Completely out of sight, always listening.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🪶</div>
-                    <h3 data-i18n="featherweight.96bfa8">Featherweight</h3>
-                    <p data-i18n="under-1-mb-zero.ed10ee">Under 1 MB, zero dependencies, negligible CPU/memory. Pure Swift + IOKit.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🪵</div>
-                    <h3 data-i18n="debug-logging.9d0eb7">Debug Logging</h3>
-                    <p data-i18n="optional-diagnostic-log-records.d0293e">Optional diagnostic log records every DDC command and audio routing decision. Reveal in Finder with one click.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3 data-i18n="private-secure.2f1e67">Private & Secure</h3>
-                    <p data-i18n="zero-telemetry-zero-tracking.9f2b8c">Zero telemetry, zero tracking, zero analytics. No server infrastructure — Glint works entirely on-device. Security audited to ensure your data never leaves your Mac.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🆓</div>
-                    <h3 data-i18n="free-open-source.e3a76e">Free & Open Source</h3>
-                    <p data-i18n="mit-licensed-no-accounts.ddcb0b">MIT licensed. No accounts, no subscriptions. Read every line of code on GitHub.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- SIZE CALLOUT -->
-        <section class="size-callout">
-            <div class="size-number">&lt;1</div>
-            <div class="size-unit" data-i18n="megabyte.003b8a">megabyte</div>
-            <p data-i18n="no-electron-no-frameworks.5c8180">No Electron. No frameworks. Just your keyboard and your display.</p>
-        </section>
-
-        <!-- SUPPORT -->
-        <section class="support" id="support">
-            <div class="support-card">
-                <h2 data-i18n="support-future-development.921741">Support future development</h2>
-                <p data-i18n="glint-is-free-no.732582">Glint is free — no ads, no tracking, no subscription. If it earns a place on your Mac, you can help fund what comes next.</p>
-                <div class="support-buttons">
-                    <a href="https://github.com/sponsors/blaineam" class="btn btn-primary" target="_blank" rel="noopener" data-i18n="sponsor-on-github.f22fdf">Sponsor on GitHub</a>
-                    <a href="https://ko-fi.com/wemiller" class="btn btn-secondary" target="_blank" rel="noopener" data-i18n="buy-me-a-coffee.149bea">Buy me a coffee on Ko-fi</a>
-                </div>
-                <p class="support-more"><a href="https://wemiller.com/support/" target="_blank" rel="noopener" data-i18n="all-the-ways-to.53ba1c">All the ways to support →</a></p>
-            </div>
-        </section>
-
-        <!-- FAQ -->
-        <section class="faq" id="faq">
-            <h2 data-i18n="frequently-asked-questions.d790b4">Frequently Asked Questions</h2>
-
-            <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)" data-i18n-html="does-glint-work-with.d6adce">
-                    Does Glint work with my monitor?
-                    <span class="faq-arrow">▼</span>
-                </div>
-                <div class="faq-answer" data-i18n="most-external-monitors-support.ba4369">
-                    Most external monitors support DDC/CI. If your monitor has an OSD with brightness/volume controls, it almost certainly supports DDC. Works over HDMI, DisplayPort, and USB-C/Thunderbolt — including through USB-C hubs and docks. Glint automatically detects monitor audio routed through hubs.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)" data-i18n-html="why-does-glint-need.ed82a5">
-                    Why does Glint need Accessibility access?
-                    <span class="faq-arrow">▼</span>
-                </div>
-                <div class="faq-answer" data-i18n="to-intercept-media-key.1af391">
-                    To intercept media key events before macOS processes them, Glint uses a CGEventTap, which requires Accessibility permission. Without it, Glint can't detect brightness/volume key presses. This is a standard macOS security requirement for any app that reads keyboard input. After enabling access, you'll need to quit and relaunch Glint for it to take effect.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)" data-i18n-html="is-this-safe-why.668062">
-                    Is this safe? Why isn't it on the Mac App Store?
-                    <span class="faq-arrow">▼</span>
-                </div>
-                <div class="faq-answer" data-i18n="glint-is-open-source.a73bdf">
-                    Glint is open source (read every line!) and notarized by Apple (malware-scanned). There is no telemetry or tracking of any kind — no analytics, no crash reporters, no network calls home. No server infrastructure is used or needed for Glint to work; everything runs entirely on your Mac. The app has been security audited to ensure the utmost care in being a safe app for use. DDC requires IOKit I2C access, which the App Store sandbox blocks. This is the same reason BetterDisplay, MonitorControl, and Lunar distribute outside the Store.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)" data-i18n-html="how-do-i-get.ddd26b">
-                    How do I get settings back after hiding the menu bar icon?
-                    <span class="faq-arrow">▼</span>
-                </div>
-                <div class="faq-answer" data-i18n="open-glint-from-your.ed0a6d">
-                    Open Glint from your Applications folder (or Spotlight search for "Glint"). When the app detects it's being re-opened, it automatically shows the settings window.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)" data-i18n-html="can-i-control-multiple.c28f60">
-                    Can I control multiple monitors?
-                    <span class="faq-arrow">▼</span>
-                </div>
-                <div class="faq-answer" data-i18n="yes-glint-detects-all.4a21d0">
-                    Yes! Glint detects all connected external displays. With sync mode off, brightness keys adjust only the display your cursor is on. With sync mode on, all displays (including the built-in screen) are synced to the same brightness on first press, then adjusted together.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)" data-i18n-html="what-s-the-cpu.75ae43">
-                    What's the CPU/memory usage?
-                    <span class="faq-arrow">▼</span>
-                </div>
-                <div class="faq-answer" data-i18n="effectively-zero-when-idle.81fe80">
-                    Effectively zero when idle. Glint uses a CGEventTap which is interrupt-driven — no polling, no timers, no background threads. Memory footprint is under 15 MB.
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question" onclick="toggleFaq(this)" data-i18n-html="does-it-conflict-with.139c10">
-                    Does it conflict with BetterDisplay / MonitorControl?
-                    <span class="faq-arrow">▼</span>
-                </div>
-                <div class="faq-answer" data-i18n="possibly-if-two-apps.434ac2">
-                    Possibly — if two apps both intercept the same media keys, they may interfere. We recommend using one DDC controller at a time.
-                </div>
-            </div>
-        </section>
-
-        <!-- FOOTER -->
-        <footer>
-            <p data-i18n-html="glint-free-open-source.2f98fa">
-                ✨ Glint — free, open source, <a href="https://github.com/blaineam/Glint/blob/main/LICENSE">MIT License</a>
-                <br>
-                Built by <a href="https://github.com/blaineam">Blaine Miller</a>
-            </p>
-        </footer>
+        <p class="gl-hero-caption" data-i18n="press-a-key-the.b211ad">Press a key. The monitor answers.</p>
     </div>
+</header>
 
-    <script>
-        // FAQ toggle
-        function toggleFaq(el) {
-            el.parentElement.classList.toggle('open');
-        }
+<section class="gl-statement">
+    <span class="gl-sun" aria-hidden="true"></span>
+    <p data-i18n="no-electron-no-frameworks.5c8180">No Electron. No frameworks. Just your keyboard and your display.</p>
+</section>
 
+<!-- Three stories: one idea, one headline, two sentences at most, one picture. -->
+<main id="stories">
+    <section class="gl-chapter" id="brightness">
+        <div class="gl-spread">
+            <div class="gl-copy" data-reveal>
+                <p class="gl-eyebrow"><span class="gl-num">01</span><span data-i18n="brightness.e1a2b6">Brightness</span></p>
+                <h2 class="gl-display" data-i18n="the-real-backlight-not.41d1a9">The real backlight, not a filter</h2>
+                <p class="gl-lede" data-i18n="glint-talks-to-your.56a6d1">Glint talks to your monitor over DDC, the same channel its own buttons use. The backlight itself gets brighter or dimmer, not a gray layer on top.</p>
+            </div>
+            <figure class="gl-figure" data-reveal aria-hidden="true">
+                <div class="gl-scene">
+                    <div class="gl-mon">
+                        <div class="gl-mon-screen" style="--lit: 0.16">
+                            <div class="gl-pill"><span>☀️</span><span class="gl-pill-bar"><i style="width: 80%"></i></span><b>80</b></div>
+                        </div>
+                        <div class="gl-mon-neck"></div>
+                        <div class="gl-mon-foot"></div>
+                    </div>
+                </div>
+                <div class="gl-keys"><span class="gl-key">🔅</span><span class="gl-key is-down">🔆</span></div>
+            </figure>
+        </div>
+    </section>
+
+    <section class="gl-chapter is-flipped" id="cursor">
+        <div class="gl-spread">
+            <div class="gl-copy" data-reveal>
+                <p class="gl-eyebrow"><span class="gl-num">02</span><span data-i18n="two-screens.92d3f3">Two screens</span></p>
+                <h2 class="gl-display" data-i18n="the-screen-under-your.567e02">The screen under your cursor</h2>
+                <p class="gl-lede" data-i18n="brightness-keys-change-only.fd9ba0">Brightness keys change only the display your cursor is on. Turn on sync mode and every screen moves together.</p>
+            </div>
+            <figure class="gl-figure" data-reveal aria-hidden="true">
+                <div class="gl-scene is-pair">
+                    <div class="gl-mon">
+                        <div class="gl-mon-screen" style="--lit: 0"></div>
+                        <div class="gl-mon-neck"></div>
+                        <div class="gl-mon-foot"></div>
+                    </div>
+                    <div class="gl-mon">
+                        <div class="gl-mon-screen" style="--lit: 0.2">
+                            <div class="gl-pill"><span>☀️</span><span class="gl-pill-bar"><i style="width: 90%"></i></span><b>90</b></div>
+                            <svg class="gl-cursor" viewBox="0 0 14 20" fill="none"><path d="M1 1l4.5 17L7.5 11l6.5-2L1 1z" fill="#fff" stroke="#000" stroke-width="1"/></svg>
+                        </div>
+                        <div class="gl-mon-neck"></div>
+                        <div class="gl-mon-foot"></div>
+                    </div>
+                </div>
+                <div class="gl-keys"><span class="gl-key">🔅</span><span class="gl-key is-down">🔆</span></div>
+            </figure>
+        </div>
+    </section>
+
+    <section class="gl-chapter" id="volume">
+        <div class="gl-spread">
+            <div class="gl-copy" data-reveal>
+                <p class="gl-eyebrow"><span class="gl-num">03</span><span data-i18n="sound.b4e3ef">Sound</span></p>
+                <h2 class="gl-display" data-i18n="volume-where-the-sound.2ba91c">Volume where the sound is</h2>
+                <p class="gl-lede" data-i18n="when-audio-plays-through.9097d5">When audio plays through your monitor over HDMI, DisplayPort or USB-C, even through a hub, the volume keys drive its speakers. Headphones and AirPods work as they always have.</p>
+            </div>
+            <figure class="gl-figure" data-reveal aria-hidden="true">
+                <div class="gl-scene">
+                    <div class="gl-mon">
+                        <div class="gl-mon-screen" style="--lit: 0.06">
+                            <div class="gl-pill"><span>🔊</span><span class="gl-pill-bar"><i style="width: 62%"></i></span><b>62</b></div>
+                            <svg class="gl-waves" viewBox="0 0 40 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 11v10M15 7v18M22 3v26M29 8v16M36 12v8"/></svg>
+                        </div>
+                        <div class="gl-mon-neck"></div>
+                        <div class="gl-mon-foot"></div>
+                    </div>
+                </div>
+                <div class="gl-keys"><span class="gl-key">🔇</span><span class="gl-key">🔉</span><span class="gl-key is-down">🔊</span></div>
+            </figure>
+        </div>
+    </section>
+</main>
+
+<!-- Trust: one beat. -->
+<section class="gl-trust" id="privacy">
+    <div class="gl-trust-inner" data-reveal>
+        <p class="gl-eyebrow" data-i18n="free-open.8c4e1a">Free &amp; open</p>
+        <h2 class="gl-display" data-i18n="tiny-invisible-and-nothing.fe2e99">Tiny, invisible, and nothing to hide</h2>
+        <div class="gl-badges">
+            <div class="gl-badge"><span class="gl-mono" data-i18n="1-mb.2c571a">&lt;1 MB</span><span data-i18n="on-disk.c50f59">on disk</span></div>
+            <div class="gl-badge"><span class="gl-mono">0</span><span data-i18n="analytics-or-trackers.251691">analytics or trackers</span></div>
+            <div class="gl-badge"><span class="gl-mono" data-i18n="mit.89690a">MIT</span><span data-i18n="open-source.534298">open source</span></div>
+            <div class="gl-badge"><span class="gl-mono">✓</span><span data-i18n="notarized-by-apple.805457">notarized by Apple</span></div>
+        </div>
+        <p class="gl-trust-note" data-i18n="glint-is-free-no.732582">Glint is free — no ads, no tracking, no subscription. If it earns a place on your Mac, you can help fund what comes next.</p>
+        <p class="gl-trust-link"><a href="https://wemiller.com/support/" target="_blank" rel="noopener" data-i18n="all-the-ways-to.53ba1c">All the ways to support →</a></p>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section class="gl-faq" id="faq">
+    <p class="gl-eyebrow" data-i18n="faq.03688b">FAQ</p>
+    <h2 data-i18n="frequently-asked-questions.d790b4">Frequently Asked Questions</h2>
+    <div class="gl-faq-list">
+        <details class="gl-faq-item">
+            <summary data-i18n="does-glint-work-with.7c15a2">Does Glint work with my monitor?</summary>
+            <p class="gl-faq-answer" data-i18n="most-external-monitors-support.ba4369">Most external monitors support DDC/CI. If your monitor has an OSD with brightness/volume controls, it almost certainly supports DDC. Works over HDMI, DisplayPort, and USB-C/Thunderbolt — including through USB-C hubs and docks. Glint automatically detects monitor audio routed through hubs.</p>
+        </details>
+        <details class="gl-faq-item">
+            <summary data-i18n="why-isn-t-glint.ff8a43">Why isn't Glint on the Mac App Store?</summary>
+            <p class="gl-faq-answer" data-i18n="talking-to-a-monitor.1f2d61">Talking to a monitor over DDC needs hardware access the App Store sandbox blocks, so Glint ships as a direct download instead. Every release is notarized by Apple, and the source is open to read.</p>
+        </details>
+        <details class="gl-faq-item">
+            <summary data-i18n="why-does-glint-need.8e8c95">Why does Glint need Accessibility access?</summary>
+            <p class="gl-faq-answer" data-i18n="to-intercept-media-key.1af391">To intercept media key events before macOS processes them, Glint uses a CGEventTap, which requires Accessibility permission. Without it, Glint can't detect brightness/volume key presses. This is a standard macOS security requirement for any app that reads keyboard input. After enabling access, you'll need to quit and relaunch Glint for it to take effect.</p>
+        </details>
+        <details class="gl-faq-item">
+            <summary data-i18n="what-do-i-need.c6c81a">What do I need to run it?</summary>
+            <p class="gl-faq-answer" data-i18n="a-mac-with-apple.3b5e98">A Mac with Apple silicon on macOS 13 Ventura or later. Intel Macs can keep using Glint 1.4.3 from the GitHub releases.</p>
+        </details>
+        <details class="gl-faq-item" id="homebrew">
+            <summary data-i18n="can-i-install-it.9ac23d">Can I install it with Homebrew?</summary>
+            <p class="gl-faq-answer" data-i18n-html="yes-brew-install-cask.3a7df2">Yes: <code>brew install --cask blaineam/tap/glint</code></p>
+        </details>
+        <details class="gl-faq-item">
+            <summary data-i18n="how-do-i-get.d02e79">How do I get settings back after hiding the menu bar icon?</summary>
+            <p class="gl-faq-answer" data-i18n="open-glint-from-your.ed0a6d">Open Glint from your Applications folder (or Spotlight search for "Glint"). When the app detects it's being re-opened, it automatically shows the settings window.</p>
+        </details>
+        <details class="gl-faq-item">
+            <summary data-i18n="does-it-conflict-with.a2c902">Does it conflict with other display apps?</summary>
+            <p class="gl-faq-answer" data-i18n="possibly-if-two-apps.434ac2">Possibly — if two apps both intercept the same media keys, they may interfere. We recommend using one DDC controller at a time.</p>
+        </details>
+    </div>
+</section>
+
+<!-- Closing -->
+<section class="gl-closing">
+    <img src="apple-touch-icon.png" alt="" width="360" height="360" loading="lazy">
+    <h2 class="gl-display" data-i18n-html="your-keyboard-your-monitor.69fac5">Your keyboard.<br><span>Your monitor.</span></h2>
+    <div class="gl-cta">
+        <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="gl-btn" data-cta data-i18n="download-for-mac.752ca6">Download for Mac</a>
+    </div>
+    <p class="gl-alt-links">
+        <a href="#homebrew" data-i18n="install-with-homebrew.59d2db">Install with Homebrew</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/blaineam/Glint" target="_blank" rel="noopener noreferrer" data-i18n="source-on-github.c60f2f">Source on GitHub</a>
+    </p>
+    <p class="gl-requires" data-i18n="macos-13-or-later.9e06e8">macOS 13 or later on Apple silicon · notarized by Apple</p>
+</section>
+
+<footer>
+    <p data-i18n-html="glint-free-open-source.2f98fa">✨ Glint — free, open source, <a href="https://github.com/blaineam/Glint/blob/main/LICENSE">MIT License</a> <br> Built by <a href="https://github.com/blaineam">Blaine Miller</a></p>
+</footer>
+
+<script>
         // Animated demo
         (function() {
             const monitorBrightness = document.getElementById('monitorBrightness');
@@ -888,6 +734,23 @@
             // Start animation after a short delay
             setTimeout(tick, 2000);
         })();
-    </script>
+</script>
+<script>
+    // "Install with Homebrew" opens its FAQ answer instead of leaving it folded.
+    document.querySelectorAll('a[href="#homebrew"]').forEach(function (a) {
+        a.addEventListener('click', function () { var d = document.getElementById('homebrew'); if (d) d.open = true; });
+    });
+    if (location.hash === '#homebrew') { var hb = document.getElementById('homebrew'); if (hb) hb.open = true; }
+    // A quiet reveal — only when motion is welcome and JavaScript is running.
+    (function () {
+        if (!('IntersectionObserver' in window)) return;
+        if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+        document.documentElement.classList.add('gl-motion');
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+        document.querySelectorAll('[data-reveal]').forEach(function (el) { io.observe(el); });
+    })();
+</script>
 </body>
 </html>

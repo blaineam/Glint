@@ -16,6 +16,7 @@
 - **MillerKit pinned at 1.3.0** — `Package.resolved` had stayed at 1.2.0 after `project.yml` moved to `from: "1.2.2"` (structural funding-link gate), so every `xcodebuild` re-resolved the package and rewrote the lockfile, leaving the tree dirty after any build. The pin now records what the requirement actually resolves to; 1.3.0 itself only registers Kern in MillerKit's shared suite registry, nothing Glint-visible.
 
 ### Docs
+- **Landing page redesign** — glint.wemiller.com is now a short magazine page: one promise, one "Download for Mac" button (Homebrew and source as quiet links, macOS 13 + Apple silicon stated under it), the live desk demo as the hero, three stories (real backlight over DDC, the screen under your cursor, volume through the monitor's speakers) each with a small drawn scene, one trust beat, a seven-question FAQ and a closing button. The nine-card feature grid, size callout and separate support section are gone (the support link lives in the trust beat); the Google Fonts import is dropped for the system font; `docs/i18n/i18n.js` is synced with the portfolio's runtime.
 - **Support future development** — the landing page and README gained a support block with GitHub Sponsors and Ko-fi links (plus a link to every way to support at wemiller.com/support). Glint stays free: no ads, no tracking, no subscription
 
 ## v1.4.3
