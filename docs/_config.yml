@@ -1,0 +1,4 @@
+# GitHub Pages builds docs/ with Jekyll. appstore-screenshots/ holds the App Store source
+# captures and .monkr project that no page links to; keep them out of every Pages artifact.
+exclude:
+  - appstore-screenshots
