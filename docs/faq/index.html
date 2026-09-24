@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glint — DDC Display Control for Mac</title>
-    <meta name="description" content="Control your external monitor's brightness and volume with your Mac keyboard. Tiny, invisible, free.">
+    <title>FAQ — Glint</title>
+    <meta name="description" content="Every question about Glint, answered.">
 
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=fd40d67b">
-    <link rel="icon" type="image/png" sizes="96x96" href="favicon-96.png?v=d2d9a52b">
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=fac5c914">
+    <link rel="icon" type="image/png" sizes="32x32" href="../favicon.png?v=fd40d67b">
+    <link rel="icon" type="image/png" sizes="96x96" href="../favicon-96.png?v=d2d9a52b">
+    <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png?v=fac5c914">
     <meta name="theme-color" content="#0d0b14">
 
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://glint.wemiller.com/">
+    <meta property="og:url" content="https://glint.wemiller.com/faq/">
     <meta property="og:title" content="Glint — DDC Display Control for Mac">
     <meta property="og:description" content="Control your external monitor's brightness and volume with your Mac keyboard. Tiny, invisible, free and open source.">
     <meta property="og:image" content="https://glint.wemiller.com/og-poster.jpg">
@@ -419,6 +419,11 @@
         }
         .osd-value { font-family: var(--gl-sans); }
         @media (max-width: 640px) { .demo-container { padding: 18px; } .key { width: 24px; height: 21px; } }
+        .gl-faq-page { padding-top: calc(72px + clamp(2rem, 6vw, 3.5rem)); }
+        .gl-faq-page h1 { font-weight: 700; color: var(--gl-ink); font-size: clamp(2.3rem, 6vw, 4.2rem); letter-spacing: -0.025em; line-height: 1.05; margin: 0 0 1rem; text-align: center; text-wrap: balance; }
+        .gl-faq-page .gl-standfirst { text-align: center; color: var(--gl-body); font-size: clamp(1.08rem, 1.8vw, 1.3rem); margin: 0 0 2.5rem; }
+        .gl-back { margin: 1rem 0 0; font-size: 0.92rem; }
+        .gl-back a { color: var(--gl-quiet); }
     </style>
   <link rel="alternate" hreflang="x-default" href="https://glint.wemiller.com/">
   <link rel="alternate" hreflang="en" href="https://glint.wemiller.com/">
@@ -430,176 +435,22 @@
   <link rel="alternate" hreflang="ko" href="https://glint.wemiller.com/?lang=ko">
   <link rel="alternate" hreflang="pt-BR" href="https://glint.wemiller.com/?lang=pt-BR">
   <link rel="alternate" hreflang="it" href="https://glint.wemiller.com/?lang=it">
-  <script src="i18n/i18n.js?v=9b769779" defer data-page="index" data-pos="bottom-left"></script>
+  <script src="../i18n/i18n.js?v=9b769779" defer data-page="faq" data-pos="bottom-left"></script>
 </head>
 <body>
 
 <nav class="gl-nav">
     <div class="gl-nav-row">
-        <a href="#" class="gl-logo" data-i18n="glint.ba6f87">✨ Glint</a>
-        <ul class="gl-nav-links"><li><a href="./" aria-current="page" data-i18n="overview.0efc2e">Overview</a></li><li><a href="faq/" data-i18n="faq.03688b">FAQ</a></li></ul>
+        <a href="../" class="gl-logo" data-i18n="glint.ba6f87">✨ Glint</a>
+        <ul class="gl-nav-links"><li><a href="../" data-i18n="overview.0efc2e">Overview</a></li><li><a href="./" aria-current="page" data-i18n="faq.03688b">FAQ</a></li></ul>
         <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="gl-nav-dl" data-i18n="download.a479c9">Download</a>
     </div>
 </nav>
 
-<!-- Hero: the promise, one download, and the desk the keys finally reach. -->
-<header class="gl-hero">
-    <img class="gl-hero-icon" src="apple-touch-icon.png?v=fac5c914" alt="Glint app icon" width="360" height="360">
-    <p class="gl-hero-kicker">Glint</p>
-    <h1 data-i18n-html="your-keyboard-your-monitor.69fac5">Your keyboard.<br><span>Your monitor.</span></h1>
-    <p class="gl-hero-standfirst" data-i18n="the-brightness-and-volume.07301d">The brightness and volume keys on your Mac finally work on your external display. Free, open source and under 1 MB.</p>
-    <div class="gl-cta">
-        <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="gl-btn" data-cta data-i18n="download-for-mac.752ca6">Download for Mac</a>
-    </div>
-    <p class="gl-alt-links">
-        <a href="#homebrew" data-i18n="install-with-homebrew.59d2db">Install with Homebrew</a>
-        <span aria-hidden="true">·</span>
-        <a href="https://github.com/blaineam/Glint" target="_blank" rel="noopener noreferrer" data-i18n="source-on-github.c60f2f">Source on GitHub</a>
-    </p>
-    <p class="gl-requires" data-i18n="macos-13-or-later.9e06e8">macOS 13 or later on Apple silicon · notarized by Apple</p>
-    <div class="gl-hero-demo">
-            <div class="demo-container">
-                <div class="desk-scene" id="deskScene">
-                    <!-- Monitor -->
-                    <div class="monitor">
-                        <div class="monitor-screen" id="monitorScreen">
-                            <div class="brightness-overlay" id="monitorBrightness"></div>
-                            <div class="osd" id="monitorOsd">
-                                <div class="osd-icon" id="osdIcon">☀️</div>
-                                <div class="osd-bar">
-                                    <div class="osd-fill" id="osdFill"></div>
-                                </div>
-                                <div class="osd-value" id="osdValue">50</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="monitor-stand"></div>
-                    <div class="monitor-base"></div>
-
-                    <!-- Laptop -->
-                    <div class="laptop">
-                        <div class="laptop-screen">
-                            <div class="laptop-screen-inner">
-                                <div class="brightness-overlay" id="laptopBrightness"></div>
-                            </div>
-                        </div>
-                        <div class="laptop-base"></div>
-                    </div>
-
-                    <!-- Keyboard keys -->
-                    <div class="keyboard-hint">
-                        <div class="key" id="keyDown">🔅</div>
-                        <div class="key" id="keyUp">🔆</div>
-                        <div class="key" id="keyVolDown">🔉</div>
-                        <div class="key" id="keyVolUp">🔊</div>
-                    </div>
-                </div>
-            </div>
-        <p class="gl-hero-caption" data-i18n="press-a-key-the.b211ad">Press a key. The monitor answers.</p>
-    </div>
-</header>
-
-<section class="gl-statement">
-    <span class="gl-sun" aria-hidden="true"></span>
-    <p data-i18n="no-electron-no-frameworks.5c8180">No Electron. No frameworks. Just your keyboard and your display.</p>
-</section>
-
-<!-- Three stories: one idea, one headline, two sentences at most, one picture. -->
-<main id="stories">
-    <section class="gl-chapter" id="brightness">
-        <div class="gl-spread">
-            <div class="gl-copy" data-reveal>
-                <p class="gl-eyebrow"><span class="gl-num">01</span><span data-i18n="brightness.e1a2b6">Brightness</span></p>
-                <h2 class="gl-display" data-i18n="the-real-backlight-not.41d1a9">The real backlight, not a filter</h2>
-                <p class="gl-lede" data-i18n="glint-talks-to-your.56a6d1">Glint talks to your monitor over DDC, the same channel its own buttons use. The backlight itself gets brighter or dimmer, not a gray layer on top.</p>
-            </div>
-            <figure class="gl-figure" data-reveal aria-hidden="true">
-                <div class="gl-scene">
-                    <div class="gl-mon">
-                        <div class="gl-mon-screen" style="--lit: 0.16">
-                            <div class="gl-pill"><span>☀️</span><span class="gl-pill-bar"><i style="width: 80%"></i></span><b>80</b></div>
-                        </div>
-                        <div class="gl-mon-neck"></div>
-                        <div class="gl-mon-foot"></div>
-                    </div>
-                </div>
-                <div class="gl-keys"><span class="gl-key">🔅</span><span class="gl-key is-down">🔆</span></div>
-            </figure>
-        </div>
-    </section>
-
-    <section class="gl-chapter is-flipped" id="cursor">
-        <div class="gl-spread">
-            <div class="gl-copy" data-reveal>
-                <p class="gl-eyebrow"><span class="gl-num">02</span><span data-i18n="two-screens.92d3f3">Two screens</span></p>
-                <h2 class="gl-display" data-i18n="the-screen-under-your.567e02">The screen under your cursor</h2>
-                <p class="gl-lede" data-i18n="brightness-keys-change-only.fd9ba0">Brightness keys change only the display your cursor is on. Turn on sync mode and every screen moves together.</p>
-            </div>
-            <figure class="gl-figure" data-reveal aria-hidden="true">
-                <div class="gl-scene is-pair">
-                    <div class="gl-mon">
-                        <div class="gl-mon-screen" style="--lit: 0"></div>
-                        <div class="gl-mon-neck"></div>
-                        <div class="gl-mon-foot"></div>
-                    </div>
-                    <div class="gl-mon">
-                        <div class="gl-mon-screen" style="--lit: 0.2">
-                            <div class="gl-pill"><span>☀️</span><span class="gl-pill-bar"><i style="width: 90%"></i></span><b>90</b></div>
-                            <svg class="gl-cursor" viewBox="0 0 14 20" fill="none"><path d="M1 1l4.5 17L7.5 11l6.5-2L1 1z" fill="#fff" stroke="#000" stroke-width="1"/></svg>
-                        </div>
-                        <div class="gl-mon-neck"></div>
-                        <div class="gl-mon-foot"></div>
-                    </div>
-                </div>
-                <div class="gl-keys"><span class="gl-key">🔅</span><span class="gl-key is-down">🔆</span></div>
-            </figure>
-        </div>
-    </section>
-
-    <section class="gl-chapter" id="volume">
-        <div class="gl-spread">
-            <div class="gl-copy" data-reveal>
-                <p class="gl-eyebrow"><span class="gl-num">03</span><span data-i18n="sound.b4e3ef">Sound</span></p>
-                <h2 class="gl-display" data-i18n="volume-where-the-sound.2ba91c">Volume where the sound is</h2>
-                <p class="gl-lede" data-i18n="when-audio-plays-through.9097d5">When audio plays through your monitor over HDMI, DisplayPort or USB-C, even through a hub, the volume keys drive its speakers. Headphones and AirPods work as they always have.</p>
-            </div>
-            <figure class="gl-figure" data-reveal aria-hidden="true">
-                <div class="gl-scene">
-                    <div class="gl-mon">
-                        <div class="gl-mon-screen" style="--lit: 0.06">
-                            <div class="gl-pill"><span>🔊</span><span class="gl-pill-bar"><i style="width: 62%"></i></span><b>62</b></div>
-                            <svg class="gl-waves" viewBox="0 0 40 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 11v10M15 7v18M22 3v26M29 8v16M36 12v8"/></svg>
-                        </div>
-                        <div class="gl-mon-neck"></div>
-                        <div class="gl-mon-foot"></div>
-                    </div>
-                </div>
-                <div class="gl-keys"><span class="gl-key">🔇</span><span class="gl-key">🔉</span><span class="gl-key is-down">🔊</span></div>
-            </figure>
-        </div>
-    </section>
-</main>
-
-<!-- Trust: one beat. -->
-<section class="gl-trust" id="privacy">
-    <div class="gl-trust-inner" data-reveal>
-        <p class="gl-eyebrow" data-i18n="free-open.8c4e1a">Free &amp; open</p>
-        <h2 class="gl-display" data-i18n="tiny-invisible-and-nothing.fe2e99">Tiny, invisible, and nothing to hide</h2>
-        <div class="gl-badges">
-            <div class="gl-badge"><span class="gl-mono" data-i18n="1-mb.2c571a">&lt;1 MB</span><span data-i18n="on-disk.c50f59">on disk</span></div>
-            <div class="gl-badge"><span class="gl-mono">0</span><span data-i18n="analytics-or-trackers.251691">analytics or trackers</span></div>
-            <div class="gl-badge"><span class="gl-mono" data-i18n="mit.89690a">MIT</span><span data-i18n="open-source.534298">open source</span></div>
-            <div class="gl-badge"><span class="gl-mono">✓</span><span data-i18n="notarized-by-apple.805457">notarized by Apple</span></div>
-        </div>
-        <p class="gl-trust-note" data-i18n="glint-is-free-no.732582">Glint is free — no ads, no tracking, no subscription. If it earns a place on your Mac, you can help fund what comes next.</p>
-        <p class="gl-trust-link"><a href="https://wemiller.com/support/" target="_blank" rel="noopener" data-i18n="all-the-ways-to.53ba1c">All the ways to support →</a></p>
-    </div>
-</section>
-
-<!-- FAQ -->
-<section class="gl-faq" id="faq">
-    <p class="gl-eyebrow" data-i18n="faq.03688b">FAQ</p>
-    <h2 data-i18n="frequently-asked-questions.d790b4">Frequently Asked Questions</h2>
+<main class="gl-faq gl-faq-page" id="faq">
+    <p class="gl-eyebrow">Glint</p>
+    <h1 data-i18n="frequently-asked-questions.d790b4">Frequently Asked Questions</h1>
+    <p class="gl-standfirst" data-i18n="every-question-about-glint.db4db5">Every question about Glint, answered.</p>
     <div class="gl-faq-list">
         <details class="gl-faq-item">
             <summary data-i18n="does-glint-work-with.7c15a2">Does Glint work with my monitor?</summary>
@@ -612,6 +463,10 @@
         <details class="gl-faq-item">
             <summary data-i18n="why-does-glint-need.8e8c95">Why does Glint need Accessibility access?</summary>
             <p class="gl-faq-answer" data-i18n="to-intercept-media-key.1af391">To intercept media key events before macOS processes them, Glint uses a CGEventTap, which requires Accessibility permission. Without it, Glint can't detect brightness/volume key presses. This is a standard macOS security requirement for any app that reads keyboard input. After enabling access, you'll need to quit and relaunch Glint for it to take effect.</p>
+        </details>
+        <details class="gl-faq-item">
+            <summary data-i18n-html="is-this-safe-why.825245">Is this safe? Why isn't it on the Mac App Store?</summary>
+            <p class="gl-faq-answer" data-i18n="glint-is-open-source.a73bdf">Glint is open source (read every line!) and notarized by Apple (malware-scanned). There is no telemetry or tracking of any kind — no analytics, no crash reporters, no network calls home. No server infrastructure is used or needed for Glint to work; everything runs entirely on your Mac. The app has been security audited to ensure the utmost care in being a safe app for use. DDC requires IOKit I2C access, which the App Store sandbox blocks. This is the same reason BetterDisplay, MonitorControl, and Lunar distribute outside the Store.</p>
         </details>
         <details class="gl-faq-item">
             <summary data-i18n="what-do-i-need.c6c81a">What do I need to run it?</summary>
@@ -629,13 +484,20 @@
             <summary data-i18n="does-it-conflict-with.a2c902">Does it conflict with other display apps?</summary>
             <p class="gl-faq-answer" data-i18n="possibly-if-two-apps.434ac2">Possibly — if two apps both intercept the same media keys, they may interfere. We recommend using one DDC controller at a time.</p>
         </details>
+        <details class="gl-faq-item">
+            <summary data-i18n-html="can-i-control-multiple.2973d6">Can I control multiple monitors?</summary>
+            <p class="gl-faq-answer" data-i18n="yes-glint-detects-all.4a21d0">Yes! Glint detects all connected external displays. With sync mode off, brightness keys adjust only the display your cursor is on. With sync mode on, all displays (including the built-in screen) are synced to the same brightness on first press, then adjusted together.</p>
+        </details>
+        <details class="gl-faq-item">
+            <summary data-i18n-html="what-s-the-cpu.d7aa87">What's the CPU/memory usage?</summary>
+            <p class="gl-faq-answer" data-i18n="effectively-zero-when-idle.81fe80">Effectively zero when idle. Glint uses a CGEventTap which is interrupt-driven — no polling, no timers, no background threads. Memory footprint is under 15 MB.</p>
+        </details>
     </div>
-    <p class="gl-faq-more"><a href="faq/" data-i18n="see-all-questions.237fee">See all questions</a></p>
-</section>
+</main>
 
 <!-- Closing -->
 <section class="gl-closing">
-    <img src="apple-touch-icon.png?v=fac5c914" alt="" width="360" height="360" loading="lazy">
+    <img src="../apple-touch-icon.png?v=fac5c914" alt="" width="360" height="360" loading="lazy">
     <h2 class="gl-display" data-i18n-html="your-keyboard-your-monitor.69fac5">Your keyboard.<br><span>Your monitor.</span></h2>
     <div class="gl-cta">
         <a href="https://github.com/blaineam/Glint/releases/latest/download/Glint.dmg" class="gl-btn" data-cta data-i18n="download-for-mac.752ca6">Download for Mac</a>
@@ -645,125 +507,12 @@
         <span aria-hidden="true">·</span>
         <a href="https://github.com/blaineam/Glint" target="_blank" rel="noopener noreferrer" data-i18n="source-on-github.c60f2f">Source on GitHub</a>
     </p>
+    <p class="gl-back"><a href="../" data-i18n="back-to-the-overview.e274c2">Back to the overview</a></p>
     <p class="gl-requires" data-i18n="macos-13-or-later.9e06e8">macOS 13 or later on Apple silicon · notarized by Apple</p>
 </section>
 
 <footer>
     <p data-i18n-html="glint-free-open-source.2f98fa">✨ Glint — free, open source, <a href="https://github.com/blaineam/Glint/blob/main/LICENSE">MIT License</a> <br> Built by <a href="https://github.com/blaineam">Blaine Miller</a></p>
 </footer>
-
-<script>
-        // Animated demo
-        (function() {
-            const monitorBrightness = document.getElementById('monitorBrightness');
-            const laptopBrightness = document.getElementById('laptopBrightness');
-            const monitorOsd = document.getElementById('monitorOsd');
-            const osdIcon = document.getElementById('osdIcon');
-            const osdFill = document.getElementById('osdFill');
-            const osdValue = document.getElementById('osdValue');
-            const keyUp = document.getElementById('keyUp');
-            const keyDown = document.getElementById('keyDown');
-            const keyVolUp = document.getElementById('keyVolUp');
-            const keyVolDown = document.getElementById('keyVolDown');
-
-            let brightness = 50;
-            let volume = 50;
-            let step = 0;
-
-            const sequence = [
-                // Brightness up sequence
-                { key: 'up', type: 'brightness', delta: 10 },
-                { key: 'up', type: 'brightness', delta: 10 },
-                { key: 'up', type: 'brightness', delta: 10 },
-                { key: 'up', type: 'brightness', delta: 10 },
-                // Pause
-                { key: null, type: 'pause', delta: 0 },
-                // Brightness down
-                { key: 'down', type: 'brightness', delta: -15 },
-                { key: 'down', type: 'brightness', delta: -15 },
-                { key: 'down', type: 'brightness', delta: -15 },
-                // Pause
-                { key: null, type: 'pause', delta: 0 },
-                // Volume up
-                { key: 'volUp', type: 'volume', delta: 12 },
-                { key: 'volUp', type: 'volume', delta: 12 },
-                { key: 'volUp', type: 'volume', delta: 12 },
-                // Pause
-                { key: null, type: 'pause', delta: 0 },
-                // Volume down
-                { key: 'volDown', type: 'volume', delta: -20 },
-                { key: 'volDown', type: 'volume', delta: -20 },
-                // Reset pause
-                { key: null, type: 'pause', delta: 0 },
-            ];
-
-            function showOsd(type, value) {
-                const clamped = Math.max(0, Math.min(100, Math.round(value)));
-                osdIcon.textContent = type === 'brightness' ? '☀️' : '🔊';
-                osdFill.style.width = clamped + '%';
-                osdValue.textContent = clamped;
-                monitorOsd.classList.add('visible');
-                setTimeout(() => monitorOsd.classList.remove('visible'), 1200);
-            }
-
-            function pressKey(keyName) {
-                const keyEl = keyName === 'up' ? keyUp
-                            : keyName === 'down' ? keyDown
-                            : keyName === 'volUp' ? keyVolUp
-                            : keyVolDown;
-                keyEl.classList.add('active');
-                setTimeout(() => keyEl.classList.remove('active'), 200);
-            }
-
-            function updateBrightness() {
-                const opacity = Math.max(0, Math.min(0.3, (brightness - 50) / 150));
-                monitorBrightness.style.opacity = opacity;
-                laptopBrightness.style.opacity = opacity;
-            }
-
-            function tick() {
-                const action = sequence[step % sequence.length];
-                step++;
-
-                if (action.type === 'pause') {
-                    setTimeout(tick, 1500);
-                    return;
-                }
-
-                if (action.key) pressKey(action.key);
-
-                if (action.type === 'brightness') {
-                    brightness = Math.max(10, Math.min(100, brightness + action.delta));
-                    updateBrightness();
-                    showOsd('brightness', brightness);
-                } else if (action.type === 'volume') {
-                    volume = Math.max(0, Math.min(100, volume + action.delta));
-                    showOsd('volume', volume);
-                }
-
-                setTimeout(tick, 700);
-            }
-
-            // Start animation after a short delay
-            setTimeout(tick, 2000);
-        })();
-</script>
-<script>
-    // "Install with Homebrew" opens its FAQ answer instead of leaving it folded.
-    document.querySelectorAll('a[href="#homebrew"]').forEach(function (a) {
-        a.addEventListener('click', function () { var d = document.getElementById('homebrew'); if (d) d.open = true; });
-    });
-    if (location.hash === '#homebrew') { var hb = document.getElementById('homebrew'); if (hb) hb.open = true; }
-    // A quiet reveal — only when motion is welcome and JavaScript is running.
-    (function () {
-        if (!('IntersectionObserver' in window)) return;
-        if (!window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
-        document.documentElement.classList.add('gl-motion');
-        var io = new IntersectionObserver(function (entries) {
-            entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
-        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
-        document.querySelectorAll('[data-reveal]').forEach(function (el) { io.observe(el); });
-    })();
-</script>
 </body>
 </html>
