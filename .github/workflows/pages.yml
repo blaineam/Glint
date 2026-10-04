@@ -1,0 +1,55 @@
+# Publishes glint.wemiller.com. Glint's site lives at wemiller.com/apps/glint/ now: the
+# portfolio's mirror-app-docs workflow rsyncs docs/ from this repo's source (never from this
+# deploy), so it always gets the real pages. This deploy builds docs/ exactly as the old
+# branch-based Pages build did (Jekyll), then .github/legacy-site.mjs turns every page the
+# portfolio mirrors into a redirect to its copy there, keeping the path, query and #fragment.
+# Every other file stays served as-is.
+name: Deploy glint.wemiller.com (redirects) to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+      - '.github/legacy-site.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Build docs/ with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+      - name: Turn the mirrored pages into redirects to wemiller.com/apps/glint/
+        run: |
+          set -euo pipefail
+          sudo chown -R "$(id -u):$(id -g)" _site
+          node .github/legacy-site.mjs _site docs https://wemiller.com/apps/glint/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
