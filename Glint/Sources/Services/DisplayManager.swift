@@ -283,7 +283,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
             // Adjust ALL external displays via DDC
             for i in displays.indices {
-                let delta = stepToAbsolute(step, max: displays[i].maxBrightness ?? 100)
+                let delta = stepToAbsolute(step, max: displays[i].maxBrightness ?? 100, percent: Preferences.shared.brightnessStep)
                 if let result = ddc.adjust(vcp: .brightness, by: delta, on: displays[i].id) {
                     displays[i].brightness = result.currentValue
                     displays[i].maxBrightness = result.maxValue
@@ -301,7 +301,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             if CGDisplayIsBuiltin(cursorID) != 0 {
                 adjustBuiltInBrightness(by: step)
             } else if let i = displays.firstIndex(where: { $0.id == cursorID }) {
-                let delta = stepToAbsolute(step, max: displays[i].maxBrightness ?? 100)
+                let delta = stepToAbsolute(step, max: displays[i].maxBrightness ?? 100, percent: Preferences.shared.brightnessStep)
                 if let result = ddc.adjust(vcp: .brightness, by: delta, on: cursorID) {
                     displays[i].brightness = result.currentValue
                     displays[i].maxBrightness = result.maxValue
@@ -362,7 +362,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     /// falls back to write-only from in-memory state when writeOnlyVolume is enabled.
     private func adjustDisplayVolume(at i: Int, step: Int) {
         let maxVal = displays[i].maxVolume ?? 100
-        let delta = stepToAbsolute(step, max: maxVal)
+        let delta = stepToAbsolute(step, max: maxVal, percent: Preferences.shared.volumeStep)
 
         // Try ddc.adjust first (cached read + write)
         if let result = ddc.adjust(vcp: .volume, by: delta, on: displays[i].id) {
@@ -426,7 +426,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     private func adjustSystemVolume(by step: Int) {
         guard let device = defaultOutputDevice() else { return }
         let currentVolume = systemVolume(device: device) ?? 0.5
-        let delta: Float = Float(step) * 0.0625 // ~6% per step, matches macOS
+        let delta = Float(step) * Float(Preferences.stepFraction(Preferences.shared.volumeStep))
         let newVolume = max(0, min(1, currentVolume + delta))
         setSystemVolume(device: device, volume: newVolume)
 
@@ -518,7 +518,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     private func adjustBuiltInBrightness(by step: Int) {
         guard let current = getBuiltInBrightness() else { return }
-        let delta: Float = Float(step) * 0.0625 // ~6% per step
+        let delta = Float(step) * Float(Preferences.stepFraction(Preferences.shared.brightnessStep))
         let newBrightness = max(0, min(1, current + delta))
         setBuiltInBrightness(newBrightness)
     }
@@ -666,9 +666,10 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    /// Convert a ±step (e.g., ±1) to an absolute DDC value delta.
-    private func stepToAbsolute(_ step: Int, max: UInt16) -> Int {
-        let perStep = Swift.max(1, Int(Double(max) * 0.0625))
+    /// Convert a ±step (e.g., ±1) to an absolute DDC value delta, sized by the
+    /// user's step percent of the display's max.
+    private func stepToAbsolute(_ step: Int, max: UInt16, percent: Double) -> Int {
+        let perStep = Swift.max(1, Int(Double(max) * Preferences.stepFraction(percent)))
         return step > 0 ? perStep : -perStep
     }
 

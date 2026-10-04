@@ -371,6 +371,58 @@
         }
       }
     },
+    "Brightness step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Helligkeitsschritt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paso de brillo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de luminosité"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passo luminosità"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輝度の調整幅"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밝기 조절 단위"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incremento de brilho"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "亮度步长"
+          }
+        }
+      }
+    },
     "DDC display control from your keyboard.": {
       "localizations": {
         "de": {
@@ -786,6 +838,110 @@
           "stringUnit": {
             "state": "translated",
             "value": "隐藏菜单栏图标"
+          }
+        }
+      }
+    },
+    "How much each brightness key press changes brightness.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie stark sich die Helligkeit pro Tastendruck ändert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuánto cambia el brillo con cada pulsación de la tecla de brillo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variation de la luminosité à chaque pression sur une touche de luminosité."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto cambia la luminosità a ogni pressione del tasto luminosità."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輝度キーを 1 回押すごとに変化する輝度の量です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밝기 키를 한 번 누를 때마다 바뀌는 밝기의 양입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto o brilho muda a cada toque na tecla de brilho."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每按一次亮度键时亮度的变化量。"
+          }
+        }
+      }
+    },
+    "How much each volume key press changes volume.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie stark sich die Lautstärke pro Tastendruck ändert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuánto cambia el volumen con cada pulsación de la tecla de volumen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variation du volume à chaque pression sur une touche de volume."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto cambia il volume a ogni pressione del tasto volume."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量キーを 1 回押すごとに変化する音量の量です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음량 키를 한 번 누를 때마다 바뀌는 음량의 양입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto o volume muda a cada toque na tecla de volume."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每按一次音量键时音量的变化量。"
           }
         }
       }
@@ -2191,6 +2347,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "相同的支持与反馈选项，可在撰写时让窗口一直保持打开。"
+          }
+        }
+      }
+    },
+    "Volume step": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lautstärkeschritt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paso de volumen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de volume"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passo volume"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量の調整幅"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음량 조절 단위"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incremento de volume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量步长"
           }
         }
       }

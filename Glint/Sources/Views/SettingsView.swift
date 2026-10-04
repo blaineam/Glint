@@ -23,6 +23,18 @@ struct SettingsView: View {
                         .help("Skip DDC volume reads and start at 50%. Volume is tracked in memory and sent via DDC writes only. Enable this if your monitor ignores DDC volume reads but responds to writes.")
                         .padding(.leading, 16)
                 }
+                Picker("Brightness step", selection: $prefs.brightnessStep) {
+                    ForEach(Preferences.stepOptions, id: \.self) { step in
+                        Text(step / 100, format: .percent).tag(step)
+                    }
+                }
+                .help("How much each brightness key press changes brightness.")
+                Picker("Volume step", selection: $prefs.volumeStep) {
+                    ForEach(Preferences.stepOptions, id: \.self) { step in
+                        Text(step / 100, format: .percent).tag(step)
+                    }
+                }
+                .help("How much each volume key press changes volume.")
                 Toggle("Sync with built-in display", isOn: $prefs.syncWithBuiltIn)
                     .help("When on, brightness/volume keys also adjust the built-in display and Mac speakers alongside external displays.")
             }
