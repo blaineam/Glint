@@ -34,6 +34,7 @@ Glint makes your keyboard Just Work™ with external displays.
 | 🔇 **Mute key** | Toggles mute with a proper muted/unmuted OSD indicator |
 | 🎯 **Cursor-aware** | Brightness keys adjust only the display the cursor is on — no more changing every screen at once |
 | 🔄 **Sync mode** | First keypress syncs all displays to match the cursor display's brightness, then adjusts every screen in lockstep |
+| 🎚️ **Adjustable step** | Choose how much each key press changes brightness and volume — 1% to 10% (default 6.25%, matching macOS) |
 | 🖥️ **Subtle OSD** | Shows a minimal pill-style brightness/volume overlay below the notch |
 | 👻 **Invisible mode** | Hide from menu bar AND dock — completely invisible, always listening |
 | 🚀 **Launch at login** | Starts silently, ready before you are |

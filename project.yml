@@ -43,8 +43,8 @@ targets:
       properties:
         CFBundleName: Glint
         CFBundleIconName: AppIcon
-        CFBundleShortVersionString: "1.4.4"
-        CFBundleVersion: "21"
+        CFBundleShortVersionString: "1.5.0"
+        CFBundleVersion: "22"
         LSUIElement: true
         NSHumanReadableCopyright: "Copyright © 2026 Blaine Miller. MIT License."
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)

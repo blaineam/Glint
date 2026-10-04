@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.0
+
+### Added
+- **Configurable brightness and volume step** ([#3](https://github.com/blaineam/Glint/issues/3)) — Settings gains *Brightness step* and *Volume step* pickers (1, 2, 3, 4, 5, 6.25, 8 or 10% per key press). The step applies to external displays over DDC, the built-in display and the Mac's own volume. The default stays 6.25% (1/16, matching macOS), so nothing changes until you pick a different step. Translated into all shipped languages.
+
+### Fixed
+- **OSD overlay compiler warning cleared** — the hide timer now captures the overlay weakly instead of mixing a weak inner capture with an implicit strong one.
+
 ## v1.4.4
 
 ### Changed

@@ -69,9 +69,9 @@ final class OSDOverlay {
         }
 
         // Reset hide timer
-        hideTask = Task {
+        hideTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(1.2))
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, let self else { return }
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.3
                 self.window?.animator().alphaValue = 0
