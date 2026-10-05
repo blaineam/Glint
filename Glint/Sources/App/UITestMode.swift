@@ -148,18 +148,35 @@ enum UITestMode {
         window.setAccessibilityIdentifier("glint.uitest.menuWindow")
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
-        window.setFrameTopLeftPoint(NSPoint(x: 80, y: (NSScreen.main?.visibleFrame.maxY ?? 800) - 40))
+        // Top right; Settings and Support open at the left (place(_:)), so they never
+        // cover the harness whatever height SwiftUI gives them.
+        if let fitting = window.contentViewController?.view.fittingSize, fitting.width > 0 {
+            window.setContentSize(fitting)
+        }
+        let visible = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
+        window.setFrameTopLeftPoint(NSPoint(x: visible.maxX - window.frame.width - 40, y: visible.maxY - 8))
+        // Floating: macOS may refuse to activate a freshly launched app, and other apps'
+        // windows (a Terminal, another app's panel) would then cover the harness. XCUITest
+        // treats a covered element as interrupted and runs its alert handlers against the
+        // other app's UI, which fails the test at random.
+        window.level = .floating
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         harnessWindow = window
     }
 
-    /// Puts a Settings/Support window at a fixed spot below the harness, away from the
-    /// screen centre where system alerts appear, so tests never find it covered.
+    /// Puts a Settings/Support window at the top left, clear of the harness (top right)
+    /// and of the screen centre where system alerts appear, and floats it above other
+    /// apps' windows (see showHarness), so tests never find it covered. Laid out first:
+    /// SwiftUI otherwise sizes the window afterwards and AppKit pushes it back up.
     @MainActor
     static func place(_ window: NSWindow) {
         guard isActive, let screen = NSScreen.main else { return }
-        window.setFrameTopLeftPoint(NSPoint(x: screen.visibleFrame.minX + 80, y: screen.visibleFrame.maxY - 360))
+        if let fitting = window.contentViewController?.view.fittingSize, fitting.width > 0 {
+            window.setContentSize(fitting)
+        }
+        window.setFrameTopLeftPoint(NSPoint(x: screen.visibleFrame.minX + 40, y: screen.visibleFrame.maxY - 8))
+        window.level = .floating
     }
 
     @MainActor

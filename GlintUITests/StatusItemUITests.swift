@@ -25,7 +25,8 @@ final class StatusItemUITests: GlintUITestCase {
         XCTAssertTrue(statusItem.appears(timeout: Self.timeout))
         element("glint.uitest.reopen", in: harness).click()
         XCTAssertTrue(popover.appears(timeout: Self.timeout))
-        XCTAssertTrue(element("glint.menu.settings", in: popover).exists)
+        waitForText(display(Self.monitorA, "name", in: popover), "Glint Test Monitor A")
+        waitForText(display(Self.monitorB, "volumeNA", in: popover), "N/A")
     }
 
     func testHideMenuBarIconRemovesAndRestoresStatusItem() {
