@@ -312,6 +312,9 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         let value = UInt16(Double(maxVal) * Double(percent) / 100.0)
         if ddc.write(vcp: .brightness, value: value, to: displayID) {
             displays[idx].brightness = value
+            // Keep the adjust() cache in step, or a key press within the TTL would step
+            // from the stale pre-slider value and jump the brightness back.
+            ddc.updateCache(vcp: .brightness, displayID: displayID, newValue: value, maxValue: maxVal)
         }
     }
 
