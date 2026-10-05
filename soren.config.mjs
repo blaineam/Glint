@@ -14,12 +14,22 @@
 //           (MediaKeyInterceptor.action), Preferences in a throwaway UserDefaults suite,
 //           and DisplayManager over fake CoreAudio / display environment. AppDelegate
 //           returns early under XCTest, so no event tap or Accessibility alert.
+//   ui    — GlintUITests (XCUITest) against Glint.app in its DEBUG-only -UITestMode
+//           (Glint/Sources/App/UITestMode.swift): fixture DDC monitors + fake CoreAudio,
+//           throwaway defaults suite, no event tap, stubbed Accessibility, recorded URLs.
+//           Covers the menu-bar content, simulated media keys + OSD, Settings (window and
+//           SwiftUI scene), Support window, the real status item/popover, invisible mode +
+//           LaunchServices reopen, and the Accessibility alert. Debug builds use the
+//           com.blainemiller.Glint.debug bundle ID, so the installed Glint is never touched.
+//           Must run from a terminal with the Developer Tools privilege (Terminal.app has
+//           it): otherwise Gatekeeper kills the locally built XCUITest runner at launch
+//           ("Early unexpected exit … signal kill").
 //   l10n  — node --test: Localizable.xcstrings completeness + format specifiers in all
 //           8 languages, and docs/i18n dictionary parity with the pages (9 locales).
 //   web   — node --check on the site's i18n runtime.
 //
 // Still manual (window server / hardware bound): IOKit port enumeration and real I2C,
-// CGEventTap creation, SMAppService, the SwiftUI menu-bar / Settings views.
+// CGEventTap creation and real NX_SYSDEFINED key events, SMAppService.
 //
 // `root` defaults to this file's directory (the Glint repo).
 export default {
@@ -53,7 +63,21 @@ export default {
       destination: 'platform=macOS,arch=arm64',
       xcodegen: true,
       derivedDataPath: '/tmp/soren-dd-glint-unit',
+      // The Glint scheme only has GlintTests; this keeps it that way if UI tests are
+      // ever added to it.
+      extraArgs: ['-only-testing:GlintTests'],
       description: 'GlintTests: DDC protocol, port selection, cache/retry, media keys, preferences, routing',
+    },
+
+    ui: {
+      type: 'xcodebuild-test',
+      platform: 'macos',
+      project: 'Glint.xcodeproj',
+      scheme: 'GlintUITests',
+      destination: 'platform=macOS,arch=arm64',
+      xcodegen: true,
+      derivedDataPath: '/tmp/soren-dd-glint-ui',
+      description: 'GlintUITests: menu-bar popover, media keys + OSD, Settings, Support, status item, invisible mode, permission alert (DEBUG -UITestMode fixtures)',
     },
 
     l10n: {
