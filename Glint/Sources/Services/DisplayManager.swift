@@ -98,7 +98,23 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return manager
     }()
 
-    @Published var displays: [ExternalDisplay] = []
+    /// Published by hand rather than with @Published: media keys update this on the
+    /// DDC queue, and @Published would fire objectWillChange on that background thread
+    /// *before* the new value lands, so SwiftUI could re-render the menu from the old
+    /// value and never hear about the new one (a key press, e.g. unmute, left the
+    /// popover showing a stale percentage). The change is announced on the main thread
+    /// once it has been stored.
+    var displays: [ExternalDisplay] = [] {
+        didSet { announceChange() }
+    }
+
+    private func announceChange() {
+        if Thread.isMainThread {
+            objectWillChange.send()
+        } else {
+            DispatchQueue.main.async { [weak self] in self?.objectWillChange.send() }
+        }
+    }
 
     private let ddc: DDCService
     private let preferences: Preferences
