@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## v1.5.1
 
 ### Fixed
+- **Brightness key right after the slider** — a brightness key pressed within two seconds of moving the menu-bar slider (or of sync mode's first keystroke) stepped from a stale cached value and jumped back (e.g. 46 → slider 80 → key gave 52 instead of 86). Slider writes now update the same cache volume writes already did.
 - **Mute restores each monitor's own volume** — DDC unmute used to write a fixed 50%, so a monitor at 20% came back much louder. Glint now remembers each monitor's volume before muting (per monitor, by vendor/model/serial, persisted so unmuting after a relaunch still restores it) and puts it back; 50% is only the fallback when no earlier volume is known. The restored value also seeds the DDC adjust cache, so a volume key right after unmute steps from it.
 - **Mute with several monitors is one decision** — Mute toggled every display independently and showed the last one's state, so a monitor already at 0 jumped to 50% while the OSD said "unmuted" and the other monitor went silent. Now if anything Glint controls is audible, everything is muted; otherwise everything is unmuted. Displays without DDC audio are still ignored.
 
