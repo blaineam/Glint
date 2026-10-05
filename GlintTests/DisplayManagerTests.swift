@@ -12,6 +12,7 @@ final class DisplayManagerTests: XCTestCase {
     private var audio: FakeSystemAudio!
     private var env: FakeDisplayEnvironment!
     private var prefs: Preferences!
+    private var defaults: UserDefaults!
 
     override func setUp() {
         super.setUp()
@@ -19,7 +20,7 @@ final class DisplayManagerTests: XCTestCase {
         clock = FakeClock()
         audio = FakeSystemAudio()
         env = FakeDisplayEnvironment()
-        (prefs, _) = makePreferences()
+        (prefs, defaults) = makePreferences()
     }
 
     /// Builds a manager over the fakes and runs the initial display refresh.
@@ -420,7 +421,7 @@ final class DisplayManagerTests: XCTestCase {
         XCTAssertTrue(manager.toggleMute())
         XCTAssertEqual(display(lg, in: manager)?.volume, 0)
         XCTAssertFalse(manager.toggleMute())
-        XCTAssertEqual(display(lg, in: manager)?.volume, 50)
+        XCTAssertEqual(display(lg, in: manager)?.volume, 40, "back to the pre-mute volume")
         XCTAssertEqual(audio.setMutedCalls, [], "system mute untouched when audio goes to the monitor")
     }
 
@@ -446,26 +447,47 @@ final class DisplayManagerTests: XCTestCase {
     }
 
     func testMuteWithMixedMonitorsSilencesEverything() {
-        // KNOWN BUG (reported, not fixed here): with several monitors each one is toggled
-        // independently and the returned state is the LAST monitor's. If one monitor is
-        // already at 0, pressing Mute unmutes it to 50 % and the OSD says "unmuted" while
-        // the other monitor was just silenced.
+        // One monitor audible, one already at 0: Mute must silence both and report muted,
+        // not toggle the silent one up to 50 % and report the last display's state.
         twoMonitors()
         transport.set(.volume, current: 40, max: 100, on: lg)
         transport.set(.volume, current: 0, max: 100, on: dell)
         audio.transport = kAudioDeviceTransportTypeHDMI
         let manager = makeManager(sync: false)
 
-        XCTExpectFailure("toggleMute toggles each display independently and reports the last display's state")
         let muted = manager.toggleMute()
         XCTAssertTrue(muted)
         XCTAssertEqual(display(lg, in: manager)?.volume, 0)
         XCTAssertEqual(display(dell, in: manager)?.volume, 0)
+        XCTAssertEqual(transport.writtenValues(.volume, on: dell), [], "an already-silent monitor is left alone")
+    }
+
+    func testUnmuteAfterMixedMuteRestoresEachMonitorToItsOwnVolume() {
+        twoMonitors()
+        transport.set(.volume, current: 40, max: 100, on: lg)
+        transport.set(.volume, current: 0, max: 100, on: dell)
+        audio.transport = kAudioDeviceTransportTypeHDMI
+        let manager = makeManager(sync: false)
+
+        XCTAssertTrue(manager.toggleMute())
+        XCTAssertFalse(manager.toggleMute(), "everything silent -> unmute all")
+        XCTAssertEqual(display(lg, in: manager)?.volume, 40)
+        XCTAssertEqual(display(dell, in: manager)?.volume, 50, "no known pre-mute volume -> fallback")
+    }
+
+    func testMuteIgnoresDisplaysWithoutDDCVolume() {
+        twoMonitors() // Dell has no DDC volume
+        audio.transport = kAudioDeviceTransportTypeHDMI
+        let manager = makeManager(sync: false)
+
+        XCTAssertTrue(manager.toggleMute())
+        XCTAssertFalse(manager.toggleMute())
+        XCTAssertEqual(transport.writtenValues(.volume, on: dell), [])
+        XCTAssertNil(display(dell, in: manager)?.volume)
+        XCTAssertEqual(display(lg, in: manager)?.volume, 20)
     }
 
     func testUnmuteRestoresThePreviousVolume() {
-        // KNOWN LIMITATION (reported): DDC "mute" writes volume 0 and unmute always writes
-        // 50 %, so a monitor at 20 % comes back much louder than before.
         env.addExternal(lg, name: "LG")
         transport.set(.volume, current: 20, max: 100, on: lg)
         audio.transport = kAudioDeviceTransportTypeHDMI
@@ -473,8 +495,81 @@ final class DisplayManagerTests: XCTestCase {
 
         _ = manager.toggleMute()
         _ = manager.toggleMute()
-        XCTExpectFailure("unmute restores a fixed 50% instead of the pre-mute volume")
         XCTAssertEqual(display(lg, in: manager)?.volume, 20)
+        XCTAssertEqual(transport.current(.volume, on: lg), 20)
+    }
+
+    func testUnmuteWithNoKnownVolumeFallsBackTo50Percent() {
+        env.addExternal(lg, name: "LG")
+        transport.set(.volume, current: 0, max: 60, on: lg)
+        audio.transport = kAudioDeviceTransportTypeHDMI
+        let manager = makeManager(sync: false)
+
+        XCTAssertFalse(manager.toggleMute(), "already silent -> unmute")
+        XCTAssertEqual(display(lg, in: manager)?.volume, 30, "50 % of the monitor's max")
+    }
+
+    func testUnmuteAfterRelaunchWhileMutedRestoresThePreviousVolume() {
+        env.addExternal(lg, name: "LG")
+        transport.set(.volume, current: 20, max: 100, on: lg)
+        audio.transport = kAudioDeviceTransportTypeHDMI
+        XCTAssertTrue(makeManager(sync: false).toggleMute())
+        XCTAssertEqual(transport.current(.volume, on: lg), 0)
+
+        // Relaunch: fresh Preferences over the same defaults store, fresh manager and DDC
+        // service; the monitor reports 0.
+        prefs = Preferences(defaults: defaults, loginItem: { _ in })
+        let relaunched = makeManager(sync: false)
+        XCTAssertEqual(display(lg, in: relaunched)?.volume, 0)
+
+        XCTAssertFalse(relaunched.toggleMute())
+        XCTAssertEqual(display(lg, in: relaunched)?.volume, 20)
+    }
+
+    func testPreMuteVolumeIsRememberedPerMonitor() {
+        twoMonitors()
+        transport.set(.volume, current: 15, max: 100, on: dell)
+        audio.transport = kAudioDeviceTransportTypeHDMI
+        let manager = makeManager(sync: false)
+
+        XCTAssertTrue(manager.toggleMute())
+        XCTAssertFalse(manager.toggleMute())
+        XCTAssertEqual(display(lg, in: manager)?.volume, 20)
+        XCTAssertEqual(display(dell, in: manager)?.volume, 15)
+    }
+
+    func testVolumeKeyAfterUnmuteStepsFromTheRestoredVolume() {
+        env.addExternal(lg, name: "LG")
+        transport.set(.volume, current: 20, max: 100, on: lg)
+        audio.transport = kAudioDeviceTransportTypeHDMI
+        let manager = makeManager(sync: false)
+        let step = DisplayManager.stepToAbsolute(1, max: 100, percent: prefs.volumeStep)
+
+        manager.adjustVolume(by: 1) // seeds the adjust() cache at 20 + step
+        XCTAssertEqual(display(lg, in: manager)?.volume, UInt16(20 + step))
+        XCTAssertTrue(manager.toggleMute())
+        manager.adjustVolume(by: 1) // within the cache TTL: must step from 0, not the stale value
+        XCTAssertEqual(display(lg, in: manager)?.volume, UInt16(step))
+        XCTAssertTrue(manager.toggleMute(), "audible again -> mute")
+        XCTAssertFalse(manager.toggleMute())
+        XCTAssertEqual(display(lg, in: manager)?.volume, UInt16(step), "restores the volume it had before this mute")
+        manager.adjustVolume(by: 1)
+        XCTAssertEqual(display(lg, in: manager)?.volume, UInt16(2 * step), "steps from the restored value")
+        XCTAssertEqual(transport.current(.volume, on: lg), UInt16(2 * step))
+    }
+
+    func testMuteInSyncModeIsOneDecisionAcrossMonitorAndSystem() {
+        env.addExternal(lg, name: "LG")
+        transport.set(.volume, current: 40, max: 100, on: lg)
+        audio.muted = true // system already muted, monitor audible
+        let manager = makeManager(sync: true)
+
+        XCTAssertTrue(manager.toggleMute(), "monitor audible -> mute everything")
+        XCTAssertEqual(display(lg, in: manager)?.volume, 0)
+        XCTAssertEqual(audio.muted, true)
+        XCTAssertFalse(manager.toggleMute())
+        XCTAssertEqual(display(lg, in: manager)?.volume, 40)
+        XCTAssertEqual(audio.muted, false)
     }
 
     // MARK: - Audio output detection

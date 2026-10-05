@@ -29,6 +29,8 @@ struct ExternalDisplay: Identifiable, Hashable {
     let name: String
     let vendorNumber: UInt32
     let modelNumber: UInt32
+    /// EDID serial number (0 when the monitor doesn't report one).
+    var serialNumber: UInt32 = 0
     var brightness: UInt16?
     var maxBrightness: UInt16?
     var volume: UInt16?
@@ -44,6 +46,13 @@ struct ExternalDisplay: Identifiable, Hashable {
     var volumePercent: Int {
         guard let v = volume, let m = maxVolume, m > 0 else { return 0 }
         return Int(round(Double(v) / Double(m) * 100))
+    }
+
+    /// Stable identity of the physical monitor across reconnects and relaunches
+    /// (a CGDirectDisplayID can change). Used as the key for per-display state kept in
+    /// Preferences, such as the volume to restore on unmute.
+    var identityKey: String {
+        "\(vendorNumber)-\(modelNumber)-\(serialNumber)"
     }
 }
 
@@ -385,39 +394,74 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         guard let idx = displays.firstIndex(where: { $0.id == displayID }),
               let maxVal = displays[idx].maxVolume else { return }
         let value = UInt16(Double(maxVal) * Double(percent) / 100.0)
-        if ddc.write(vcp: .volume, value: value, to: displayID) {
-            displays[idx].volume = value
-            ddc.updateCache(vcp: .volume, displayID: displayID, newValue: value, maxValue: maxVal)
-        }
+        writeVolume(value, at: idx)
     }
 
+    /// Writes a raw DDC volume and keeps both the published state and the adjust() cache in
+    /// step, so a volume key pressed right after steps from this value. Returns success.
+    @discardableResult
+    private func writeVolume(_ value: UInt16, at idx: Int) -> Bool {
+        guard let maxVal = displays[idx].maxVolume else { return false }
+        let displayID = displays[idx].id
+        guard ddc.write(vcp: .volume, value: value, to: displayID) else { return false }
+        displays[idx].volume = value
+        ddc.updateCache(vcp: .volume, displayID: displayID, newValue: value, maxValue: maxVal)
+        return true
+    }
+
+    /// Volume restored on unmute when the pre-mute volume is unknown (or was 0).
+    static let fallbackUnmutePercent = 50
+
     /// Toggles mute and returns whether the output is now muted.
+    ///
+    /// One decision covers every output Glint controls on the current route (DDC volume on
+    /// external displays, and/or the system output): if ANY of them is audible, all are
+    /// muted; otherwise all are unmuted, each display back to the volume it had before it
+    /// was muted (remembered per monitor and persisted, so it survives a relaunch).
+    /// Displays without DDC volume are ignored.
     func toggleMute() -> Bool {
         let syncMode = preferences.syncWithBuiltIn
         let displayAudio = isAudioOutputDisplayBased()
-        var muted = false
 
-        if syncMode || displayAudio {
-            // Toggle DDC mute on external displays
-            for display in displays {
-                if (display.volume ?? 0) > 0 {
-                    setVolume(0, for: display.id)
-                    muted = true
-                } else {
-                    setVolume(50, for: display.id)
-                    muted = false
-                }
+        let ddcIndices = (syncMode || displayAudio)
+            ? displays.indices.filter { displays[$0].ddcVolumeAvailable && displays[$0].maxVolume != nil }
+            : []
+        let systemDevice = (syncMode || !displayAudio) ? audio.defaultOutputDevice() : nil
+
+        let displayAudible = ddcIndices.contains { (displays[$0].volume ?? 0) > 0 }
+        let systemAudible = systemDevice.map { !(audio.isMuted($0) ?? false) } ?? false
+        let mute = displayAudible || systemAudible
+
+        for idx in ddcIndices {
+            if mute {
+                muteDisplay(at: idx)
+            } else {
+                unmuteDisplay(at: idx)
             }
         }
-
-        if syncMode || !displayAudio {
-            toggleSystemMute()
-            if let device = audio.defaultOutputDevice() {
-                muted = audio.isMuted(device) ?? muted
-            }
+        if let device = systemDevice {
+            audio.setMuted(mute, on: device)
         }
 
-        return muted
+        DebugLogger.shared.log("MUTE: -> \(mute ? "muted" : "unmuted") (displays=\(ddcIndices.count), system=\(systemDevice != nil))")
+        return mute
+    }
+
+    private func muteDisplay(at idx: Int) {
+        let current = displays[idx].volume ?? 0
+        guard current > 0 else { return } // already silent — keep whatever was remembered
+        if writeVolume(0, at: idx) {
+            preferences.setPreMuteVolume(current, forDisplay: displays[idx].identityKey)
+        }
+    }
+
+    private func unmuteDisplay(at idx: Int) {
+        let maxVal = displays[idx].maxVolume ?? 100
+        let remembered = preferences.preMuteVolume(forDisplay: displays[idx].identityKey) ?? 0
+        let target = remembered > 0
+            ? min(remembered, maxVal)
+            : UInt16(Double(maxVal) * Double(Self.fallbackUnmutePercent) / 100.0)
+        writeVolume(target, at: idx)
     }
 
     // MARK: - System Volume Control (CoreAudio)
@@ -433,12 +477,6 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         if step > 0 {
             audio.setMuted(false, on: device)
         }
-    }
-
-    private func toggleSystemMute() {
-        guard let device = audio.defaultOutputDevice() else { return }
-        let muted = audio.isMuted(device) ?? false
-        audio.setMuted(!muted, on: device)
     }
 
     // MARK: - Built-in Brightness Control
@@ -646,7 +684,8 @@ final class SystemDisplayEnvironment: DisplayEnvironment {
                 id: id,
                 name: displayName(for: id),
                 vendorNumber: CGDisplayVendorNumber(id),
-                modelNumber: CGDisplayModelNumber(id)
+                modelNumber: CGDisplayModelNumber(id),
+                serialNumber: CGDisplaySerialNumber(id)
             )
         }
     }

@@ -104,6 +104,24 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         debugLogging = defaults.bool(forKey: "debugLogging")
     }
 
+    // MARK: - Per-display state
+
+    private static let preMuteVolumesKey = "preMuteVolumes"
+
+    /// Raw DDC volume a display had before Glint muted it, keyed by
+    /// `ExternalDisplay.identityKey`. Persisted so unmute restores it after a relaunch.
+    func preMuteVolume(forDisplay key: String) -> UInt16? {
+        let stored = defaults.dictionary(forKey: Self.preMuteVolumesKey) as? [String: Int]
+        guard let value = stored?[key] else { return nil }
+        return UInt16(clamping: value)
+    }
+
+    func setPreMuteVolume(_ value: UInt16?, forDisplay key: String) {
+        var stored = (defaults.dictionary(forKey: Self.preMuteVolumesKey) as? [String: Int]) ?? [:]
+        stored[key] = value.map(Int.init)
+        defaults.set(stored, forKey: Self.preMuteVolumesKey)
+    }
+
     static func updateLoginItem(_ launchAtLogin: Bool) {
         do {
             if launchAtLogin {
