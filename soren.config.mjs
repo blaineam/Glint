@@ -6,23 +6,20 @@
 // Soren (🦉, the QA counterpart to Rocket) lives in _shared/soren and is pluggable
 // per project via this file. See _shared/soren/docs/config.md for every field.
 //
-// ── Why there is exactly ONE build-only suite here ────────────────────────────
-// `xcodebuild -list -project Glint.xcodeproj` reports a single target and a
-// single scheme, both named `Glint`, and project.yml declares no test target.
-// Glint HAS NO XCTest bundle. Rather than list a test suite that would run
-// nothing and report green — which is worse than no gate, because a release
-// would be gated on a suite that can't fail — the honest gate is that the app
-// still compiles cleanly on the macOS destination. This is the same pattern
-// Haven uses for its HavenMac scheme.
+// ── Suites ────────────────────────────────────────────────────────────────────
+//   build — compile gate for the shipping app (no tests run).
+//   unit  — GlintTests (XCTest, hosted in Glint.app). The hardware edges sit behind
+//           seams: DDC packets/reply parsing (DDCPacket), port ordering (DDCPortSelection),
+//           cache/retry policy over a fake DDCTransport + fake clock, media-key routing
+//           (MediaKeyInterceptor.action), Preferences in a throwaway UserDefaults suite,
+//           and DisplayManager over fake CoreAudio / display environment. AppDelegate
+//           returns early under XCTest, so no event tap or Accessibility alert.
+//   l10n  — node --test: Localizable.xcstrings completeness + format specifiers in all
+//           8 languages, and docs/i18n dictionary parity with the pages (9 locales).
+//   web   — node --check on the site's i18n runtime.
 //
-// Glint is also close to untestable in XCTest as it stands: its whole job is
-// side effects on hardware and on the window server — a CGEventTap on media
-// keys (needs Accessibility permission), I2C DDC/CI writes to a physically
-// attached monitor, and private DisplayServices brightness calls resolved at
-// runtime via dlopen/dlsym. A real suite would need DDCService and the
-// DisplayServices shim factored behind injectable protocols first; until that
-// refactor lands, do not add a suite here that only asserts on a mock of code
-// that does not exist yet.
+// Still manual (window server / hardware bound): IOKit port enumeration and real I2C,
+// CGEventTap creation, SMAppService, the SwiftUI menu-bar / Settings views.
 //
 // `root` defaults to this file's directory (the Glint repo).
 export default {
@@ -45,13 +42,37 @@ export default {
       project: 'Glint.xcodeproj',
       scheme: 'Glint',
       destination: 'platform=macOS',
-      description: 'Glint compiles on macOS (no test target exists — see the note above)',
+      description: 'Glint compiles on macOS',
+    },
+
+    unit: {
+      type: 'xcodebuild-test',
+      platform: 'macos',
+      project: 'Glint.xcodeproj',
+      scheme: 'Glint',
+      destination: 'platform=macOS,arch=arm64',
+      xcodegen: true,
+      derivedDataPath: '/tmp/soren-dd-glint-unit',
+      description: 'GlintTests: DDC protocol, port selection, cache/retry, media keys, preferences, routing',
+    },
+
+    l10n: {
+      type: 'cmd',
+      cmd: 'node',
+      args: ['--test', 'Scripts/tests/*.test.mjs'],
+      description: 'xcstrings complete in 8 languages + website i18n key parity (9 locales)',
+    },
+
+    web: {
+      type: 'node-check',
+      files: ['docs/i18n/'],
+      description: 'website i18n runtime parses',
     },
   },
 
-  // No data model, no persistence format to migrate, and no test bundle: the
-  // compile gate is all `soren migrate Glint` can honestly assert.
-  migration: ['build'],
+  // The only persisted state is UserDefaults; the unit suite covers defaults
+  // registration and the pre-1.5 upgrade (no step keys → 6.25 %).
+  migration: ['build', 'unit'],
 
-  release: { requireGreen: ['build'] },
+  release: { requireGreen: ['build', 'unit', 'l10n'] },
 };
