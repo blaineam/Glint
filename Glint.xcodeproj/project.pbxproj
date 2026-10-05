@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1607851D8D96C7FCB7650101 /* MediaKeyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B685FC48F27A606017A3549 /* MediaKeyUITests.swift */; };
 		1740D559AA344316F582166A /* DisplayManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B7A8B76F380823A677FE9F /* DisplayManagerTests.swift */; };
+		181A3E7694ABA287A768C2E7 /* AccessibilityAlertUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DC7537F9D6FB92BAD0D0A8 /* AccessibilityAlertUITests.swift */; };
 		1A32999FB52B5305233F4533 /* PreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE7739AE02DCC24D4ADEBB15 /* PreferencesTests.swift */; };
 		211225BAF03651FC861727AF /* SupportWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60B0D2383D4DB7401DA7F9C /* SupportWindow.swift */; };
 		2500370823674743910BB2E2 /* DDCPortSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC276DEA7355AC120009E63B /* DDCPortSelectionTests.swift */; };
@@ -15,25 +17,40 @@
 		31D50731B062DF56EED921D5 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F871A5D2864AB32F025196 /* DisplayManager.swift */; };
 		349BB3D556AF44229544299D /* Glint.icon in Resources */ = {isa = PBXBuildFile; fileRef = 970B904762E8A35DC16ECACA /* Glint.icon */; };
 		3B71A3C190C22537BCFCCF6E /* DDCServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6509A0B612A4597ECBB7C5BA /* DDCServiceTests.swift */; };
+		4C14B256C70C77419024B2B0 /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADA6B460EC0C149DD9F52A89 /* SettingsUITests.swift */; };
 		5C14C3794AFEE701B8BD166D /* DDCPacketTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 968B8DF16191BA945867EE0C /* DDCPacketTests.swift */; };
 		644BAA10D4A2E62C4B479AE4 /* MediaKeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300605DA6ABBB04FAE37DD1B /* MediaKeyInterceptor.swift */; };
 		79A45BB6F5671A4A4D0DE096 /* TestDoubles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A3A736A08BC298854EB271 /* TestDoubles.swift */; };
+		7D8B2FD95A08FEDDA56D613F /* SettingsSceneUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EBF8471DA9DF0CDC0D3243 /* SettingsSceneUITests.swift */; };
 		8425E1EEEDD88106BD102445 /* DebugLoggerAndOSDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C18B72688DBDEA83D577249 /* DebugLoggerAndOSDTests.swift */; };
 		888CC26DF19E4F218B94FE47 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B392AF935EBF332BE851397 /* Assets.xcassets */; };
+		909D53364625B684DED7F777 /* UITestMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B5F3092D3FDD1D188C14E1 /* UITestMode.swift */; };
 		97BCF0C2163D7B620F890FF1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82A8057ECF1F6FA17690EAFB /* SettingsView.swift */; };
 		A6F09635614F2ED6D668657B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8270790A03573066AEA43219 /* CoreAudio.framework */; };
+		A9EDD870E5C08EB039F38209 /* MenuBarUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F673B0373DD8333DDDDB27 /* MenuBarUITests.swift */; };
+		AECE2C64345DC184A1680F0C /* StatusItemUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BD55E5EAA7E001757991827 /* StatusItemUITests.swift */; };
 		B70CAFEBB2416E25B0FFED97 /* MillerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 33E23FBE72BA4F41DE8F8565 /* MillerKit */; };
+		BB39E7AFEB817C97E691131C /* SupportWindowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F684864D3105577430119907 /* SupportWindowUITests.swift */; };
 		BDB4EFCB21435B86D4CF01A2 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C1E83CE4CDABC4F0038185 /* Preferences.swift */; };
 		BDE625CBD0C63680B0EAE3DC /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */; };
 		BF46C11E1A471E28DEAB01D8 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D80235222F8408AF3392684D /* Localizable.xcstrings */; };
 		BFB4C9E4BF4E452E3ACF8ED9 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */; };
+		CE64E6CB52421C753846FBEB /* GlintUITestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5741B0B135987C7AA6291A68 /* GlintUITestCase.swift */; };
 		E11E174193297CCD614CB342 /* MediaKeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7112F504F127B6B0B1F71B27 /* MediaKeyTests.swift */; };
+		E5C7558ADFA95B1F2BC3F0F8 /* OSDUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E236791E1BA551FBD70E0E1E /* OSDUITests.swift */; };
 		EE884A591152F0EF72D43C20 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B1FD40AB8D03FF3FDCA0E3B /* IOKit.framework */; };
 		F1DC01014450ED71DC1B5E5C /* DDCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF93EB90A6AE593A6393654 /* DDCService.swift */; };
 		F59E5DDF0D70C6AB5215DFFD /* OSDOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B782F26D30192C2F6180E26A /* OSDOverlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		D4C9234CAD9895EEAF0DC5C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BE6DB378EC4FB00E8DB46BA7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 370743E3F9FFC81627C407C4;
+			remoteInfo = Glint;
+		};
 		E573422D753FD4F162230F22 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = BE6DB378EC4FB00E8DB46BA7 /* Project object */;
@@ -50,26 +67,37 @@
 		2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlintApp.swift; sourceTree = "<group>"; };
 		300605DA6ABBB04FAE37DD1B /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
 		35B7A8B76F380823A677FE9F /* DisplayManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManagerTests.swift; sourceTree = "<group>"; };
+		3B685FC48F27A606017A3549 /* MediaKeyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyUITests.swift; sourceTree = "<group>"; };
 		3E2E78BBA22734DD486C760B /* Glint.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Glint.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5741B0B135987C7AA6291A68 /* GlintUITestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlintUITestCase.swift; sourceTree = "<group>"; };
 		6509A0B612A4597ECBB7C5BA /* DDCServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDCServiceTests.swift; sourceTree = "<group>"; };
 		7112F504F127B6B0B1F71B27 /* MediaKeyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyTests.swift; sourceTree = "<group>"; };
 		7C18B72688DBDEA83D577249 /* DebugLoggerAndOSDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLoggerAndOSDTests.swift; sourceTree = "<group>"; };
 		8270790A03573066AEA43219 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		82A8057ECF1F6FA17690EAFB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		86A3A736A08BC298854EB271 /* TestDoubles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestDoubles.swift; sourceTree = "<group>"; };
+		8871F6F57636762A5E692B8E /* GlintUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GlintUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BD55E5EAA7E001757991827 /* StatusItemUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemUITests.swift; sourceTree = "<group>"; };
 		90C1E83CE4CDABC4F0038185 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
+		91F673B0373DD8333DDDDB27 /* MenuBarUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarUITests.swift; sourceTree = "<group>"; };
 		91F871A5D2864AB32F025196 /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
 		968B8DF16191BA945867EE0C /* DDCPacketTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDCPacketTests.swift; sourceTree = "<group>"; };
 		970B904762E8A35DC16ECACA /* Glint.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = Glint.icon; sourceTree = "<group>"; };
+		A1B5F3092D3FDD1D188C14E1 /* UITestMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestMode.swift; sourceTree = "<group>"; };
+		ADA6B460EC0C149DD9F52A89 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
 		B782F26D30192C2F6180E26A /* OSDOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSDOverlay.swift; sourceTree = "<group>"; };
 		C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
+		C6DC7537F9D6FB92BAD0D0A8 /* AccessibilityAlertUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAlertUITests.swift; sourceTree = "<group>"; };
 		CC276DEA7355AC120009E63B /* DDCPortSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDCPortSelectionTests.swift; sourceTree = "<group>"; };
 		CE7739AE02DCC24D4ADEBB15 /* PreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesTests.swift; sourceTree = "<group>"; };
 		D280CA78B805CF0C47F15519 /* Glint-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Glint-Bridging-Header.h"; sourceTree = "<group>"; };
+		D3EBF8471DA9DF0CDC0D3243 /* SettingsSceneUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSceneUITests.swift; sourceTree = "<group>"; };
 		D80235222F8408AF3392684D /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		E236791E1BA551FBD70E0E1E /* OSDUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSDUITests.swift; sourceTree = "<group>"; };
 		E94AB23640CA1E6007F8B2B4 /* GlintTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GlintTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F60B0D2383D4DB7401DA7F9C /* SupportWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportWindow.swift; sourceTree = "<group>"; };
+		F684864D3105577430119907 /* SupportWindowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportWindowUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +119,7 @@
 			children = (
 				D280CA78B805CF0C47F15519 /* Glint-Bridging-Header.h */,
 				2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */,
+				A1B5F3092D3FDD1D188C14E1 /* UITestMode.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -143,6 +172,22 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		C4E4CEBCF2C9DF80C8E39706 /* GlintUITests */ = {
+			isa = PBXGroup;
+			children = (
+				C6DC7537F9D6FB92BAD0D0A8 /* AccessibilityAlertUITests.swift */,
+				5741B0B135987C7AA6291A68 /* GlintUITestCase.swift */,
+				3B685FC48F27A606017A3549 /* MediaKeyUITests.swift */,
+				91F673B0373DD8333DDDDB27 /* MenuBarUITests.swift */,
+				E236791E1BA551FBD70E0E1E /* OSDUITests.swift */,
+				D3EBF8471DA9DF0CDC0D3243 /* SettingsSceneUITests.swift */,
+				ADA6B460EC0C149DD9F52A89 /* SettingsUITests.swift */,
+				8BD55E5EAA7E001757991827 /* StatusItemUITests.swift */,
+				F684864D3105577430119907 /* SupportWindowUITests.swift */,
+			);
+			path = GlintUITests;
+			sourceTree = "<group>";
+		};
 		D801533C6FB33EF2E2274FBC /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -157,6 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				5F9010EBEE9DCDE13D866A74 /* GlintTests */,
+				C4E4CEBCF2C9DF80C8E39706 /* GlintUITests */,
 				FD569EF777D164901CEB4F30 /* Resources */,
 				2737906091E3FF8EFD782CD1 /* Sources */,
 				846EE2A0E01AF110EE275AFD /* Frameworks */,
@@ -169,6 +215,7 @@
 			children = (
 				3E2E78BBA22734DD486C760B /* Glint.app */,
 				E94AB23640CA1E6007F8B2B4 /* GlintTests.xctest */,
+				8871F6F57636762A5E692B8E /* GlintUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -187,6 +234,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0DDB8FABF207E501D6E3ABA9 /* GlintUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 98D29B0B75FAC71E1F2462C3 /* Build configuration list for PBXNativeTarget "GlintUITests" */;
+			buildPhases = (
+				DB693DE064D4608852AF9FBE /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				889709B6B3D7DE02D59D2520 /* PBXTargetDependency */,
+			);
+			name = GlintUITests;
+			packageProductDependencies = (
+			);
+			productName = GlintUITests;
+			productReference = 8871F6F57636762A5E692B8E /* GlintUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		370743E3F9FFC81627C407C4 /* Glint */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4AC9F6345A7677531E105A3D /* Build configuration list for PBXNativeTarget "Glint" */;
@@ -234,6 +299,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
+					0DDB8FABF207E501D6E3ABA9 = {
+						ProvisioningStyle = Manual;
+						TestTargetID = 370743E3F9FFC81627C407C4;
+					};
 					370743E3F9FFC81627C407C4 = {
 						ProvisioningStyle = Manual;
 					};
@@ -261,6 +330,7 @@
 			targets = (
 				370743E3F9FFC81627C407C4 /* Glint */,
 				900A6C235CB23B81714F0821 /* GlintTests */,
+				0DDB8FABF207E501D6E3ABA9 /* GlintUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -308,12 +378,34 @@
 				BDB4EFCB21435B86D4CF01A2 /* Preferences.swift in Sources */,
 				97BCF0C2163D7B620F890FF1 /* SettingsView.swift in Sources */,
 				211225BAF03651FC861727AF /* SupportWindow.swift in Sources */,
+				909D53364625B684DED7F777 /* UITestMode.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DB693DE064D4608852AF9FBE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				181A3E7694ABA287A768C2E7 /* AccessibilityAlertUITests.swift in Sources */,
+				CE64E6CB52421C753846FBEB /* GlintUITestCase.swift in Sources */,
+				1607851D8D96C7FCB7650101 /* MediaKeyUITests.swift in Sources */,
+				A9EDD870E5C08EB039F38209 /* MenuBarUITests.swift in Sources */,
+				E5C7558ADFA95B1F2BC3F0F8 /* OSDUITests.swift in Sources */,
+				7D8B2FD95A08FEDDA56D613F /* SettingsSceneUITests.swift in Sources */,
+				4C14B256C70C77419024B2B0 /* SettingsUITests.swift in Sources */,
+				AECE2C64345DC184A1680F0C /* StatusItemUITests.swift in Sources */,
+				BB39E7AFEB817C97E691131C /* SupportWindowUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		889709B6B3D7DE02D59D2520 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 370743E3F9FFC81627C407C4 /* Glint */;
+			targetProxy = D4C9234CAD9895EEAF0DC5C1 /* PBXContainerItemProxy */;
+		};
 		D3E9FF39F2716E0829281863 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 370743E3F9FFC81627C407C4 /* Glint */;
@@ -430,6 +522,46 @@
 			};
 			name = Debug;
 		};
+		96759CD233056F3772440577 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.GlintUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = Glint;
+			};
+			name = Debug;
+		};
+		9D45C08A96BF217FCEA14595 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.GlintUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = Glint;
+			};
+			name = Release;
+		};
 		A421CEA63DCEC9F0C551FA29 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -465,7 +597,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.Glint;
+				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.Glint.debug;
 				SDKROOT = macosx;
 				SWIFT_OBJC_BRIDGING_HEADER = "Glint/Sources/App/Glint-Bridging-Header.h";
 				SWIFT_STRICT_CONCURRENCY = minimal;
@@ -557,6 +689,15 @@
 			buildConfigurations = (
 				D716E255757C327EE86E1B65 /* Debug */,
 				2FF28DB47A88D5C96B620971 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		98D29B0B75FAC71E1F2462C3 /* Build configuration list for PBXNativeTarget "GlintUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				96759CD233056F3772440577 /* Debug */,
+				9D45C08A96BF217FCEA14595 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

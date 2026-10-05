@@ -71,6 +71,13 @@ targets:
         SWIFT_STRICT_CONCURRENCY: minimal
         ASSETCATALOG_COMPILER_APPICON_NAME: Glint
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+      configs:
+        # Debug builds (Xcode runs, the hosted unit tests, GlintUITests) get their own
+        # bundle ID, so a test launch never collides with — or gets terminated as — the
+        # installed Glint, and never writes the real com.blainemiller.Glint defaults
+        # (status-item position etc.). Release keeps com.blainemiller.Glint.
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.blainemiller.Glint.debug
 
   # Unit tests, hosted in Glint.app (so @testable import sees the app module).
   # AppDelegate returns early under XCTest, so a test run never installs the
@@ -92,3 +99,38 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Glint.app/Contents/MacOS/Glint
         BUNDLE_LOADER: $(TEST_HOST)
+
+  # UI tests (XCUITest) driving Glint.app in its DEBUG-only -UITestMode (see
+  # Glint/Sources/App/UITestMode.swift): fixture monitors, stubbed Accessibility,
+  # throwaway defaults suite, no event tap, recorded (not opened) URLs.
+  # Run through the GlintUITests scheme, kept out of the Glint scheme so the unit
+  # suite stays fast.
+  GlintUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - GlintUITests
+    dependencies:
+      - target: Glint
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.blainemiller.GlintUITests
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        GENERATE_INFOPLIST_FILE: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        TEST_TARGET_NAME: Glint
+
+schemes:
+  GlintUITests:
+    build:
+      targets:
+        Glint: all
+        GlintUITests: [test]
+    test:
+      config: Debug
+      gatherCoverageData: true
+      coverageTargets:
+        - Glint
+      targets:
+        - GlintUITests
