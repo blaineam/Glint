@@ -9,17 +9,22 @@ struct SettingsView: View {
         Form {
             Section("Keyboard Controls") {
                 Toggle("Intercept brightness keys", isOn: $prefs.interceptBrightness)
+                    .accessibilityIdentifier("glint.settings.interceptBrightness")
                 if prefs.interceptBrightness {
                     Toggle("Always intercept brightness", isOn: $prefs.alwaysInterceptBrightness)
+                        .accessibilityIdentifier("glint.settings.alwaysInterceptBrightness")
                         .help("Intercept brightness keys even when DDC brightness control wasn't detected. Useful if your monitor responds to DDC writes but not reads.")
                         .padding(.leading, 16)
                 }
                 Toggle("Intercept volume keys", isOn: $prefs.interceptVolume)
+                    .accessibilityIdentifier("glint.settings.interceptVolume")
                 if prefs.interceptVolume {
                     Toggle("Always intercept volume", isOn: $prefs.alwaysInterceptVolume)
+                        .accessibilityIdentifier("glint.settings.alwaysInterceptVolume")
                         .help("Intercept volume keys even when DDC volume control wasn't detected. Useful if your monitor responds to DDC writes but not reads.")
                         .padding(.leading, 16)
                     Toggle("Write-only volume", isOn: $prefs.writeOnlyVolume)
+                        .accessibilityIdentifier("glint.settings.writeOnlyVolume")
                         .help("Skip DDC volume reads and start at 50%. Volume is tracked in memory and sent via DDC writes only. Enable this if your monitor ignores DDC volume reads but responds to writes.")
                         .padding(.leading, 16)
                 }
@@ -29,19 +34,24 @@ struct SettingsView: View {
                     }
                 }
                 .help("How much each brightness key press changes brightness.")
+                .accessibilityIdentifier("glint.settings.brightnessStep")
                 Picker("Volume step", selection: $prefs.volumeStep) {
                     ForEach(Preferences.stepOptions, id: \.self) { step in
                         Text(step / 100, format: .percent).tag(step)
                     }
                 }
                 .help("How much each volume key press changes volume.")
+                .accessibilityIdentifier("glint.settings.volumeStep")
                 Toggle("Sync with built-in display", isOn: $prefs.syncWithBuiltIn)
+                    .accessibilityIdentifier("glint.settings.syncWithBuiltIn")
                     .help("When on, brightness/volume keys also adjust the built-in display and Mac speakers alongside external displays.")
             }
 
             Section("General") {
                 Toggle("Launch at login", isOn: $prefs.launchAtLogin)
+                    .accessibilityIdentifier("glint.settings.launchAtLogin")
                 Toggle("Hide menu bar icon", isOn: $prefs.hideMenuBarIcon)
+                    .accessibilityIdentifier("glint.settings.hideMenuBarIcon")
                     .help("Glint disappears completely. To access settings again, open Glint from Applications.")
             }
 
@@ -52,10 +62,12 @@ struct SettingsView: View {
                         .frame(width: 8, height: 8)
                     if interceptor.isActive {
                         Text("Accessibility access granted")
+                            .accessibilityIdentifier("glint.settings.accessibilityStatus")
                     } else {
                         VStack(alignment: .leading) {
                             Text("Accessibility access required")
                                 .foregroundStyle(.orange)
+                                .accessibilityIdentifier("glint.settings.accessibilityStatus")
                             Text("Open System Settings > Privacy & Security > Accessibility and add Glint. You will need to quit and relaunch Glint after enabling access.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -64,16 +76,21 @@ struct SettingsView: View {
                     Spacer()
                     if !interceptor.isActive {
                         Button("Open Settings") {
-                            NSWorkspace.shared.open(
-                                URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-                            )
+                            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+                            #if DEBUG
+                            UITestMode.open(url)
+                            #else
+                            NSWorkspace.shared.open(url)
+                            #endif
                         }
+                        .accessibilityIdentifier("glint.settings.openAccessibilitySettings")
                     }
                 }
             }
 
             Section("Diagnostics") {
                 Toggle("Debug logging", isOn: $prefs.debugLogging)
+                    .accessibilityIdentifier("glint.settings.debugLogging")
                     .help("Writes detailed DDC and audio routing info to a log file for troubleshooting.")
                 if prefs.debugLogging {
                     HStack {
@@ -84,6 +101,7 @@ struct SettingsView: View {
                         Button("Show Log File") {
                             DebugLogger.shared.revealInFinder()
                         }
+                        .accessibilityIdentifier("glint.settings.showLogFile")
                     }
                 }
             }
@@ -91,6 +109,7 @@ struct SettingsView: View {
             Section("About") {
                 Text("Glint")
                     .font(.headline)
+                    .accessibilityIdentifier("glint.settings.aboutTitle")
                 Text("DDC display control from your keyboard.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -107,6 +126,7 @@ struct SettingsView: View {
                     NSApplication.shared.terminate(nil)
                 }
                 .foregroundStyle(.red)
+                .accessibilityIdentifier("glint.settings.quit")
             }
 
             // Support is already fully usable inline via SupportSection above —
@@ -140,7 +160,11 @@ final class SettingsWindowController: @unchecked Sendable {
         }
 
         let settingsView = SettingsView()
+        #if DEBUG
+        let hostingController = NSHostingController(rootView: UITestMode.host(settingsView))
+        #else
         let hostingController = NSHostingController(rootView: settingsView)
+        #endif
 
         let window = NSWindow(contentViewController: hostingController)
         window.title = String(localized: "Glint Settings", comment: "Title of the settings window")

@@ -28,13 +28,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             setupMenuBar()
         }
 
-        // Start intercepting media keys
-        MediaKeyInterceptor.shared.start()
-
-        // If event tap failed, prompt for accessibility
-        if !MediaKeyInterceptor.shared.isActive {
-            promptAccessibility()
+        #if DEBUG
+        if UITestMode.isActive {
+            // GlintUITests: no event tap; Accessibility state and alert are stubbed.
+            UITestMode.applicationDidFinishLaunching(self) { [weak self] in self?.promptAccessibility() }
+        } else {
+            startInterceptingMediaKeys()
         }
+        #else
+        startInterceptingMediaKeys()
+        #endif
 
         // Listen for preference changes to show/hide menu bar icon
         NotificationCenter.default.addObserver(
@@ -52,6 +55,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.setupMenuBar()
                 }
             }
+        }
+    }
+
+    private func startInterceptingMediaKeys() {
+        // Start intercepting media keys
+        MediaKeyInterceptor.shared.start()
+
+        // If event tap failed, prompt for accessibility
+        if !MediaKeyInterceptor.shared.isActive {
+            promptAccessibility()
         }
     }
 
@@ -79,10 +92,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.image?.size = NSSize(width: 16, height: 16)
             button.action = #selector(togglePopover)
             button.target = self
+            button.setAccessibilityIdentifier("glint.statusItem")
         }
 
         let popover = NSPopover()
+        #if DEBUG
+        popover.contentViewController = NSHostingController(rootView: UITestMode.host(MenuBarView()))
+        #else
         popover.contentViewController = NSHostingController(rootView: MenuBarView())
+        #endif
         popover.behavior = .transient
         self.popover = popover
     }
@@ -114,9 +132,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.alertStyle = .informational
 
         if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(
-                URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-            )
+            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+            #if DEBUG
+            UITestMode.open(url)
+            #else
+            NSWorkspace.shared.open(url)
+            #endif
         }
     }
 }

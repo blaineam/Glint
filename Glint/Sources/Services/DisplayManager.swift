@@ -84,6 +84,9 @@ protocol DisplayEnvironment: AnyObject {
 
 final class DisplayManager: ObservableObject, @unchecked Sendable {
     static let shared: DisplayManager = {
+        #if DEBUG
+        if UITestMode.isActive { return UITestMode.makeDisplayManager() }
+        #endif
         let manager = DisplayManager(
             preferences: .shared,
             ddc: .shared,

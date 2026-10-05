@@ -16,6 +16,13 @@ final class OSDOverlay {
 
     private init() {}
 
+    private static var hideDelay: Duration {
+        #if DEBUG
+        if UITestMode.isActive { return UITestMode.osdHideDelay }
+        #endif
+        return .seconds(1.2)
+    }
+
     /// Where the pill sits: horizontally centred on the screen, 8 pt below the menu bar
     /// (or notch), whose height is the gap between the screen top and the visible frame.
     nonisolated static func pillOrigin(screenFrame: NSRect, visibleFrame: NSRect, pillSize: NSSize) -> NSPoint {
@@ -52,6 +59,7 @@ final class OSDOverlay {
             panel.ignoresMouseEvents = true
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary]
             panel.contentView = hostingView
+            panel.setAccessibilityIdentifier("glint.osd")
             window = panel
         }
 
@@ -78,7 +86,7 @@ final class OSDOverlay {
 
         // Reset hide timer
         hideTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.2))
+            try? await Task.sleep(for: Self.hideDelay)
             guard !Task.isCancelled, let self else { return }
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.3
@@ -105,6 +113,7 @@ struct OSDPillView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))
                 .frame(width: 14)
+                .accessibilityIdentifier("glint.osd.icon")
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -123,6 +132,7 @@ struct OSDPillView: View {
                 .foregroundStyle(.white.opacity(0.6))
                 .frame(width: 22, alignment: .trailing)
                 .monospacedDigit()
+                .accessibilityIdentifier("glint.osd.value")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)

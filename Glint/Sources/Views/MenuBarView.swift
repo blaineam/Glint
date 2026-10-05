@@ -39,6 +39,7 @@ struct MenuBarView: View {
             Text("No external displays detected")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityIdentifier("glint.menu.empty")
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -65,6 +66,7 @@ struct MenuBarView: View {
             Text(interceptor.isActive ? "Intercepting keys" : "Not active")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityIdentifier("glint.menu.status")
             Spacer()
         }
         .padding(.horizontal, 4)
@@ -81,6 +83,7 @@ struct MenuBarView: View {
             }
             .buttonStyle(.plain)
             .font(.caption)
+            .accessibilityIdentifier("glint.menu.settings")
 
             Spacer()
 
@@ -93,6 +96,7 @@ struct MenuBarView: View {
             }
             .buttonStyle(.plain)
             .font(.caption)
+            .accessibilityIdentifier("glint.menu.support")
 
             Spacer()
 
@@ -101,6 +105,7 @@ struct MenuBarView: View {
             }
             .buttonStyle(.plain)
             .font(.caption)
+            .accessibilityIdentifier("glint.menu.refresh")
 
             Spacer()
 
@@ -109,6 +114,7 @@ struct MenuBarView: View {
             }
             .buttonStyle(.plain)
             .font(.caption)
+            .accessibilityIdentifier("glint.menu.quit")
         }
         .padding(.horizontal, 4)
     }
@@ -126,6 +132,7 @@ struct DisplayControlView: View {
             Text(display.name)
                 .font(.headline)
                 .lineLimit(1)
+                .accessibilityIdentifier("glint.display.\(display.id).name")
 
             // Brightness
             HStack(spacing: 8) {
@@ -148,14 +155,17 @@ struct DisplayControlView: View {
                         ),
                         in: 0...Double(maxBrightness)
                     )
+                    .accessibilityIdentifier("glint.display.\(display.id).brightnessSlider")
                     Text("\(display.brightnessPercent)%")
                         .font(.caption)
                         .frame(width: 32, alignment: .trailing)
                         .monospacedDigit()
+                        .accessibilityIdentifier("glint.display.\(display.id).brightnessValue")
                 } else {
                     Text("N/A")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("glint.display.\(display.id).brightnessNA")
                     Spacer()
                 }
             }
@@ -177,14 +187,17 @@ struct DisplayControlView: View {
                         ),
                         in: 0...Double(maxVolume)
                     )
+                    .accessibilityIdentifier("glint.display.\(display.id).volumeSlider")
                     Text("\(display.volumePercent)%")
                         .font(.caption)
                         .frame(width: 32, alignment: .trailing)
                         .monospacedDigit()
+                        .accessibilityIdentifier("glint.display.\(display.id).volumeValue")
                 } else {
                     Text("N/A")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("glint.display.\(display.id).volumeNA")
                     Spacer()
                 }
             }

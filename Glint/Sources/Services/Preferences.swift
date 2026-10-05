@@ -2,7 +2,12 @@ import Foundation
 import ServiceManagement
 
 final class Preferences: ObservableObject, @unchecked Sendable {
-    static let shared = Preferences()
+    static let shared: Preferences = {
+        #if DEBUG
+        if UITestMode.isActive { return UITestMode.makePreferences() }
+        #endif
+        return Preferences()
+    }()
 
     private let defaults: UserDefaults
     /// Registers/unregisters the login item. Injectable so tests never touch SMAppService.

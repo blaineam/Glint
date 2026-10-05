@@ -75,29 +75,47 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             ddcVolumeAvailable: DisplayManager.shared.ddcVolumeAvailable
         )
 
+        guard action != .passThrough else { return event }
+        perform(action)
+        return nil // Consume — Glint handles everything
+    }
+
+    /// Carries out a consuming action off the event-tap thread.
+    private func perform(_ action: Action) {
         switch action {
         case .passThrough:
-            return event
+            return
         case .brightness(let step):
             ddcQueue.async {
                 DisplayManager.shared.adjustBrightness(by: step)
                 self.showOSD(.brightness)
             }
-            return nil // Consume — Glint handles everything
         case .volume(let step):
             ddcQueue.async {
                 DisplayManager.shared.adjustVolume(by: step)
                 self.showOSD(.volume)
             }
-            return nil
         case .toggleMute:
             ddcQueue.async {
                 let muted = DisplayManager.shared.toggleMute()
                 self.showMuteOSD(muted: muted)
             }
-            return nil
         }
     }
+
+    #if DEBUG
+    /// UI-test mode: routes a decoded key exactly as the event tap would (XCUITest
+    /// cannot synthesize NX_SYSDEFINED events).
+    func simulate(_ key: MediaKey) {
+        let action = Self.action(
+            for: key,
+            prefs: Preferences.shared,
+            ddcBrightnessAvailable: DisplayManager.shared.ddcBrightnessAvailable,
+            ddcVolumeAvailable: DisplayManager.shared.ddcVolumeAvailable
+        )
+        perform(action)
+    }
+    #endif
 
     /// What Glint does with a decoded media key. Anything but `.passThrough` consumes the
     /// event, so macOS never sees it — getting this wrong kills the user's keys.

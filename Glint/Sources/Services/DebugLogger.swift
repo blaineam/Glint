@@ -3,7 +3,12 @@ import AppKit
 /// File-based debug logger. Writes to ~/Library/Application Support/Glint/debug.log
 /// when enabled via Preferences. Automatically truncates at 1 MB.
 final class DebugLogger: @unchecked Sendable {
-    static let shared = DebugLogger()
+    static let shared: DebugLogger = {
+        #if DEBUG
+        if UITestMode.isActive { return UITestMode.makeDebugLogger() }
+        #endif
+        return DebugLogger()
+    }()
 
     private let maxFileSize: UInt64
     private let queue = DispatchQueue(label: "com.blainemiller.Glint.logger")

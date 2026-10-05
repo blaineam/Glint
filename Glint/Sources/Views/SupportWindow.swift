@@ -27,7 +27,11 @@ final class SupportWindowController: @unchecked Sendable {
             return
         }
 
+        #if DEBUG
+        let hostingController = NSHostingController(rootView: UITestMode.host(SupportWindowContent(app: .glint)))
+        #else
         let hostingController = NSHostingController(rootView: SupportWindowContent(app: .glint))
+        #endif
 
         let window = NSWindow(contentViewController: hostingController)
         window.title = String(localized: "Support Glint", comment: "Title of the support window")
