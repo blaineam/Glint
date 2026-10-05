@@ -67,63 +67,75 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             return event
         }
 
-        let keyCode = Int((nsEvent.data1 & 0xFFFF_0000) >> 16)
-        let keyFlags = nsEvent.data1 & 0x0000_FFFF
-        let keyState = (keyFlags & 0xFF00) >> 8
-        let isDown = keyState == 0x0A
+        let key = MediaKey(data1: nsEvent.data1)
+        let action = Self.action(
+            for: key,
+            prefs: Preferences.shared,
+            ddcBrightnessAvailable: DisplayManager.shared.ddcBrightnessAvailable,
+            ddcVolumeAvailable: DisplayManager.shared.ddcVolumeAvailable
+        )
 
-        guard isDown else { return event }
-
-        let prefs = Preferences.shared
-
-        switch keyCode {
-        case Int(NX_KEYTYPE_BRIGHTNESS_UP):
-            guard prefs.interceptBrightness,
-                  prefs.alwaysInterceptBrightness || DisplayManager.shared.ddcBrightnessAvailable else { return event }
+        switch action {
+        case .passThrough:
+            return event
+        case .brightness(let step):
             ddcQueue.async {
-                DisplayManager.shared.adjustBrightness(by: 1)
+                DisplayManager.shared.adjustBrightness(by: step)
                 self.showOSD(.brightness)
             }
             return nil // Consume — Glint handles everything
-
-        case Int(NX_KEYTYPE_BRIGHTNESS_DOWN):
-            guard prefs.interceptBrightness,
-                  prefs.alwaysInterceptBrightness || DisplayManager.shared.ddcBrightnessAvailable else { return event }
+        case .volume(let step):
             ddcQueue.async {
-                DisplayManager.shared.adjustBrightness(by: -1)
-                self.showOSD(.brightness)
-            }
-            return nil
-
-        case Int(NX_KEYTYPE_SOUND_UP):
-            guard prefs.interceptVolume,
-                  prefs.alwaysInterceptVolume || DisplayManager.shared.ddcVolumeAvailable else { return event }
-            ddcQueue.async {
-                DisplayManager.shared.adjustVolume(by: 1)
+                DisplayManager.shared.adjustVolume(by: step)
                 self.showOSD(.volume)
             }
             return nil
-
-        case Int(NX_KEYTYPE_SOUND_DOWN):
-            guard prefs.interceptVolume,
-                  prefs.alwaysInterceptVolume || DisplayManager.shared.ddcVolumeAvailable else { return event }
-            ddcQueue.async {
-                DisplayManager.shared.adjustVolume(by: -1)
-                self.showOSD(.volume)
-            }
-            return nil
-
-        case Int(NX_KEYTYPE_MUTE):
-            guard prefs.interceptVolume,
-                  prefs.alwaysInterceptVolume || DisplayManager.shared.ddcVolumeAvailable else { return event }
+        case .toggleMute:
             ddcQueue.async {
                 let muted = DisplayManager.shared.toggleMute()
                 self.showMuteOSD(muted: muted)
             }
             return nil
+        }
+    }
+
+    /// What Glint does with a decoded media key. Anything but `.passThrough` consumes the
+    /// event, so macOS never sees it — getting this wrong kills the user's keys.
+    enum Action: Equatable {
+        case passThrough
+        case brightness(Int)
+        case volume(Int)
+        case toggleMute
+    }
+
+    /// Decides whether to consume a media key and what to do with it. The DDC availability
+    /// flags are autoclosures so they are only evaluated when the "always intercept"
+    /// preference doesn't already decide.
+    static func action(
+        for key: MediaKey,
+        prefs: Preferences,
+        ddcBrightnessAvailable: @autoclosure () -> Bool,
+        ddcVolumeAvailable: @autoclosure () -> Bool
+    ) -> Action {
+        guard key.isDown else { return .passThrough }
+
+        switch key.keyCode {
+        case Int(NX_KEYTYPE_BRIGHTNESS_UP), Int(NX_KEYTYPE_BRIGHTNESS_DOWN):
+            guard prefs.interceptBrightness,
+                  prefs.alwaysInterceptBrightness || ddcBrightnessAvailable() else { return .passThrough }
+            return .brightness(key.keyCode == Int(NX_KEYTYPE_BRIGHTNESS_UP) ? 1 : -1)
+
+        case Int(NX_KEYTYPE_SOUND_UP), Int(NX_KEYTYPE_SOUND_DOWN), Int(NX_KEYTYPE_MUTE):
+            guard prefs.interceptVolume,
+                  prefs.alwaysInterceptVolume || ddcVolumeAvailable() else { return .passThrough }
+            switch key.keyCode {
+            case Int(NX_KEYTYPE_SOUND_UP): return .volume(1)
+            case Int(NX_KEYTYPE_SOUND_DOWN): return .volume(-1)
+            default: return .toggleMute
+            }
 
         default:
-            return event
+            return .passThrough
         }
     }
 
@@ -197,4 +209,26 @@ private func mediaKeyCallback(
         return Unmanaged.passRetained(result)
     }
     return nil
+}
+
+// MARK: - Media key decoding
+
+/// An NX_SYSDEFINED (subtype 8, "aux control button") event's payload, decoded from
+/// NSEvent.data1: the NX_KEYTYPE in the high 16 bits, key state in bits 8–15
+/// (0x0A = down, 0x0B = up).
+struct MediaKey: Equatable {
+    let keyCode: Int
+    let isDown: Bool
+
+    init(keyCode: Int, isDown: Bool) {
+        self.keyCode = keyCode
+        self.isDown = isDown
+    }
+
+    init(data1: Int) {
+        keyCode = Int((data1 & 0xFFFF_0000) >> 16)
+        let keyFlags = data1 & 0x0000_FFFF
+        let keyState = (keyFlags & 0xFF00) >> 8
+        isDown = keyState == 0x0A
+    }
 }

@@ -7,11 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1740D559AA344316F582166A /* DisplayManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B7A8B76F380823A677FE9F /* DisplayManagerTests.swift */; };
+		1A32999FB52B5305233F4533 /* PreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE7739AE02DCC24D4ADEBB15 /* PreferencesTests.swift */; };
 		211225BAF03651FC861727AF /* SupportWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60B0D2383D4DB7401DA7F9C /* SupportWindow.swift */; };
+		2500370823674743910BB2E2 /* DDCPortSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC276DEA7355AC120009E63B /* DDCPortSelectionTests.swift */; };
 		30D103D38B5D3F8844D7FEF2 /* GlintApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */; };
 		31D50731B062DF56EED921D5 /* DisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F871A5D2864AB32F025196 /* DisplayManager.swift */; };
 		349BB3D556AF44229544299D /* Glint.icon in Resources */ = {isa = PBXBuildFile; fileRef = 970B904762E8A35DC16ECACA /* Glint.icon */; };
+		3B71A3C190C22537BCFCCF6E /* DDCServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6509A0B612A4597ECBB7C5BA /* DDCServiceTests.swift */; };
+		5C14C3794AFEE701B8BD166D /* DDCPacketTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 968B8DF16191BA945867EE0C /* DDCPacketTests.swift */; };
 		644BAA10D4A2E62C4B479AE4 /* MediaKeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300605DA6ABBB04FAE37DD1B /* MediaKeyInterceptor.swift */; };
+		79A45BB6F5671A4A4D0DE096 /* TestDoubles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A3A736A08BC298854EB271 /* TestDoubles.swift */; };
+		8425E1EEEDD88106BD102445 /* DebugLoggerAndOSDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C18B72688DBDEA83D577249 /* DebugLoggerAndOSDTests.swift */; };
 		888CC26DF19E4F218B94FE47 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0B392AF935EBF332BE851397 /* Assets.xcassets */; };
 		97BCF0C2163D7B620F890FF1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82A8057ECF1F6FA17690EAFB /* SettingsView.swift */; };
 		A6F09635614F2ED6D668657B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8270790A03573066AEA43219 /* CoreAudio.framework */; };
@@ -20,10 +27,21 @@
 		BDE625CBD0C63680B0EAE3DC /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */; };
 		BF46C11E1A471E28DEAB01D8 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D80235222F8408AF3392684D /* Localizable.xcstrings */; };
 		BFB4C9E4BF4E452E3ACF8ED9 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */; };
+		E11E174193297CCD614CB342 /* MediaKeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7112F504F127B6B0B1F71B27 /* MediaKeyTests.swift */; };
 		EE884A591152F0EF72D43C20 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B1FD40AB8D03FF3FDCA0E3B /* IOKit.framework */; };
 		F1DC01014450ED71DC1B5E5C /* DDCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF93EB90A6AE593A6393654 /* DDCService.swift */; };
 		F59E5DDF0D70C6AB5215DFFD /* OSDOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B782F26D30192C2F6180E26A /* OSDOverlay.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E573422D753FD4F162230F22 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BE6DB378EC4FB00E8DB46BA7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 370743E3F9FFC81627C407C4;
+			remoteInfo = Glint;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0B392AF935EBF332BE851397 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -31,17 +49,26 @@
 		1B1FD40AB8D03FF3FDCA0E3B /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		2D7C90DD29B87BFF18C8DDB1 /* GlintApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlintApp.swift; sourceTree = "<group>"; };
 		300605DA6ABBB04FAE37DD1B /* MediaKeyInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyInterceptor.swift; sourceTree = "<group>"; };
+		35B7A8B76F380823A677FE9F /* DisplayManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManagerTests.swift; sourceTree = "<group>"; };
 		3E2E78BBA22734DD486C760B /* Glint.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Glint.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6509A0B612A4597ECBB7C5BA /* DDCServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDCServiceTests.swift; sourceTree = "<group>"; };
+		7112F504F127B6B0B1F71B27 /* MediaKeyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaKeyTests.swift; sourceTree = "<group>"; };
+		7C18B72688DBDEA83D577249 /* DebugLoggerAndOSDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLoggerAndOSDTests.swift; sourceTree = "<group>"; };
 		8270790A03573066AEA43219 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		82A8057ECF1F6FA17690EAFB /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		86A3A736A08BC298854EB271 /* TestDoubles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestDoubles.swift; sourceTree = "<group>"; };
 		90C1E83CE4CDABC4F0038185 /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		91F871A5D2864AB32F025196 /* DisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayManager.swift; sourceTree = "<group>"; };
+		968B8DF16191BA945867EE0C /* DDCPacketTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDCPacketTests.swift; sourceTree = "<group>"; };
 		970B904762E8A35DC16ECACA /* Glint.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = Glint.icon; sourceTree = "<group>"; };
 		B782F26D30192C2F6180E26A /* OSDOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSDOverlay.swift; sourceTree = "<group>"; };
 		C32358BABDB1C3F8DA00A502 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		C5ADF49575288A9CCEB71CA4 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
+		CC276DEA7355AC120009E63B /* DDCPortSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DDCPortSelectionTests.swift; sourceTree = "<group>"; };
+		CE7739AE02DCC24D4ADEBB15 /* PreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesTests.swift; sourceTree = "<group>"; };
 		D280CA78B805CF0C47F15519 /* Glint-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Glint-Bridging-Header.h"; sourceTree = "<group>"; };
 		D80235222F8408AF3392684D /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		E94AB23640CA1E6007F8B2B4 /* GlintTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GlintTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F60B0D2383D4DB7401DA7F9C /* SupportWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -92,6 +119,21 @@
 			path = Glint/Sources;
 			sourceTree = "<group>";
 		};
+		5F9010EBEE9DCDE13D866A74 /* GlintTests */ = {
+			isa = PBXGroup;
+			children = (
+				968B8DF16191BA945867EE0C /* DDCPacketTests.swift */,
+				CC276DEA7355AC120009E63B /* DDCPortSelectionTests.swift */,
+				6509A0B612A4597ECBB7C5BA /* DDCServiceTests.swift */,
+				7C18B72688DBDEA83D577249 /* DebugLoggerAndOSDTests.swift */,
+				35B7A8B76F380823A677FE9F /* DisplayManagerTests.swift */,
+				7112F504F127B6B0B1F71B27 /* MediaKeyTests.swift */,
+				CE7739AE02DCC24D4ADEBB15 /* PreferencesTests.swift */,
+				86A3A736A08BC298854EB271 /* TestDoubles.swift */,
+			);
+			path = GlintTests;
+			sourceTree = "<group>";
+		};
 		846EE2A0E01AF110EE275AFD /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -114,6 +156,7 @@
 		EA6921C9B6CB486D18C07534 = {
 			isa = PBXGroup;
 			children = (
+				5F9010EBEE9DCDE13D866A74 /* GlintTests */,
 				FD569EF777D164901CEB4F30 /* Resources */,
 				2737906091E3FF8EFD782CD1 /* Sources */,
 				846EE2A0E01AF110EE275AFD /* Frameworks */,
@@ -125,6 +168,7 @@
 			isa = PBXGroup;
 			children = (
 				3E2E78BBA22734DD486C760B /* Glint.app */,
+				E94AB23640CA1E6007F8B2B4 /* GlintTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -163,6 +207,24 @@
 			productReference = 3E2E78BBA22734DD486C760B /* Glint.app */;
 			productType = "com.apple.product-type.application";
 		};
+		900A6C235CB23B81714F0821 /* GlintTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 11189B2AF4B71B0DFE397743 /* Build configuration list for PBXNativeTarget "GlintTests" */;
+			buildPhases = (
+				3827C1790EDA945C32F356F3 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D3E9FF39F2716E0829281863 /* PBXTargetDependency */,
+			);
+			name = GlintTests;
+			packageProductDependencies = (
+			);
+			productName = GlintTests;
+			productReference = E94AB23640CA1E6007F8B2B4 /* GlintTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -173,6 +235,9 @@
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					370743E3F9FFC81627C407C4 = {
+						ProvisioningStyle = Manual;
+					};
+					900A6C235CB23B81714F0821 = {
 						ProvisioningStyle = Manual;
 					};
 				};
@@ -195,6 +260,7 @@
 			projectRoot = "";
 			targets = (
 				370743E3F9FFC81627C407C4 /* Glint */,
+				900A6C235CB23B81714F0821 /* GlintTests */,
 			);
 		};
 /* End PBXProject section */
@@ -213,6 +279,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		3827C1790EDA945C32F356F3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C14C3794AFEE701B8BD166D /* DDCPacketTests.swift in Sources */,
+				2500370823674743910BB2E2 /* DDCPortSelectionTests.swift in Sources */,
+				3B71A3C190C22537BCFCCF6E /* DDCServiceTests.swift in Sources */,
+				8425E1EEEDD88106BD102445 /* DebugLoggerAndOSDTests.swift in Sources */,
+				1740D559AA344316F582166A /* DisplayManagerTests.swift in Sources */,
+				E11E174193297CCD614CB342 /* MediaKeyTests.swift in Sources */,
+				1A32999FB52B5305233F4533 /* PreferencesTests.swift in Sources */,
+				79A45BB6F5671A4A4D0DE096 /* TestDoubles.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		86AD9E59837D6EEC7E56E0F0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -232,7 +313,35 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		D3E9FF39F2716E0829281863 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 370743E3F9FFC81627C407C4 /* Glint */;
+			targetProxy = E573422D753FD4F162230F22 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		130074BCE1A72D62A77E00B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.GlintTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Glint.app/Contents/MacOS/Glint";
+			};
+			name = Debug;
+		};
 		2FF28DB47A88D5C96B620971 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -320,6 +429,26 @@
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
+		};
+		A421CEA63DCEC9F0C551FA29 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.blainemiller.GlintTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Glint.app/Contents/MacOS/Glint";
+			};
+			name = Release;
 		};
 		D716E255757C327EE86E1B65 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -410,6 +539,15 @@
 			buildConfigurations = (
 				737FFBE4050FEC0AF1931C18 /* Debug */,
 				E37AAD708771A94B3B8380A6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		11189B2AF4B71B0DFE397743 /* Build configuration list for PBXNativeTarget "GlintTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				130074BCE1A72D62A77E00B9 /* Debug */,
+				A421CEA63DCEC9F0C551FA29 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -4,7 +4,9 @@ import ServiceManagement
 final class Preferences: ObservableObject, @unchecked Sendable {
     static let shared = Preferences()
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
+    /// Registers/unregisters the login item. Injectable so tests never touch SMAppService.
+    private let loginItem: (Bool) -> Void
 
     /// 1/16 per key press, matching macOS.
     static let defaultStep: Double = 6.25
@@ -20,7 +22,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
     @Published var launchAtLogin: Bool {
         didSet {
             defaults.set(launchAtLogin, forKey: "launchAtLogin")
-            updateLoginItem()
+            loginItem(launchAtLogin)
         }
     }
 
@@ -69,7 +71,11 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         didSet { defaults.set(debugLogging, forKey: "debugLogging") }
     }
 
-    private init() {
+    /// `defaults` is the store every preference reads and writes (`.standard` in the app;
+    /// a throwaway suite in tests).
+    init(defaults: UserDefaults = .standard, loginItem: @escaping (Bool) -> Void = Preferences.updateLoginItem) {
+        self.defaults = defaults
+        self.loginItem = loginItem
         // Register defaults
         defaults.register(defaults: [
             "launchAtLogin": false,
@@ -98,7 +104,7 @@ final class Preferences: ObservableObject, @unchecked Sendable {
         debugLogging = defaults.bool(forKey: "debugLogging")
     }
 
-    private func updateLoginItem() {
+    static func updateLoginItem(_ launchAtLogin: Bool) {
         do {
             if launchAtLogin {
                 try SMAppService.mainApp.register()

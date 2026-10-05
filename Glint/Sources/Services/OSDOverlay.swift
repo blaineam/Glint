@@ -16,6 +16,16 @@ final class OSDOverlay {
 
     private init() {}
 
+    /// Where the pill sits: horizontally centred on the screen, 8 pt below the menu bar
+    /// (or notch), whose height is the gap between the screen top and the visible frame.
+    nonisolated static func pillOrigin(screenFrame: NSRect, visibleFrame: NSRect, pillSize: NSSize) -> NSPoint {
+        let menuBarHeight = screenFrame.maxY - visibleFrame.maxY
+        let topInset = menuBarHeight + 8
+        let x = screenFrame.midX - pillSize.width / 2
+        let y = screenFrame.maxY - topInset - pillSize.height
+        return NSPoint(x: x, y: y)
+    }
+
     func show(icon: String, value: Int, on screen: NSScreen? = nil) {
         hideTask?.cancel()
 
@@ -48,13 +58,11 @@ final class OSDOverlay {
         // Position below notch/menu bar on the target screen
         let targetScreen = screen ?? NSScreen.main
         if let screen = targetScreen {
-            let screenFrame = screen.frame
-            let visibleFrame = screen.visibleFrame
-            let menuBarHeight = screenFrame.maxY - visibleFrame.maxY
-            let topInset = menuBarHeight + 8
-            let x = screenFrame.midX - pillWidth / 2
-            let y = screenFrame.maxY - topInset - pillHeight
-            window?.setFrameOrigin(NSPoint(x: x, y: y))
+            window?.setFrameOrigin(Self.pillOrigin(
+                screenFrame: screen.frame,
+                visibleFrame: screen.visibleFrame,
+                pillSize: NSSize(width: pillWidth, height: pillHeight)
+            ))
         }
 
         // Only fade in if not already visible

@@ -18,6 +18,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // GlintTests runs hosted inside Glint.app. Under XCTest, skip the menu
+        // bar item, the global media-key event tap and the modal Accessibility
+        // alert — a test run must not hijack the keyboard or block on a dialog.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil { return }
+
         // Show menu bar icon unless user chose invisible mode
         if !Preferences.shared.hideMenuBarIcon {
             setupMenuBar()

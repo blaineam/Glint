@@ -52,6 +52,10 @@ targets:
       path: Glint/Resources/Glint.entitlements
       properties:
         com.apple.security.app-sandbox: false
+    scheme:
+      testTargets:
+        - GlintTests
+      gatherCoverageData: true
     dependencies:
       - package: MillerKit
       - sdk: IOKit.framework
@@ -67,3 +71,24 @@ targets:
         SWIFT_STRICT_CONCURRENCY: minimal
         ASSETCATALOG_COMPILER_APPICON_NAME: Glint
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # Unit tests, hosted in Glint.app (so @testable import sees the app module).
+  # AppDelegate returns early under XCTest, so a test run never installs the
+  # media-key event tap or shows the Accessibility alert.
+  GlintTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - GlintTests
+    dependencies:
+      - target: Glint
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.blainemiller.GlintTests
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        GENERATE_INFOPLIST_FILE: YES
+        # XCTest itself requires macOS 14; the app keeps its macOS 13 floor.
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Glint.app/Contents/MacOS/Glint
+        BUNDLE_LOADER: $(TEST_HOST)

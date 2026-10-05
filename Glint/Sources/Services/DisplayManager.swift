@@ -47,12 +47,51 @@ struct ExternalDisplay: Identifiable, Hashable {
     }
 }
 
+// MARK: - Seams
+
+/// CoreAudio default-output access, behind a protocol so routing logic is testable.
+protocol SystemAudio: AnyObject {
+    func defaultOutputDevice() -> AudioDeviceID?
+    func deviceName(of device: AudioDeviceID) -> String?
+    /// kAudioDevicePropertyTransportType, nil when the query fails.
+    func transportType(of device: AudioDeviceID) -> UInt32?
+    func volume(of device: AudioDeviceID) -> Float?
+    func setVolume(_ volume: Float, on device: AudioDeviceID)
+    func isMuted(_ device: AudioDeviceID) -> Bool?
+    func setMuted(_ muted: Bool, on device: AudioDeviceID)
+}
+
+/// Window-server / IOKit facts about the connected displays and the built-in panel.
+protocol DisplayEnvironment: AnyObject {
+    /// Active non-built-in displays with id, name, vendor and model filled in (no DDC state).
+    func externalDisplays() -> [ExternalDisplay]
+    func isBuiltIn(_ displayID: CGDirectDisplayID) -> Bool
+    func builtInDisplayID() -> CGDirectDisplayID?
+    /// Built-in panel brightness 0–1, nil when there is no built-in display or it can't be read.
+    func builtInBrightness() -> Float?
+    func setBuiltInBrightness(_ brightness: Float)
+    func displayUnderCursor() -> CGDirectDisplayID?
+}
+
 final class DisplayManager: ObservableObject, @unchecked Sendable {
-    static let shared = DisplayManager()
+    static let shared: DisplayManager = {
+        let manager = DisplayManager(
+            preferences: .shared,
+            ddc: .shared,
+            audio: CoreAudioSystemAudio(),
+            environment: SystemDisplayEnvironment()
+        )
+        manager.refresh()
+        manager.startMonitoring()
+        return manager
+    }()
 
     @Published var displays: [ExternalDisplay] = []
 
-    private let ddc = DDCService.shared
+    private let ddc: DDCService
+    private let preferences: Preferences
+    private let audio: SystemAudio
+    private let environment: DisplayEnvironment
 
     /// Tracks whether we've synced on first keystroke
     private var brightnessSynced = false
@@ -68,32 +107,24 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         displays.contains { $0.ddcVolumeAvailable }
     }
 
-    private init() {
-        refresh()
-        startMonitoring()
+    /// The app uses `shared`; tests inject fakes. Does not refresh or start monitoring.
+    init(preferences: Preferences, ddc: DDCService, audio: SystemAudio, environment: DisplayEnvironment) {
+        self.preferences = preferences
+        self.ddc = ddc
+        self.audio = audio
+        self.environment = environment
     }
 
     func refresh() {
         let log = DebugLogger.shared
         // Displays may have moved to a different physical port — re-discover which port answers.
         ddc.invalidateServiceCache()
-        var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
-        var displayCount: UInt32 = 0
-        CGGetActiveDisplayList(16, &displayIDs, &displayCount)
 
         var externals: [ExternalDisplay] = []
 
-        for i in 0..<Int(displayCount) {
-            let id = displayIDs[i]
-            if CGDisplayIsBuiltin(id) != 0 { continue }
-
-            let name = displayName(for: id)
-            var display = ExternalDisplay(
-                id: id,
-                name: name,
-                vendorNumber: CGDisplayVendorNumber(id),
-                modelNumber: CGDisplayModelNumber(id)
-            )
+        for var display in environment.externalDisplays() {
+            let id = display.id
+            let name = display.name
 
             // DDC reads — DDCService handles retries with exponential backoff internally.
             let brightness = ddc.read(vcp: .brightness, from: id)
@@ -108,7 +139,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
                 display.volume = volume.currentValue
                 display.maxVolume = volume.maxValue > 0 ? volume.maxValue : 100
                 display.ddcVolumeAvailable = true
-            } else if Preferences.shared.writeOnlyVolume {
+            } else if preferences.writeOnlyVolume {
                 // Write-only mode: assume 50% volume and track in memory
                 display.volume = 50
                 display.maxVolume = 100
@@ -127,13 +158,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     /// Returns the CGDirectDisplayID of the display the mouse cursor is currently on.
     func displayUnderCursor() -> CGDirectDisplayID? {
-        let mouseLocation = NSEvent.mouseLocation
-        for screen in NSScreen.screens {
-            if screen.frame.contains(mouseLocation) {
-                return screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
-            }
-        }
-        return nil
+        environment.displayUnderCursor()
     }
 
     /// Returns the NSScreen the mouse cursor is currently on.
@@ -144,8 +169,8 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     /// Returns brightness percent for any display (built-in or external).
     func brightnessPercent(for displayID: CGDirectDisplayID) -> Int? {
-        if CGDisplayIsBuiltin(displayID) != 0 {
-            guard let b = getBuiltInBrightness() else { return nil }
+        if environment.isBuiltIn(displayID) {
+            guard let b = environment.builtInBrightness() else { return nil }
             return Int(round(b * 100))
         }
         return displays.first(where: { $0.id == displayID })?.brightnessPercent
@@ -168,59 +193,48 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     /// edge cases where the transport type doesn't clearly indicate a monitor.
     func isAudioOutputDisplayBased() -> Bool {
         let log = DebugLogger.shared
-        guard let device = defaultOutputDevice() else {
+        guard let device = audio.defaultOutputDevice() else {
             log.log("AUDIO: No default output device")
             return false
         }
 
-        let deviceName = audioDeviceName(for: device) ?? "unknown"
-
-        // Check transport type — covers direct HDMI, DisplayPort, and USB-C hub connections
-        var addr = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyTransportType,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        var transportType: UInt32 = 0
-        var size = UInt32(MemoryLayout<UInt32>.size)
-        if AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &transportType) == noErr {
-            let transportName = transportTypeName(transportType)
-            log.log("AUDIO: device=\"\(deviceName)\" transport=\(transportName) (0x\(String(transportType, radix: 16)))")
-
-            if transportType == kAudioDeviceTransportTypeHDMI
-                || transportType == kAudioDeviceTransportTypeDisplayPort {
-                log.log("AUDIO: -> display-based (HDMI/DP transport)")
-                return true
-            }
-
-            // USB transport — could be a monitor via USB-C hub or a USB headset/DAC.
-            // Match audio device name against connected display names to distinguish.
-            if transportType == kAudioDeviceTransportTypeUSB {
-                let match = audioDeviceMatchesDisplay(device)
-                log.log("AUDIO: USB transport, display name match = \(match)")
-                return match
-            }
+        let deviceName = audio.deviceName(of: device)
+        let transportType = audio.transportType(of: device)
+        if let transportType {
+            log.log("AUDIO: device=\"\(deviceName ?? "unknown")\" transport=\(Self.transportTypeName(transportType)) (0x\(String(transportType, radix: 16)))")
         } else {
-            log.log("AUDIO: device=\"\(deviceName)\" transport=unknown (query failed)")
+            log.log("AUDIO: device=\"\(deviceName ?? "unknown")\" transport=unknown (query failed)")
         }
 
-        // Final fallback: name match regardless of transport type
-        let match = audioDeviceMatchesDisplay(device)
-        log.log("AUDIO: fallback name match = \(match)")
-        return match
+        let displayNames = displays.map { $0.name }
+        let result = Self.isDisplayAudio(transportType: transportType) {
+            guard let audioName = deviceName else { return false }
+            log.log("AUDIO: matching audio=\"\(audioName.lowercased())\" against displays=\(displayNames)")
+            return Self.audioNameMatchesDisplay(audioName: audioName, displayNames: displayNames)
+        }
+        log.log("AUDIO: -> display-based = \(result)")
+        return result
+    }
+
+    /// HDMI / DisplayPort output is always a monitor. Anything else — USB (a monitor via a
+    /// USB-C hub, or a USB headset/DAC), an unknown transport, or a failed query — counts
+    /// only when the audio device's name matches a connected display.
+    static func isDisplayAudio(transportType: UInt32?, nameMatchesDisplay: () -> Bool) -> Bool {
+        if let transportType,
+           transportType == kAudioDeviceTransportTypeHDMI
+            || transportType == kAudioDeviceTransportTypeDisplayPort {
+            return true
+        }
+        return nameMatchesDisplay()
     }
 
     /// Returns true if the audio device name matches any connected external display name.
     /// Uses word-level partial matching to handle cases where names partially overlap
     /// (e.g., audio "LG HDR 4K" matching display "LG HDR 4K (2)").
-    private func audioDeviceMatchesDisplay(_ deviceID: AudioDeviceID) -> Bool {
-        guard let audioName = audioDeviceName(for: deviceID)?.lowercased() else { return false }
-        let log = DebugLogger.shared
-        let displayNames = displays.map { $0.name }
-        log.log("AUDIO: matching audio=\"\(audioName)\" against displays=\(displayNames)")
-
-        return displays.contains { display in
-            let displayName = display.name.lowercased()
+    static func audioNameMatchesDisplay(audioName rawAudioName: String, displayNames: [String]) -> Bool {
+        let audioName = rawAudioName.lowercased()
+        return displayNames.contains { name in
+            let displayName = name.lowercased()
             // Full containment match
             if audioName.contains(displayName) || displayName.contains(audioName) {
                 return true
@@ -233,7 +247,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    private func transportTypeName(_ type: UInt32) -> String {
+    private static func transportTypeName(_ type: UInt32) -> String {
         switch type {
         case kAudioDeviceTransportTypeBuiltIn: return "BuiltIn"
         case kAudioDeviceTransportTypeUSB: return "USB"
@@ -248,28 +262,10 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    private func audioDeviceName(for deviceID: AudioDeviceID) -> String? {
-        var addr = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyDeviceNameCFString,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        // CoreAudio hands back a +1 CFStringRef. Receive it as Unmanaged so the
-        // raw-pointer write never aliases an ARC-managed reference (the compiler
-        // warns about forming an UnsafeMutableRawPointer to a CFString variable).
-        var name: Unmanaged<CFString>? = nil
-        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
-        guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &name) == noErr,
-              let cfName = name?.takeRetainedValue() else {
-            return nil
-        }
-        return cfName as String
-    }
-
     // MARK: - Brightness
 
     func adjustBrightness(by step: Int) {
-        let syncMode = Preferences.shared.syncWithBuiltIn
+        let syncMode = preferences.syncWithBuiltIn
         let cursorDisplayID = displayUnderCursor()
 
         if syncMode {
@@ -283,7 +279,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
             // Adjust ALL external displays via DDC
             for i in displays.indices {
-                let delta = stepToAbsolute(step, max: displays[i].maxBrightness ?? 100, percent: Preferences.shared.brightnessStep)
+                let delta = Self.stepToAbsolute(step, max: displays[i].maxBrightness ?? 100, percent: preferences.brightnessStep)
                 if let result = ddc.adjust(vcp: .brightness, by: delta, on: displays[i].id) {
                     displays[i].brightness = result.currentValue
                     displays[i].maxBrightness = result.maxValue
@@ -298,10 +294,10 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             // Only adjust the display the cursor is on
             guard let cursorID = cursorDisplayID else { return }
 
-            if CGDisplayIsBuiltin(cursorID) != 0 {
+            if environment.isBuiltIn(cursorID) {
                 adjustBuiltInBrightness(by: step)
             } else if let i = displays.firstIndex(where: { $0.id == cursorID }) {
-                let delta = stepToAbsolute(step, max: displays[i].maxBrightness ?? 100, percent: Preferences.shared.brightnessStep)
+                let delta = Self.stepToAbsolute(step, max: displays[i].maxBrightness ?? 100, percent: preferences.brightnessStep)
                 if let result = ddc.adjust(vcp: .brightness, by: delta, on: cursorID) {
                     displays[i].brightness = result.currentValue
                     displays[i].maxBrightness = result.maxValue
@@ -325,14 +321,14 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             setBrightness(percent, for: display.id)
         }
         if hasBuiltInDisplay() {
-            setBuiltInBrightness(Float(percent) / 100.0)
+            environment.setBuiltInBrightness(Float(percent) / 100.0)
         }
     }
 
     // MARK: - Volume
 
     func adjustVolume(by step: Int) {
-        let syncMode = Preferences.shared.syncWithBuiltIn
+        let syncMode = preferences.syncWithBuiltIn
         let displayAudio = isAudioOutputDisplayBased()
 
         if syncMode {
@@ -362,7 +358,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     /// falls back to write-only from in-memory state when writeOnlyVolume is enabled.
     private func adjustDisplayVolume(at i: Int, step: Int) {
         let maxVal = displays[i].maxVolume ?? 100
-        let delta = stepToAbsolute(step, max: maxVal, percent: Preferences.shared.volumeStep)
+        let delta = Self.stepToAbsolute(step, max: maxVal, percent: preferences.volumeStep)
 
         // Try ddc.adjust first (cached read + write)
         if let result = ddc.adjust(vcp: .volume, by: delta, on: displays[i].id) {
@@ -372,7 +368,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
 
         // Read failed — if write-only mode, compute from in-memory state and write directly
-        if Preferences.shared.writeOnlyVolume {
+        if preferences.writeOnlyVolume {
             let current = Int(displays[i].volume ?? 50)
             let newValue = UInt16(clamping: min(max(current + delta, 0), Int(maxVal)))
             if ddc.write(vcp: .volume, value: newValue, to: displays[i].id) {
@@ -394,7 +390,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
     /// Toggles mute and returns whether the output is now muted.
     func toggleMute() -> Bool {
-        let syncMode = Preferences.shared.syncWithBuiltIn
+        let syncMode = preferences.syncWithBuiltIn
         let displayAudio = isAudioOutputDisplayBased()
         var muted = false
 
@@ -413,8 +409,8 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
 
         if syncMode || !displayAudio {
             toggleSystemMute()
-            if let device = defaultOutputDevice() {
-                muted = systemMute(device: device) ?? muted
+            if let device = audio.defaultOutputDevice() {
+                muted = audio.isMuted(device) ?? muted
             }
         }
 
@@ -424,25 +420,113 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
     // MARK: - System Volume Control (CoreAudio)
 
     private func adjustSystemVolume(by step: Int) {
-        guard let device = defaultOutputDevice() else { return }
-        let currentVolume = systemVolume(device: device) ?? 0.5
-        let delta = Float(step) * Float(Preferences.stepFraction(Preferences.shared.volumeStep))
+        guard let device = audio.defaultOutputDevice() else { return }
+        let currentVolume = audio.volume(of: device) ?? 0.5
+        let delta = Float(step) * Float(Preferences.stepFraction(preferences.volumeStep))
         let newVolume = max(0, min(1, currentVolume + delta))
-        setSystemVolume(device: device, volume: newVolume)
+        audio.setVolume(newVolume, on: device)
 
         // Unmute if adjusting volume up
         if step > 0 {
-            setSystemMute(device: device, muted: false)
+            audio.setMuted(false, on: device)
         }
     }
 
     private func toggleSystemMute() {
-        guard let device = defaultOutputDevice() else { return }
-        let muted = systemMute(device: device) ?? false
-        setSystemMute(device: device, muted: !muted)
+        guard let device = audio.defaultOutputDevice() else { return }
+        let muted = audio.isMuted(device) ?? false
+        audio.setMuted(!muted, on: device)
     }
 
-    private func defaultOutputDevice() -> AudioDeviceID? {
+    // MARK: - Built-in Brightness Control
+
+    private func adjustBuiltInBrightness(by step: Int) {
+        guard let current = environment.builtInBrightness() else { return }
+        let delta = Float(step) * Float(Preferences.stepFraction(preferences.brightnessStep))
+        let newBrightness = max(0, min(1, current + delta))
+        environment.setBuiltInBrightness(newBrightness)
+    }
+
+    // MARK: - Sync
+
+    func hasBuiltInDisplay() -> Bool {
+        environment.builtInDisplayID() != nil
+    }
+
+    /// Syncs ALL displays to match the brightness of the given target display.
+    private func syncAllBrightnesses(to targetDisplayID: CGDirectDisplayID) {
+        let targetPercent: Int
+        let targetIsBuiltIn = environment.isBuiltIn(targetDisplayID)
+
+        if targetIsBuiltIn {
+            guard let brightness = environment.builtInBrightness() else { return }
+            targetPercent = Int(round(brightness * 100))
+        } else {
+            guard let display = displays.first(where: { $0.id == targetDisplayID }) else { return }
+            targetPercent = display.brightnessPercent
+        }
+
+        // Set all external displays to target
+        for display in displays {
+            if display.id != targetDisplayID {
+                setBrightness(targetPercent, for: display.id)
+            }
+        }
+
+        // Set built-in to target if target is not the built-in
+        if !targetIsBuiltIn, hasBuiltInDisplay() {
+            environment.setBuiltInBrightness(Float(targetPercent) / 100.0)
+        }
+    }
+
+    private func syncVolumeToSystem() {
+        guard let device = audio.defaultOutputDevice() else { return }
+        let vol = audio.volume(of: device) ?? 0.5
+        let percent = Int(vol * 100)
+        for display in displays {
+            setVolume(percent, for: display.id)
+        }
+    }
+
+    /// Gets the system output volume (0.0–1.0) using CoreAudio.
+    private func getSystemVolume() -> Float {
+        guard let device = audio.defaultOutputDevice() else { return 0.5 }
+        return audio.volume(of: device) ?? 0.5
+    }
+
+    // MARK: - Private Helpers
+
+    private func startMonitoring() {
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.screenParametersChanged()
+        }
+    }
+
+    /// Displays were connected, disconnected or rearranged: re-sync on the next keystroke
+    /// and re-enumerate.
+    func screenParametersChanged() {
+        brightnessSynced = false
+        volumeSynced = false
+        refresh()
+    }
+
+    /// Convert a ±step (e.g., ±1) to an absolute DDC value delta, sized by the
+    /// user's step percent of the display's max.
+    static func stepToAbsolute(_ step: Int, max: UInt16, percent: Double) -> Int {
+        let perStep = Swift.max(1, Int(Double(max) * Preferences.stepFraction(percent)))
+        return step > 0 ? perStep : -perStep
+    }
+}
+
+// MARK: - Real implementations
+
+/// CoreAudio-backed default output device.
+final class CoreAudioSystemAudio: SystemAudio {
+    func defaultOutputDevice() -> AudioDeviceID? {
         var addr = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultOutputDevice,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -456,7 +540,37 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return status == noErr ? deviceID : nil
     }
 
-    private func systemVolume(device: AudioDeviceID) -> Float? {
+    func deviceName(of deviceID: AudioDeviceID) -> String? {
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceNameCFString,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        // CoreAudio hands back a +1 CFStringRef. Receive it as Unmanaged so the
+        // raw-pointer write never aliases an ARC-managed reference (the compiler
+        // warns about forming an UnsafeMutableRawPointer to a CFString variable).
+        var name: Unmanaged<CFString>? = nil
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &name) == noErr,
+              let cfName = name?.takeRetainedValue() else {
+            return nil
+        }
+        return cfName as String
+    }
+
+    func transportType(of device: AudioDeviceID) -> UInt32? {
+        var addr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var transportType: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        guard AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &transportType) == noErr else { return nil }
+        return transportType
+    }
+
+    func volume(of device: AudioDeviceID) -> Float? {
         for element: UInt32 in [kAudioObjectPropertyElementMain, 1] {
             var addr = AudioObjectPropertyAddress(
                 mSelector: kAudioDevicePropertyVolumeScalar,
@@ -472,7 +586,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return nil
     }
 
-    private func setSystemVolume(device: AudioDeviceID, volume: Float) {
+    func setVolume(_ volume: Float, on device: AudioDeviceID) {
         var vol = volume
         for element: UInt32 in [kAudioObjectPropertyElementMain, 1, 2] {
             var addr = AudioObjectPropertyAddress(
@@ -487,7 +601,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
     }
 
-    private func systemMute(device: AudioDeviceID) -> Bool? {
+    func isMuted(_ device: AudioDeviceID) -> Bool? {
         var addr = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyMute,
             mScope: kAudioDevicePropertyScopeOutput,
@@ -501,7 +615,7 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return nil
     }
 
-    private func setSystemMute(device: AudioDeviceID, muted: Bool) {
+    func setMuted(_ muted: Bool, on device: AudioDeviceID) {
         var addr = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyMute,
             mScope: kAudioDevicePropertyScopeOutput,
@@ -513,75 +627,42 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             AudioObjectSetPropertyData(device, &addr, 0, nil, UInt32(MemoryLayout<UInt32>.size), &val)
         }
     }
+}
 
-    // MARK: - Built-in Brightness Control
-
-    private func adjustBuiltInBrightness(by step: Int) {
-        guard let current = getBuiltInBrightness() else { return }
-        let delta = Float(step) * Float(Preferences.stepFraction(Preferences.shared.brightnessStep))
-        let newBrightness = max(0, min(1, current + delta))
-        setBuiltInBrightness(newBrightness)
-    }
-
-    private func setBuiltInBrightness(_ brightness: Float) {
-        guard let builtInID = builtInDisplayID() else { return }
-        if let setBrightness = DisplayServicesAPI.setBrightness {
-            if setBrightness(builtInID, brightness) == 0 { return }
-        }
-        // Fallback to IOKit
-        if let service = builtInDisplayService() {
-            IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, brightness)
-            IOObjectRelease(service)
-        }
-    }
-
-    // MARK: - Sync
-
-    func hasBuiltInDisplay() -> Bool {
+/// CoreGraphics / IOKit / DisplayServices-backed display facts.
+final class SystemDisplayEnvironment: DisplayEnvironment {
+    func externalDisplays() -> [ExternalDisplay] {
         var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
-        var count: UInt32 = 0
-        CGGetActiveDisplayList(16, &displayIDs, &count)
-        for i in 0..<Int(count) {
-            if CGDisplayIsBuiltin(displayIDs[i]) != 0 { return true }
+        var displayCount: UInt32 = 0
+        CGGetActiveDisplayList(16, &displayIDs, &displayCount)
+
+        return (0..<Int(displayCount)).compactMap { i -> ExternalDisplay? in
+            let id = displayIDs[i]
+            if CGDisplayIsBuiltin(id) != 0 { return nil }
+            return ExternalDisplay(
+                id: id,
+                name: displayName(for: id),
+                vendorNumber: CGDisplayVendorNumber(id),
+                modelNumber: CGDisplayModelNumber(id)
+            )
         }
-        return false
     }
 
-    /// Syncs ALL displays to match the brightness of the given target display.
-    private func syncAllBrightnesses(to targetDisplayID: CGDirectDisplayID) {
-        let targetPercent: Int
+    func isBuiltIn(_ displayID: CGDirectDisplayID) -> Bool {
+        CGDisplayIsBuiltin(displayID) != 0
+    }
 
-        if CGDisplayIsBuiltin(targetDisplayID) != 0 {
-            guard let brightness = getBuiltInBrightness() else { return }
-            targetPercent = Int(round(brightness * 100))
-        } else {
-            guard let display = displays.first(where: { $0.id == targetDisplayID }) else { return }
-            targetPercent = display.brightnessPercent
-        }
-
-        // Set all external displays to target
-        for display in displays {
-            if display.id != targetDisplayID {
-                setBrightness(targetPercent, for: display.id)
+    func displayUnderCursor() -> CGDirectDisplayID? {
+        let mouseLocation = NSEvent.mouseLocation
+        for screen in NSScreen.screens {
+            if screen.frame.contains(mouseLocation) {
+                return screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
             }
         }
-
-        // Set built-in to target if target is not the built-in
-        if CGDisplayIsBuiltin(targetDisplayID) == 0, hasBuiltInDisplay() {
-            setBuiltInBrightness(Float(targetPercent) / 100.0)
-        }
+        return nil
     }
 
-    private func syncVolumeToSystem() {
-        guard let device = defaultOutputDevice() else { return }
-        let vol = systemVolume(device: device) ?? 0.5
-        let percent = Int(vol * 100)
-        for display in displays {
-            setVolume(percent, for: display.id)
-        }
-    }
-
-    private func getBuiltInBrightness() -> Float? {
+    func builtInBrightness() -> Float? {
         guard let builtInID = builtInDisplayID() else { return nil }
         if let getBrightness = DisplayServicesAPI.getBrightness {
             var brightness: Float = 0
@@ -597,7 +678,19 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         return result == kIOReturnSuccess ? brightness : nil
     }
 
-    private func builtInDisplayID() -> CGDirectDisplayID? {
+    func setBuiltInBrightness(_ brightness: Float) {
+        guard let builtInID = builtInDisplayID() else { return }
+        if let setBrightness = DisplayServicesAPI.setBrightness {
+            if setBrightness(builtInID, brightness) == 0 { return }
+        }
+        // Fallback to IOKit
+        if let service = builtInDisplayService() {
+            IODisplaySetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, brightness)
+            IOObjectRelease(service)
+        }
+    }
+
+    func builtInDisplayID() -> CGDirectDisplayID? {
         var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
         var count: UInt32 = 0
         CGGetActiveDisplayList(16, &displayIDs, &count)
@@ -608,14 +701,6 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
         }
         return nil
     }
-
-    /// Gets the system output volume (0.0–1.0) using CoreAudio.
-    private func getSystemVolume() -> Float {
-        guard let device = defaultOutputDevice() else { return 0.5 }
-        return systemVolume(device: device) ?? 0.5
-    }
-
-    // MARK: - Private Helpers
 
     private func builtInDisplayService() -> io_service_t? {
         var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
@@ -652,25 +737,6 @@ final class DisplayManager: ObservableObject, @unchecked Sendable {
             IOObjectRelease(iter)
         }
         return nil
-    }
-
-    private func startMonitoring() {
-        NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.brightnessSynced = false
-            self?.volumeSynced = false
-            self?.refresh()
-        }
-    }
-
-    /// Convert a ±step (e.g., ±1) to an absolute DDC value delta, sized by the
-    /// user's step percent of the display's max.
-    private func stepToAbsolute(_ step: Int, max: UInt16, percent: Double) -> Int {
-        let perStep = Swift.max(1, Int(Double(max) * Preferences.stepFraction(percent)))
-        return step > 0 ? perStep : -perStep
     }
 
     private func displayName(for displayID: CGDirectDisplayID) -> String {

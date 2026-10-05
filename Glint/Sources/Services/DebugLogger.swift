@@ -5,19 +5,37 @@ import AppKit
 final class DebugLogger: @unchecked Sendable {
     static let shared = DebugLogger()
 
-    private let maxFileSize: UInt64 = 1_000_000 // 1 MB
+    private let maxFileSize: UInt64
     private let queue = DispatchQueue(label: "com.blainemiller.Glint.logger")
+    private let isEnabled: () -> Bool
 
-    var logFileURL: URL {
+    let logFileURL: URL
+
+    static var defaultLogFileURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let glintDir = appSupport.appendingPathComponent("Glint")
         return glintDir.appendingPathComponent("debug.log")
     }
 
-    private init() {}
+    /// Tests inject a temporary file and their own enabled flag; the app uses the
+    /// Application Support log gated by the Debug Logging preference.
+    init(
+        logFileURL: URL = DebugLogger.defaultLogFileURL,
+        maxFileSize: UInt64 = 1_000_000, // 1 MB
+        isEnabled: @escaping () -> Bool = { Preferences.shared.debugLogging }
+    ) {
+        self.logFileURL = logFileURL
+        self.maxFileSize = maxFileSize
+        self.isEnabled = isEnabled
+    }
+
+    /// Blocks until every line queued so far has been written.
+    func flush() {
+        queue.sync {}
+    }
 
     func log(_ message: String) {
-        guard Preferences.shared.debugLogging else { return }
+        guard isEnabled() else { return }
         queue.async { [self] in
             let timestamp = ISO8601DateFormatter().string(from: Date())
             let line = "[\(timestamp)] \(message)\n"

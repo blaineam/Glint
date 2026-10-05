@@ -21,58 +21,237 @@ struct DDCReadResult {
     let maxValue: UInt16
 }
 
+// MARK: - DDC/CI packets
+
+/// Pure DDC/CI framing: the bytes Glint puts on the wire and how it parses replies.
+/// Kept free of IOKit so the protocol can be unit-tested byte for byte.
+enum DDCPacket {
+    /// Checksum seed for host-originated packets: destination 0x6E XOR source 0x51.
+    static let hostChecksumSeed: UInt8 = 0x6E ^ 0x51
+
+    private static func checksummed(_ payload: [UInt8], seed: UInt8) -> [UInt8] {
+        var checksum = seed
+        for byte in payload { checksum ^= byte }
+        return payload + [checksum]
+    }
+
+    /// IOAVService SET VCP Feature: [length|0x80, 0x03, vcp, value_hi, value_lo, checksum].
+    /// The 0x51 source address is passed to IOAVServiceWriteI2C separately, so it is only
+    /// folded into the checksum.
+    static func avSetVCP(command: UInt8, value: UInt16) -> [UInt8] {
+        checksummed([0x84, 0x03, command, UInt8(value >> 8), UInt8(value & 0xFF)], seed: hostChecksumSeed)
+    }
+
+    /// IOAVService GET VCP Feature request: [length|0x80, 0x01, vcp, checksum].
+    static func avGetVCP(command: UInt8) -> [UInt8] {
+        checksummed([0x82, 0x01, command], seed: hostChecksumSeed)
+    }
+
+    /// IOFramebuffer I2C SET VCP: the 0x51 source byte is part of the buffer, checksum
+    /// seeded with the 0x6E destination address.
+    static func i2cSetVCP(command: UInt8, value: UInt16) -> [UInt8] {
+        checksummed([0x51, 0x84, 0x03, command, UInt8(value >> 8), UInt8(value & 0xFF)], seed: 0x6E)
+    }
+
+    /// IOFramebuffer I2C GET VCP request.
+    static func i2cGetVCP(command: UInt8) -> [UInt8] {
+        checksummed([0x51, 0x82, 0x01, command], seed: 0x6E)
+    }
+
+    /// Parses an IOAVService VCP reply. Expected:
+    /// [source, length, 0x02, result_code, vcp_opcode, type_code, max_hi, max_lo, cur_hi, cur_lo, checksum]
+    /// The reply is located by the first 0x02 (feature reply opcode); returns nil when it is
+    /// missing, truncated, or doesn't echo `command`.
+    static func parseAVReply(_ reply: [UInt8], command: UInt8) -> DDCReadResult? {
+        guard let replyStart = reply.firstIndex(of: 0x02),
+              replyStart + 8 <= reply.count,
+              reply[replyStart + 2] == command else {
+            return nil
+        }
+        let maxValue = (UInt16(reply[replyStart + 4]) << 8) | UInt16(reply[replyStart + 5])
+        let currentValue = (UInt16(reply[replyStart + 6]) << 8) | UInt16(reply[replyStart + 7])
+        return DDCReadResult(currentValue: currentValue, maxValue: maxValue)
+    }
+
+    /// Parses an IOFramebuffer I2C VCP reply (fixed layout, opcode at index 2).
+    static func parseI2CReply(_ reply: [UInt8], command: UInt8) -> DDCReadResult? {
+        guard reply.count >= 11,
+              reply[2] == 0x02,
+              reply[4] == command else {
+            return nil
+        }
+        let maxValue = (UInt16(reply[6]) << 8) | UInt16(reply[7])
+        let currentValue = (UInt16(reply[8]) << 8) | UInt16(reply[9])
+        return DDCReadResult(currentValue: currentValue, maxValue: maxValue)
+    }
+}
+
+// MARK: - Port selection
+
+/// Pure decisions about which DCPAVServiceProxy (physical port) a display is on.
+enum DDCPortSelection {
+    /// Orders proxy indices by how likely each is to be the port the display is attached to:
+    ///   1. the proxy that already answered DDC for this display (cached),
+    ///   2. proxies whose dcp subtree publishes this display's EDID UUID,
+    ///   3. the proxy at the display's position in CoreGraphics' external-display order
+    ///      (the historical guess; position 0 when the display isn't in that list),
+    ///   4. proxies no other connected display would claim by that positional rule.
+    /// Ports another display would claim positionally are left out unless the EDID says
+    /// otherwise, so a display without DDC support can't fall through to its neighbour.
+    static func candidateOrder(
+        proxyCount: Int,
+        displayPosition: Int?,
+        externalDisplayCount: Int,
+        cachedIndex: Int?,
+        edidMatchIndices: [Int]
+    ) -> [Int] {
+        guard proxyCount > 0 else { return [] }
+        let guessIndex = min(displayPosition ?? 0, proxyCount - 1)
+        // Indices the other connected displays would pick by the same positional rule.
+        let claimedByOthers = Set((0..<min(externalDisplayCount, proxyCount)).filter { $0 != guessIndex })
+
+        var order: [Int] = []
+        func append(_ index: Int) {
+            if !order.contains(index) { order.append(index) }
+        }
+        if let cachedIndex { append(cachedIndex) }
+        for index in edidMatchIndices { append(index) }
+        append(guessIndex)
+        for index in 0..<proxyCount where !claimedByOthers.contains(index) {
+            append(index)
+        }
+        return order
+    }
+
+    struct WriteTarget: Equatable {
+        enum Reason: Equatable {
+            /// The port already answered for this display.
+            case cached
+            /// Only one candidate — nothing to choose between.
+            case onlyCandidate
+            /// The port answered a probe read (the caller should remember it).
+            case probed
+            /// Nothing answered (write-only monitor) — first candidate.
+            case fallback
+        }
+        let index: Int
+        let reason: Reason
+    }
+
+    /// Picks the port a write should go to. Prefers the port that already answered a read for
+    /// this display; otherwise probes the candidates with a read (the VCP being written, then
+    /// brightness) so the write can't land on an empty or neighbouring port. Falls back to the
+    /// first candidate when nothing answers (write-only monitors).
+    static func writeTarget(
+        candidateCount: Int,
+        cachedIndex: Int?,
+        command: UInt8,
+        probe: (_ candidateIndex: Int, _ vcp: UInt8) -> Bool
+    ) -> WriteTarget? {
+        guard candidateCount > 0 else { return nil }
+        if let cachedIndex, cachedIndex < candidateCount {
+            return WriteTarget(index: cachedIndex, reason: .cached)
+        }
+        if candidateCount == 1 { return WriteTarget(index: 0, reason: .onlyCandidate) }
+
+        var probes = [command]
+        if command != VCPCode.brightness.rawValue { probes.append(VCPCode.brightness.rawValue) }
+        for vcp in probes {
+            for index in 0..<candidateCount where probe(index, vcp) {
+                return WriteTarget(index: index, reason: .probed)
+            }
+        }
+        return WriteTarget(index: 0, reason: .fallback)
+    }
+}
+
+/// Registry entry ID of the DCPAVServiceProxy that last answered DDC for each display.
+/// Machines such as the Mac mini publish one proxy per physical port even when the
+/// port is empty, so the display→port mapping has to be discovered, not assumed by index.
+struct DDCPortMemory {
+    private var resolvedProxyIDs: [CGDirectDisplayID: UInt64] = [:]
+
+    /// Position of the remembered proxy for `displayID` among `registryIDs`, if still present.
+    func index(for displayID: CGDirectDisplayID, in registryIDs: [UInt64]) -> Int? {
+        guard let cached = resolvedProxyIDs[displayID] else { return nil }
+        return registryIDs.firstIndex(of: cached)
+    }
+
+    /// Records the proxy that answered; returns false when it was already remembered.
+    @discardableResult
+    mutating func remember(_ registryID: UInt64, for displayID: CGDirectDisplayID) -> Bool {
+        guard resolvedProxyIDs[displayID] != registryID else { return false }
+        resolvedProxyIDs[displayID] = registryID
+        return true
+    }
+
+    mutating func removeAll() {
+        resolvedProxyIDs.removeAll()
+    }
+}
+
+// MARK: - Transport
+
+/// Outcome of one raw DDC read attempt.
+enum DDCReadAttempt {
+    case value(DDCReadResult)
+    /// The display didn't answer (or answered garbage) — worth retrying.
+    case noReply
+    /// No route to the display at all (e.g. no framebuffer) — retrying is pointless.
+    case unavailable
+}
+
+/// One raw DDC/CI exchange with a display. `DDCService` layers serialisation, bus
+/// cooldown, retries and the read cache on top. Always called on DDCService's queue.
+protocol DDCTransport: AnyObject {
+    func read(command: UInt8, from displayID: CGDirectDisplayID) -> DDCReadAttempt
+    func write(command: UInt8, value: UInt16, to displayID: CGDirectDisplayID) -> Bool
+    /// Forget any display→port mapping (displays were reconfigured).
+    func invalidatePortCache()
+}
+
 // MARK: - DDC Service
 
 /// Sends DDC/CI commands to external displays over I2C.
 /// Uses IOAVService on Apple Silicon, IOFramebuffer I2C on Intel.
 final class DDCService: @unchecked Sendable {
-    static let shared = DDCService()
+    static let shared = DDCService(transport: IOKitDDCTransport())
 
-    // IOAVService — resolved at runtime via dlsym for resilience.
-    // If Apple removes these symbols in a future macOS, the app still launches
-    // and falls back to IOFramebuffer or reports DDC unavailable.
-    private typealias AVCreateFn = @convention(c) (CFAllocator?, io_service_t) -> Unmanaged<CFTypeRef>?
-    private typealias AVWriteI2CFn = @convention(c) (CFTypeRef, UInt32, UInt32, UnsafeMutableRawPointer, UInt32) -> IOReturn
-    private typealias AVReadI2CFn = @convention(c) (CFTypeRef, UInt32, UInt32, UnsafeMutableRawPointer, UInt32) -> IOReturn
-
-    private let avCreateFn: AVCreateFn?
-    private let avWriteI2CFn: AVWriteI2CFn?
-    private let avReadI2CFn: AVReadI2CFn?
-
-    /// True when all IOAVService symbols are available (Apple Silicon with compatible macOS).
-    private var hasAVService: Bool { avCreateFn != nil && avWriteI2CFn != nil && avReadI2CFn != nil }
+    private let transport: DDCTransport
 
     // Serial queue — all I2C operations go through here to prevent bus collisions.
     private let ddcQueue = DispatchQueue(label: "com.glint.ddc", qos: .userInteractive)
     // Minimum gap between any two I2C operations (read or write).
-    private let busCooldownMicros: useconds_t = 100_000 // 100ms
+    private let busCooldownMicros: useconds_t
+    private let sleep: (useconds_t) -> Void
+    /// Monotonic clock in nanoseconds.
+    private let now: () -> UInt64
 
     // TTL read cache — avoids hammering DDC reads on rate-limited monitors (e.g. LG).
     private struct CacheEntry {
         let result: DDCReadResult
-        let timestamp: UInt64 // mach_absolute_time of the real DDC read or write update
+        let timestamp: UInt64 // monotonic nanos of the real DDC read or write update
     }
     private struct CacheKey: Hashable {
         let displayID: CGDirectDisplayID
         let vcp: UInt8
     }
     private var readCache: [CacheKey: CacheEntry] = [:]
-    private let cacheTTLNanos: UInt64 = 2_000_000_000 // 2 seconds
+    static let cacheTTLNanos: UInt64 = 2_000_000_000 // 2 seconds
+    static let maxReadAttempts = 3
 
-    private init() {
-        if let create = dlsym(RTLD_DEFAULT, "IOAVServiceCreateWithService"),
-           let write = dlsym(RTLD_DEFAULT, "IOAVServiceWriteI2C"),
-           let read = dlsym(RTLD_DEFAULT, "IOAVServiceReadI2C") {
-            avCreateFn = unsafeBitCast(create, to: AVCreateFn.self)
-            avWriteI2CFn = unsafeBitCast(write, to: AVWriteI2CFn.self)
-            avReadI2CFn = unsafeBitCast(read, to: AVReadI2CFn.self)
-            log.log("DDC: IOAVService symbols resolved — Apple Silicon DDC available")
-        } else {
-            avCreateFn = nil
-            avWriteI2CFn = nil
-            avReadI2CFn = nil
-            log.log("DDC: IOAVService symbols not found — falling back to IOFramebuffer I2C")
-        }
+    /// `busCooldownMicros`, `sleep` and `now` are injectable so tests run without real
+    /// delays; the app uses a 100 ms cooldown, `usleep` and the uptime clock.
+    init(
+        transport: DDCTransport,
+        busCooldownMicros: useconds_t = 100_000,
+        sleep: @escaping (useconds_t) -> Void = { _ = usleep($0) },
+        now: @escaping () -> UInt64 = { DispatchTime.now().uptimeNanoseconds }
+    ) {
+        self.transport = transport
+        self.busCooldownMicros = busCooldownMicros
+        self.sleep = sleep
+        self.now = now
     }
 
     // MARK: - Public API
@@ -91,20 +270,33 @@ final class DDCService: @unchecked Sendable {
         }
     }
 
+    /// Forgets which port each display answered on. Call when displays are (re)connected —
+    /// a display ID can come back on a different physical port.
+    func invalidateServiceCache() {
+        ddcQueue.sync { transport.invalidatePortCache() }
+    }
+
     // MARK: - Cached Read/Write
+
+    private func freshEntry(for key: CacheKey) -> CacheEntry? {
+        guard let entry = readCache[key] else { return nil }
+        let current = now()
+        let elapsed = current >= entry.timestamp ? current - entry.timestamp : 0
+        return elapsed < Self.cacheTTLNanos ? entry : nil
+    }
 
     /// Returns a cached DDC read if within TTL, otherwise performs a real read and caches it.
     func cachedRead(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> (result: DDCReadResult, wasCacheHit: Bool)? {
         ddcQueue.sync {
             let key = CacheKey(displayID: displayID, vcp: code.rawValue)
-            if let entry = readCache[key], nanosElapsed(from: entry.timestamp, to: mach_absolute_time()) < cacheTTLNanos {
+            if let entry = freshEntry(for: key) {
                 log.log("DDC CACHE HIT vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) current=\(entry.result.currentValue)")
                 return (entry.result, true)
             }
 
             // Cache miss — do a real DDC read
             guard let result = readImpl(vcp: code, from: displayID) else { return nil }
-            readCache[key] = CacheEntry(result: result, timestamp: mach_absolute_time())
+            readCache[key] = CacheEntry(result: result, timestamp: now())
             return (result, false)
         }
     }
@@ -115,7 +307,7 @@ final class DDCService: @unchecked Sendable {
             let key = CacheKey(displayID: displayID, vcp: code.rawValue)
             readCache[key] = CacheEntry(
                 result: DDCReadResult(currentValue: newValue, maxValue: maxValue),
-                timestamp: mach_absolute_time()
+                timestamp: now()
             )
         }
     }
@@ -128,12 +320,12 @@ final class DDCService: @unchecked Sendable {
             let current: DDCReadResult
             var didRealRead = false
 
-            if let entry = readCache[key], nanosElapsed(from: entry.timestamp, to: mach_absolute_time()) < cacheTTLNanos {
+            if let entry = freshEntry(for: key) {
                 log.log("DDC CACHE HIT vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) current=\(entry.result.currentValue)")
                 current = entry.result
             } else {
                 guard let result = readImpl(vcp: code, from: displayID) else { return nil }
-                readCache[key] = CacheEntry(result: result, timestamp: mach_absolute_time())
+                readCache[key] = CacheEntry(result: result, timestamp: now())
                 current = result
                 didRealRead = true
             }
@@ -145,7 +337,7 @@ final class DDCService: @unchecked Sendable {
             if writeImpl(vcp: code, value: clamped, to: displayID) {
                 readCache[key] = CacheEntry(
                     result: DDCReadResult(currentValue: clamped, maxValue: current.maxValue),
-                    timestamp: mach_absolute_time()
+                    timestamp: now()
                 )
                 return DDCReadResult(currentValue: clamped, maxValue: current.maxValue)
             }
@@ -158,54 +350,101 @@ final class DDCService: @unchecked Sendable {
     /// Raw DDC read — enforces bus cooldown with exponential backoff retries.
     /// Retries up to 3 times with 100ms, 200ms, 400ms delays on failure.
     private func readImpl(vcp code: VCPCode, from displayID: CGDirectDisplayID) -> DDCReadResult? {
-        let maxRetries = 3
+        let maxRetries = Self.maxReadAttempts
         for attempt in 0..<maxRetries {
             let delay = busCooldownMicros * useconds_t(1 << attempt) // 100ms, 200ms, 400ms
-            usleep(delay)
+            sleep(delay)
             log.log("DDC READ vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID) attempt=\(attempt + 1)/\(maxRetries) delay=\(delay / 1000)ms")
-            let result: DDCReadResult?
-            if hasAVService {
-                result = avServiceRead(command: code.rawValue, displayID: displayID)
-            } else {
-                guard let framebuffer = framebuffer(for: displayID) else {
-                    log.log("DDC READ FAILED: no framebuffer for display \(displayID)")
-                    return nil
-                }
-                defer { IOObjectRelease(framebuffer) }
-                result = i2cRead(service: framebuffer, command: code.rawValue)
-            }
-            if let r = result {
+            switch transport.read(command: code.rawValue, from: displayID) {
+            case .value(let r):
                 log.log("DDC READ OK: current=\(r.currentValue) max=\(r.maxValue)")
                 return r
+            case .unavailable:
+                return nil
+            case .noReply:
+                log.log("DDC READ FAILED: nil result for vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID), \(attempt < maxRetries - 1 ? "retrying..." : "giving up")")
             }
-            log.log("DDC READ FAILED: nil result for vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID), \(attempt < maxRetries - 1 ? "retrying..." : "giving up")")
         }
         return nil
     }
 
     /// Raw DDC write — enforces bus cooldown.
     private func writeImpl(vcp code: VCPCode, value: UInt16, to displayID: CGDirectDisplayID) -> Bool {
-        usleep(busCooldownMicros)
+        sleep(busCooldownMicros)
         log.log("DDC WRITE vcp=0x\(String(code.rawValue, radix: 16)) value=\(value) display=\(displayID)")
-        let success: Bool
-        if hasAVService {
-            success = avServiceWrite(command: code.rawValue, value: value, displayID: displayID)
-        } else {
-            guard let framebuffer = framebuffer(for: displayID) else {
-                log.log("DDC WRITE FAILED: no framebuffer for display \(displayID)")
-                return false
-            }
-            defer { IOObjectRelease(framebuffer) }
-            success = i2cWrite(service: framebuffer, command: code.rawValue, value: value)
-        }
+        let success = transport.write(command: code.rawValue, value: value, to: displayID)
         log.log("DDC WRITE \(success ? "OK" : "FAILED") vcp=0x\(String(code.rawValue, radix: 16)) display=\(displayID)")
         return success
     }
+}
 
-    private func nanosElapsed(from start: UInt64, to end: UInt64) -> UInt64 {
-        var timebaseInfo = mach_timebase_info_data_t()
-        mach_timebase_info(&timebaseInfo)
-        return (end - start) * UInt64(timebaseInfo.numer) / UInt64(timebaseInfo.denom)
+// MARK: - IOKit transport
+
+/// The real hardware transport: IOAVService (Apple Silicon) with IOFramebuffer I2C fallback.
+final class IOKitDDCTransport: DDCTransport {
+    // IOAVService — resolved at runtime via dlsym for resilience.
+    // If Apple removes these symbols in a future macOS, the app still launches
+    // and falls back to IOFramebuffer or reports DDC unavailable.
+    private typealias AVCreateFn = @convention(c) (CFAllocator?, io_service_t) -> Unmanaged<CFTypeRef>?
+    private typealias AVWriteI2CFn = @convention(c) (CFTypeRef, UInt32, UInt32, UnsafeMutableRawPointer, UInt32) -> IOReturn
+    private typealias AVReadI2CFn = @convention(c) (CFTypeRef, UInt32, UInt32, UnsafeMutableRawPointer, UInt32) -> IOReturn
+
+    private let avCreateFn: AVCreateFn?
+    private let avWriteI2CFn: AVWriteI2CFn?
+    private let avReadI2CFn: AVReadI2CFn?
+
+    /// True when all IOAVService symbols are available (Apple Silicon with compatible macOS).
+    private var hasAVService: Bool { avCreateFn != nil && avWriteI2CFn != nil && avReadI2CFn != nil }
+
+    // Gap after a successful probe read before the write that follows it.
+    private let busCooldownMicros: useconds_t = 100_000 // 100ms
+
+    private let log = DebugLogger.shared
+
+    private var portMemory = DDCPortMemory()
+
+    init() {
+        if let create = dlsym(RTLD_DEFAULT, "IOAVServiceCreateWithService"),
+           let write = dlsym(RTLD_DEFAULT, "IOAVServiceWriteI2C"),
+           let read = dlsym(RTLD_DEFAULT, "IOAVServiceReadI2C") {
+            avCreateFn = unsafeBitCast(create, to: AVCreateFn.self)
+            avWriteI2CFn = unsafeBitCast(write, to: AVWriteI2CFn.self)
+            avReadI2CFn = unsafeBitCast(read, to: AVReadI2CFn.self)
+            log.log("DDC: IOAVService symbols resolved — Apple Silicon DDC available")
+        } else {
+            avCreateFn = nil
+            avWriteI2CFn = nil
+            avReadI2CFn = nil
+            log.log("DDC: IOAVService symbols not found — falling back to IOFramebuffer I2C")
+        }
+    }
+
+    func read(command: UInt8, from displayID: CGDirectDisplayID) -> DDCReadAttempt {
+        if hasAVService {
+            return avServiceRead(command: command, displayID: displayID).map(DDCReadAttempt.value) ?? .noReply
+        }
+        guard let framebuffer = framebuffer(for: displayID) else {
+            log.log("DDC READ FAILED: no framebuffer for display \(displayID)")
+            return .unavailable
+        }
+        defer { IOObjectRelease(framebuffer) }
+        return i2cRead(service: framebuffer, command: command).map(DDCReadAttempt.value) ?? .noReply
+    }
+
+    func write(command: UInt8, value: UInt16, to displayID: CGDirectDisplayID) -> Bool {
+        if hasAVService {
+            return avServiceWrite(command: command, value: value, displayID: displayID)
+        }
+        guard let framebuffer = framebuffer(for: displayID) else {
+            log.log("DDC WRITE FAILED: no framebuffer for display \(displayID)")
+            return false
+        }
+        defer { IOObjectRelease(framebuffer) }
+        return i2cWrite(service: framebuffer, command: command, value: value)
+    }
+
+    func invalidatePortCache() {
+        portMemory.removeAll()
     }
 
     // MARK: - Apple Silicon: IOAVService
@@ -218,26 +457,8 @@ final class DDCService: @unchecked Sendable {
         let index: Int
     }
 
-    /// Registry entry ID of the DCPAVServiceProxy that last answered DDC for each display.
-    /// Machines such as the Mac mini publish one proxy per physical port even when the
-    /// port is empty, so the display→port mapping has to be discovered, not assumed by index.
-    private var resolvedProxyIDs: [CGDirectDisplayID: UInt64] = [:]
-
-    /// Forgets which port each display answered on. Call when displays are (re)connected —
-    /// a display ID can come back on a different physical port.
-    func invalidateServiceCache() {
-        ddcQueue.sync { resolvedProxyIDs.removeAll() }
-    }
-
     /// Enumerates the external DCPAVServiceProxy services, ordered by how likely each is to
-    /// be the port `displayID` is attached to:
-    ///   1. the proxy that already answered DDC for this display (cached),
-    ///   2. proxies whose dcp subtree publishes this display's EDID UUID,
-    ///   3. the proxy at the display's position in CoreGraphics' external-display order
-    ///      (the historical guess),
-    ///   4. proxies no other connected display would claim by that positional rule.
-    /// Ports another display would claim positionally are left out unless the EDID says
-    /// otherwise, so a display without DDC support can't fall through to its neighbour.
+    /// be the port `displayID` is attached to (see `DDCPortSelection.candidateOrder`).
     private func avServiceCandidates(for displayID: CGDirectDisplayID) -> [AVServiceCandidate] {
         guard let createFn = avCreateFn else { return [] }
 
@@ -276,28 +497,18 @@ final class DDCService: @unchecked Sendable {
         }
 
         let externalDisplayIDs = Self.externalDisplayIDs()
-        let guessIndex = min(externalDisplayIDs.firstIndex(of: displayID) ?? 0, externals.count - 1)
-        // Indices the other connected displays would pick by the same positional rule.
-        let claimedByOthers = Set((0..<min(externalDisplayIDs.count, externals.count)).filter { $0 != guessIndex })
         let targetUUID = Self.edidUUID(for: displayID)
+        let edidMatches = targetUUID.map { uuid in
+            externals.indices.filter { externals[$0].edidUUIDs.contains(uuid) }
+        } ?? []
 
-        var order: [Int] = []
-        func append(_ index: Int) {
-            if !order.contains(index) { order.append(index) }
-        }
-        if let cached = resolvedProxyIDs[displayID],
-           let cachedIndex = externals.firstIndex(where: { $0.registryID == cached }) {
-            append(cachedIndex)
-        }
-        if let uuid = targetUUID {
-            for (index, external) in externals.enumerated() where external.edidUUIDs.contains(uuid) {
-                append(index)
-            }
-        }
-        append(guessIndex)
-        for index in externals.indices where !claimedByOthers.contains(index) {
-            append(index)
-        }
+        let order = DDCPortSelection.candidateOrder(
+            proxyCount: externals.count,
+            displayPosition: externalDisplayIDs.firstIndex(of: displayID),
+            externalDisplayCount: externalDisplayIDs.count,
+            cachedIndex: portMemory.index(for: displayID, in: externals.map(\.registryID)),
+            edidMatchIndices: edidMatches
+        )
 
         log.log("DDC: display=\(displayID) uuid=\(targetUUID ?? "n/a") externalProxies=\(externals.count) externalDisplays=\(externalDisplayIDs.count) candidateOrder=\(order) proxyEDIDs=\(externals.map { Array($0.edidUUIDs).sorted() })")
 
@@ -368,40 +579,34 @@ final class DDCService: @unchecked Sendable {
     }
 
     private func remember(_ candidate: AVServiceCandidate, for displayID: CGDirectDisplayID) {
-        guard resolvedProxyIDs[displayID] != candidate.registryID else { return }
-        resolvedProxyIDs[displayID] = candidate.registryID
+        guard portMemory.remember(candidate.registryID, for: displayID) else { return }
         log.log("DDC: display=\(displayID) answers on DCPAVServiceProxy #\(candidate.index) (registryID=0x\(String(candidate.registryID, radix: 16)))")
     }
 
-    /// Picks the port a write should go to. Prefers the port that already answered a read for
-    /// this display; otherwise probes the candidates with a read (the VCP being written, then
-    /// brightness) so the write can't land on an empty or neighbouring port. Falls back to the
-    /// first candidate when nothing answers (write-only monitors).
+    /// Picks the port a write should go to (see `DDCPortSelection.writeTarget`).
     private func resolveWriteTarget(
         from candidates: [AVServiceCandidate],
         for displayID: CGDirectDisplayID,
         command: UInt8
     ) -> AVServiceCandidate? {
-        guard let first = candidates.first else { return nil }
-        if let cached = resolvedProxyIDs[displayID],
-           let candidate = candidates.first(where: { $0.registryID == cached }) {
-            return candidate
-        }
-        if candidates.count == 1 { return first }
+        guard let target = DDCPortSelection.writeTarget(
+            candidateCount: candidates.count,
+            cachedIndex: portMemory.index(for: displayID, in: candidates.map(\.registryID)),
+            command: command,
+            probe: { index, vcp in avServiceRead(command: vcp, on: candidates[index].service) != nil }
+        ) else { return nil }
 
-        var probes = [command]
-        if command != VCPCode.brightness.rawValue { probes.append(VCPCode.brightness.rawValue) }
-        for vcp in probes {
-            for candidate in candidates {
-                if avServiceRead(command: vcp, on: candidate.service) != nil {
-                    remember(candidate, for: displayID)
-                    usleep(busCooldownMicros)
-                    return candidate
-                }
-            }
+        let candidate = candidates[target.index]
+        switch target.reason {
+        case .cached, .onlyCandidate:
+            break
+        case .probed:
+            remember(candidate, for: displayID)
+            usleep(busCooldownMicros)
+        case .fallback:
+            log.log("DDC: no port answered a probe read for display \(displayID) — writing to candidate #\(candidate.index)")
         }
-        log.log("DDC: no port answered a probe read for display \(displayID) — writing to candidate #\(first.index)")
-        return first
+        return candidate
     }
 
     private func avServiceWrite(command: UInt8, value: UInt16, displayID: CGDirectDisplayID) -> Bool {
@@ -413,18 +618,7 @@ final class DDCService: @unchecked Sendable {
         }
 
         // DDC/CI SET VCP Feature
-        // Protocol: [length|0x80, opcode=0x03, vcp_code, value_hi, value_lo, checksum]
-        // Checksum = XOR of (0x6E, 0x51, all payload bytes)
-        var data: [UInt8] = [
-            0x84,                   // length = 4 | 0x80
-            0x03,                   // SET VCP opcode
-            command,                // VCP code
-            UInt8(value >> 8),      // value high byte
-            UInt8(value & 0xFF)     // value low byte
-        ]
-        var checksum: UInt8 = 0x6E ^ 0x51
-        for byte in data { checksum ^= byte }
-        data.append(checksum)
+        var data = DDCPacket.avSetVCP(command: command, value: value)
 
         let result = data.withUnsafeMutableBufferPointer { buffer -> IOReturn in
             writeFn(target.service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
@@ -461,14 +655,7 @@ final class DDCService: @unchecked Sendable {
         guard let writeFn = avWriteI2CFn, let readFn = avReadI2CFn else { return nil }
 
         // Step 1: Send GET VCP Feature request
-        var sendData: [UInt8] = [
-            0x82,       // length = 2 | 0x80
-            0x01,       // GET VCP opcode
-            command     // VCP code
-        ]
-        var checksum: UInt8 = 0x6E ^ 0x51
-        for byte in sendData { checksum ^= byte }
-        sendData.append(checksum)
+        var sendData = DDCPacket.avGetVCP(command: command)
 
         let writeResult = sendData.withUnsafeMutableBufferPointer { buffer -> IOReturn in
             writeFn(service, 0x37, 0x51, buffer.baseAddress!, UInt32(buffer.count))
@@ -493,20 +680,11 @@ final class DDCService: @unchecked Sendable {
             return nil
         }
 
-        // Parse VCP reply
-        // Expected: [source, length, 0x02, result_code, vcp_opcode, type_code, max_hi, max_lo, cur_hi, cur_lo, checksum]
-        // Find the 0x02 (feature reply opcode) in the response
-        guard let replyStart = replyData.firstIndex(of: 0x02),
-              replyStart + 8 <= replyData.count,
-              replyData[replyStart + 2] == command else {
+        guard let result = DDCPacket.parseAVReply(replyData, command: command) else {
             log.log("DDC read: invalid reply for VCP 0x\(String(command, radix: 16)): \(replyData.map { String($0, radix: 16) })")
             return nil
         }
-
-        let maxValue = (UInt16(replyData[replyStart + 4]) << 8) | UInt16(replyData[replyStart + 5])
-        let currentValue = (UInt16(replyData[replyStart + 6]) << 8) | UInt16(replyData[replyStart + 7])
-
-        return DDCReadResult(currentValue: currentValue, maxValue: maxValue)
+        return result
     }
 
     // MARK: - Intel: IOFramebuffer I2C (Legacy)
@@ -550,9 +728,7 @@ final class DDCService: @unchecked Sendable {
         request.sendTransactionType = IOOptionBits(kIOI2CSimpleTransactionType)
         request.sendAddress = 0x6E
 
-        var data: [UInt8] = [0x51, 0x84, 0x03, command, UInt8(value >> 8), UInt8(value & 0xFF)]
-        let checksum = data.reduce(0x6E, { $0 ^ $1 })
-        data.append(checksum)
+        var data = DDCPacket.i2cSetVCP(command: command, value: value)
 
         request.sendBytes = UInt32(data.count)
 
@@ -570,9 +746,7 @@ final class DDCService: @unchecked Sendable {
         writeRequest.sendTransactionType = IOOptionBits(kIOI2CSimpleTransactionType)
         writeRequest.sendAddress = 0x6E
 
-        var writeData: [UInt8] = [0x51, 0x82, 0x01, command]
-        let writeChecksum = writeData.reduce(0x6E, { $0 ^ $1 })
-        writeData.append(writeChecksum)
+        var writeData = DDCPacket.i2cGetVCP(command: command)
         writeRequest.sendBytes = UInt32(writeData.count)
 
         let writeSent = writeData.withUnsafeMutableBufferPointer { buffer -> Bool in
@@ -596,16 +770,7 @@ final class DDCService: @unchecked Sendable {
         }
 
         guard readSuccess else { return nil }
-        guard replyData.count >= 11,
-              replyData[2] == 0x02,
-              replyData[4] == command else {
-            return nil
-        }
-
-        let maxValue = (UInt16(replyData[6]) << 8) | UInt16(replyData[7])
-        let currentValue = (UInt16(replyData[8]) << 8) | UInt16(replyData[9])
-
-        return DDCReadResult(currentValue: currentValue, maxValue: maxValue)
+        return DDCPacket.parseI2CReply(replyData, command: command)
     }
 
     private func performI2CRequest(service: io_service_t, request: inout IOI2CRequest) -> Bool {
