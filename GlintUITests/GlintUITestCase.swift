@@ -102,6 +102,10 @@ class GlintUITestCase: XCTestCase {
     func openSettings() -> XCUIElement {
         element("glint.menu.settings", in: harness).click()
         XCTAssertTrue(settingsWindow.appears(timeout: Self.timeout), "Settings window did not open")
+        // The menu's Settings… button calls NSApp.deactivate() right after showing the
+        // window (to dismiss the popover), so the window can end up behind another app's
+        // window and its controls aren't hittable. Bring Glint back to the front.
+        app.activate()
         return settingsWindow
     }
 
@@ -109,9 +113,25 @@ class GlintUITestCase: XCTestCase {
         element("glint.settings.\(id)", in: settingsWindow)
     }
 
+    /// Scrolls the Settings form until `element` is fully on screen (much faster than
+    /// letting XCUITest scroll it into view on click, and independent of where the
+    /// window opened).
+    func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(element.appears(), "\(element) missing", file: file, line: line)
+        let scrollView = settingsWindow.scrollViews.firstMatch
+        for _ in 0..<12 {
+            let visible = scrollView.frame.insetBy(dx: 0, dy: 8)
+            let frame = element.frame
+            if visible.contains(frame) { return }
+            scrollView.scroll(byDeltaX: 0, deltaY: frame.midY > visible.midY ? -120 : 120)
+        }
+        XCTFail("could not scroll \(element) into view", file: file, line: line)
+    }
+
     /// Clicks a toggle and waits for it to flip.
     func flip(_ toggle: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(toggle.appears(timeout: Self.timeout), "\(toggle) missing", file: file, line: line)
+        if settingsWindow.exists { reveal(toggle, file: file, line: line) }
         let wasOn = isOn(toggle)
         toggle.click()
         waitForToggle(toggle, on: !wasOn, file: file, line: line)
@@ -120,6 +140,7 @@ class GlintUITestCase: XCTestCase {
     /// Picks `option` (e.g. "10%") from a pop-up picker.
     func choose(_ option: String, in picker: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(picker.appears(timeout: Self.timeout), "\(picker) missing", file: file, line: line)
+        if settingsWindow.exists { reveal(picker, file: file, line: line) }
         picker.click()
         let item = app.menuItems[option]
         XCTAssertTrue(item.appears(timeout: Self.timeout), "menu item \(option) missing", file: file, line: line)

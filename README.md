@@ -168,6 +168,11 @@ Contributions welcome! Here's how to get started:
 3. **Generate the project**: `xcodegen generate`
 4. **Open** `Glint.xcodeproj` in Xcode
 5. **Build & run** — you'll need an external monitor with DDC support to test
+6. **Run the tests** — the `Glint` scheme runs the unit tests (`GlintTests`); the
+   `GlintUITests` scheme runs XCUITest against fixture monitors (DEBUG-only
+   `-UITestMode`, see `Glint/Sources/App/UITestMode.swift`), so no monitor or
+   Accessibility permission is needed. Debug builds use the bundle ID
+   `com.blainemiller.Glint.debug` and never touch an installed Glint.
 
 ### Guidelines
 

@@ -38,6 +38,9 @@ final class SupportWindowController: @unchecked Sendable {
         window.styleMask = [.titled, .closable]
         window.setContentSize(NSSize(width: 440, height: 560))
         window.center()
+        #if DEBUG
+        UITestMode.place(window)
+        #endif
         window.isReleasedWhenClosed = false
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

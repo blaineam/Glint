@@ -74,8 +74,8 @@ final class SettingsUITests: GlintUITestCase {
     func testDebugLoggingRevealsShowLogFile() {
         launch()
         openSettings()
-        settingsWindow.scrollViews.firstMatch.scroll(byDeltaX: 0, deltaY: -300)
         XCTAssertFalse(settings("showLogFile").exists)
+        reveal(settings("debugLogging"))
         flip(settings("debugLogging"))
         XCTAssertTrue(settings("showLogFile").appears(timeout: Self.timeout))
         flip(settings("debugLogging"))
@@ -92,8 +92,8 @@ final class SettingsUITests: GlintUITestCase {
     func testAccessibilityRequiredOpensSystemSettings() {
         launch(["GLINT_UITEST_ACCESSIBILITY": "denied"])
         openSettings()
-        settingsWindow.scrollViews.firstMatch.scroll(byDeltaX: 0, deltaY: -300)
         waitForText(settings("accessibilityStatus"), "Accessibility access required")
+        reveal(settings("openAccessibilitySettings"))
         settings("openAccessibilitySettings").click()
         // Recorded instead of opening System Settings.
         waitForText(element("glint.uitest.lastOpenedURL", in: harness),
@@ -103,11 +103,12 @@ final class SettingsUITests: GlintUITestCase {
     func testSupportSectionsRenderAndComposeMail() {
         launch()
         openSettings()
-        settingsWindow.scrollViews.firstMatch.scroll(byDeltaX: 0, deltaY: -2000)
+        reveal(settingsWindow.buttons["Ask a Question"])
         for title in ["Report an Issue", "Suggest a Feature", "Ask a Question"] {
             XCTAssertTrue(settingsWindow.buttons[title].appears(timeout: Self.timeout), "\(title) row missing")
         }
         XCTAssertTrue(settingsWindow.buttons.matching(NSPredicate(format: "label BEGINSWITH 'My Other Apps'")).firstMatch.exists)
+        reveal(settingsWindow.buttons["Report an Issue"])
         settingsWindow.buttons["Report an Issue"].click()
         waitUntil("Report an Issue should compose a mailto: URL") { [unowned self] in
             self.text(of: self.element("glint.uitest.lastOpenedURL", in: self.harness)).hasPrefix("mailto:")
@@ -125,9 +126,7 @@ final class SettingsUITests: GlintUITestCase {
     func testQuitGlintButton() {
         launch()
         openSettings()
-        // The button sits below the fold; scrolling first is much faster than letting
-        // XCUITest scroll it into view.
-        settingsWindow.scrollViews.firstMatch.scroll(byDeltaX: 0, deltaY: -600)
+        reveal(settings("quit"))
         settings("quit").click()
         waitForTermination()
     }

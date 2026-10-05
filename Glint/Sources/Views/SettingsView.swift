@@ -170,6 +170,9 @@ final class SettingsWindowController: @unchecked Sendable {
         window.title = String(localized: "Glint Settings", comment: "Title of the settings window")
         window.styleMask = [.titled, .closable]
         window.center()
+        #if DEBUG
+        UITestMode.place(window)
+        #endif
         window.isReleasedWhenClosed = false
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

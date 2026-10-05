@@ -154,6 +154,14 @@ enum UITestMode {
         harnessWindow = window
     }
 
+    /// Puts a Settings/Support window at a fixed spot below the harness, away from the
+    /// screen centre where system alerts appear, so tests never find it covered.
+    @MainActor
+    static func place(_ window: NSWindow) {
+        guard isActive, let screen = NSScreen.main else { return }
+        window.setFrameTopLeftPoint(NSPoint(x: screen.visibleFrame.minX + 80, y: screen.visibleFrame.maxY - 360))
+    }
+
     @MainActor
     private static func showOSD(spec: String) {
         let parts = spec.split(separator: ":")
