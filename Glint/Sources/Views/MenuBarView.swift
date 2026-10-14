@@ -1,11 +1,51 @@
 import SwiftUI
 
-struct MenuBarView: View {
-    @ObservedObject var displayManager = DisplayManager.shared
-    @ObservedObject var interceptor = MediaKeyInterceptor.shared
-    @ObservedObject var prefs = Preferences.shared
+/// What the popover's buttons do. The app uses `.live`; tests inject recorders so a click
+/// never opens a real window or quits the test host.
+struct MenuBarActions {
+    var showSettings: @MainActor () -> Void
+    var showSupport: @MainActor () -> Void
+    var refresh: () -> Void
+    var quit: @MainActor () -> Void
 
-    @State private var showingSettings = false
+    static func live(displayManager: DisplayManager) -> MenuBarActions {
+        MenuBarActions(
+            showSettings: {
+                SettingsWindowController.shared.show()
+                // Close the popover by sending escape key
+                NSApp.deactivate()
+            },
+            // Opens the dedicated support window — a real window, never a
+            // sheet: a sheet would attach to this transient popover and be
+            // torn down with it.
+            showSupport: {
+                SupportWindowController.shared.show()
+                NSApp.deactivate()
+            },
+            refresh: { displayManager.refresh() },
+            quit: { NSApp.terminate(nil) }
+        )
+    }
+}
+
+struct MenuBarView: View {
+    @ObservedObject var displayManager: DisplayManager
+    @ObservedObject var interceptor: MediaKeyInterceptor
+    @ObservedObject var prefs: Preferences
+    let actions: MenuBarActions
+
+    /// The app uses the shared instances; tests inject fakes.
+    init(
+        displayManager: DisplayManager = .shared,
+        interceptor: MediaKeyInterceptor = .shared,
+        prefs: Preferences = .shared,
+        actions: MenuBarActions? = nil
+    ) {
+        self.displayManager = displayManager
+        self.interceptor = interceptor
+        self.prefs = prefs
+        self.actions = actions ?? MenuBarActions.live(displayManager: displayManager)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -49,7 +89,7 @@ struct MenuBarView: View {
 
     private var displaysView: some View {
         ForEach(displayManager.displays) { display in
-            DisplayControlView(display: display)
+            DisplayControlView(display: display, displayManager: displayManager, prefs: prefs)
             if display.id != displayManager.displays.last?.id {
                 Divider().padding(.vertical, 4)
             }
@@ -77,9 +117,7 @@ struct MenuBarView: View {
     private var bottomButtons: some View {
         HStack {
             Button("Settings...") {
-                SettingsWindowController.shared.show()
-                // Close the popover by sending escape key
-                NSApp.deactivate()
+                actions.showSettings()
             }
             .buttonStyle(.plain)
             .font(.caption)
@@ -87,12 +125,8 @@ struct MenuBarView: View {
 
             Spacer()
 
-            // Opens the dedicated support window — a real window, never a
-            // sheet: a sheet would attach to this transient popover and be
-            // torn down with it.
             Button("Support...") {
-                SupportWindowController.shared.show()
-                NSApp.deactivate()
+                actions.showSupport()
             }
             .buttonStyle(.plain)
             .font(.caption)
@@ -101,7 +135,7 @@ struct MenuBarView: View {
             Spacer()
 
             Button("Refresh") {
-                displayManager.refresh()
+                actions.refresh()
             }
             .buttonStyle(.plain)
             .font(.caption)
@@ -110,7 +144,7 @@ struct MenuBarView: View {
             Spacer()
 
             Button("Quit") {
-                NSApp.terminate(nil)
+                actions.quit()
             }
             .buttonStyle(.plain)
             .font(.caption)
@@ -124,8 +158,32 @@ struct MenuBarView: View {
 
 struct DisplayControlView: View {
     let display: ExternalDisplay
-    @ObservedObject var displayManager = DisplayManager.shared
-    @ObservedObject var prefs = Preferences.shared
+    @ObservedObject var displayManager: DisplayManager
+    @ObservedObject var prefs: Preferences
+
+    init(display: ExternalDisplay, displayManager: DisplayManager = .shared, prefs: Preferences = .shared) {
+        self.display = display
+        self.displayManager = displayManager
+        self.prefs = prefs
+    }
+
+    /// The brightness slider moved to `value` (raw DDC units): in sync mode every display
+    /// follows, otherwise only this one.
+    func brightnessSliderChanged(to value: Double) {
+        guard let maxBrightness = display.maxBrightness, maxBrightness > 0 else { return }
+        let percent = Int(value / Double(maxBrightness) * 100)
+        if prefs.syncWithBuiltIn {
+            displayManager.setBrightnessForAll(percent)
+        } else {
+            displayManager.setBrightness(percent, for: display.id)
+        }
+    }
+
+    /// The volume slider moved to `value` (raw DDC units).
+    func volumeSliderChanged(to value: Double) {
+        guard let maxVolume = display.maxVolume, maxVolume > 0 else { return }
+        displayManager.setVolume(Int(value / Double(maxVolume) * 100), for: display.id)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -144,14 +202,7 @@ struct DisplayControlView: View {
                     Slider(
                         value: Binding(
                             get: { Double(brightness) },
-                            set: { val in
-                                let percent = Int(val / Double(maxBrightness) * 100)
-                                if prefs.syncWithBuiltIn {
-                                    displayManager.setBrightnessForAll(percent)
-                                } else {
-                                    displayManager.setBrightness(percent, for: display.id)
-                                }
-                            }
+                            set: { brightnessSliderChanged(to: $0) }
                         ),
                         in: 0...Double(maxBrightness)
                     )
@@ -180,10 +231,7 @@ struct DisplayControlView: View {
                     Slider(
                         value: Binding(
                             get: { Double(volume) },
-                            set: { val in
-                                let percent = Int(val / Double(maxVolume) * 100)
-                                displayManager.setVolume(percent, for: display.id)
-                            }
+                            set: { volumeSliderChanged(to: $0) }
                         ),
                         in: 0...Double(maxVolume)
                     )

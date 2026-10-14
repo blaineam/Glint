@@ -28,6 +28,7 @@
 - **Settings → "Support Future Development"** (MillerKit 1.2.0): a heart row in the *Enjoying Glint?* block that opens wemiller.com/support — GitHub Sponsors, Ko-fi, a one-time tip.
 
 ### Build
+- **Unit coverage 26.6% → 73.7%** — the menu-bar popover, Settings form, OSD pill, Settings/Support window controllers, media-key event-tap plumbing and app-delegate reopen routing are now unit-tested over injected fakes (off-screen windows, a fake event tap, in-memory DDC/CoreAudio), and Soren's `unit` suite enforces a coverage floor. The views, `MediaKeyInterceptor`, `OSDOverlay` and the window controllers gained optional initializer parameters for this; app behaviour is unchanged.
 - **MillerKit pinned at 1.3.0** — `Package.resolved` had stayed at 1.2.0 after `project.yml` moved to `from: "1.2.2"` (structural funding-link gate), so every `xcodebuild` re-resolved the package and rewrote the lockfile, leaving the tree dirty after any build. The pin now records what the requirement actually resolves to; 1.3.0 itself only registers Kern in MillerKit's shared suite registry, nothing Glint-visible.
 
 ### Docs

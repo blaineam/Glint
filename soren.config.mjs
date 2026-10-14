@@ -14,6 +14,17 @@
 //           (MediaKeyInterceptor.action), Preferences in a throwaway UserDefaults suite,
 //           and DisplayManager over fake CoreAudio / display environment. AppDelegate
 //           returns early under XCTest, so no event tap or Accessibility alert.
+//           SwiftUI views (menu-bar popover, Settings) are hosted in an off-screen,
+//           never-shown window over injected fakes; MediaKeyInterceptor takes a fake tap
+//           (a plain Mach port) plus fake DisplayManager/OSD, so real CGEvents are decoded
+//           and routed without a keyboard tap; OSDOverlay and the Settings/Support window
+//           controllers have a presentsWindow:false mode. The real CoreAudio / CoreGraphics
+//           backends only run read-only queries (setters are aimed at kAudioObjectUnknown),
+//           and IOKitDDCTransport only ever sees a built-in display ID, so no test sends a DDC
+//           command or changes a real display/audio setting.
+//           Uncovered by design (~26%): IOKitDDCTransport's I2C/IOAVService bus code, the
+//           live volume/mute/brightness setters, the real status item + popover (UI suite),
+//           the DEBUG UI-test harness window, and SMAppService.
 //   ui    — GlintUITests (XCUITest) against Glint.app in its DEBUG-only -UITestMode
 //           (Glint/Sources/App/UITestMode.swift): fixture DDC monitors + fake CoreAudio,
 //           throwaway defaults suite, no event tap, stubbed Accessibility, recorded URLs.
@@ -66,7 +77,9 @@ export default {
       // The Glint scheme only has GlintTests; this keeps it that way if UI tests are
       // ever added to it.
       extraArgs: ['-only-testing:GlintTests'],
-      description: 'GlintTests: DDC protocol, port selection, cache/retry, media keys, preferences, routing',
+      // Ratchet up, never down; measured 73.7% (2467/3348 lines) 2026-10-14, up from 26.6%.
+      coverageFloor: 73.5,
+      description: 'GlintTests: DDC protocol, port selection, cache/retry, media keys + event-tap plumbing, preferences, routing, off-screen SwiftUI views, OSD',
     },
 
     ui: {

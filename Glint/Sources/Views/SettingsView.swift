@@ -2,8 +2,14 @@ import SwiftUI
 
 import MillerKit
 struct SettingsView: View {
-    @ObservedObject var prefs = Preferences.shared
-    @ObservedObject var interceptor = MediaKeyInterceptor.shared
+    @ObservedObject var prefs: Preferences
+    @ObservedObject var interceptor: MediaKeyInterceptor
+
+    /// The app uses the shared instances; tests inject throwaway ones.
+    init(prefs: Preferences = .shared, interceptor: MediaKeyInterceptor = .shared) {
+        self.prefs = prefs
+        self.interceptor = interceptor
+    }
 
     var body: some View {
         Form {
@@ -148,14 +154,18 @@ struct SettingsView: View {
 final class SettingsWindowController: @unchecked Sendable {
     static let shared = SettingsWindowController()
 
-    private var window: NSWindow?
+    private(set) var window: NSWindow?
+    /// False only in tests: the window is built but never ordered onto the real screen,
+    /// and the app is not activated.
+    private let presentsWindow: Bool
 
-    private init() {}
+    init(presentsWindow: Bool = true) {
+        self.presentsWindow = presentsWindow
+    }
 
     @MainActor func show() {
         if let window = window {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            present(window)
             return
         }
 
@@ -174,9 +184,14 @@ final class SettingsWindowController: @unchecked Sendable {
         UITestMode.place(window)
         #endif
         window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        present(window)
 
         self.window = window
+    }
+
+    @MainActor private func present(_ window: NSWindow) {
+        guard presentsWindow else { return }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

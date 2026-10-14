@@ -14,7 +14,50 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
     /// Background queue for DDC operations so we don't block the event tap.
     private let ddcQueue = DispatchQueue(label: "com.blainemiller.Glint.ddc", qos: .userInteractive)
 
-    private init() {}
+    /// Creates the session event tap for `mask`, passing `userInfo` to the C callback.
+    typealias TapFactory = (_ mask: CGEventMask, _ userInfo: UnsafeMutableRawPointer) -> CFMachPort?
+    /// Switches a tap on or off.
+    typealias TapSwitch = (_ tap: CFMachPort, _ enable: Bool) -> Void
+    /// Shows the on-screen pill: icon, value, screen.
+    typealias OSDPresenter = @MainActor (_ icon: String, _ value: Int, _ screen: NSScreen?) -> Void
+
+    private let preferences: () -> Preferences
+    private let displayManager: () -> DisplayManager
+    private let tapFactory: TapFactory
+    private let tapSwitch: TapSwitch
+    private let presentOSD: OSDPresenter
+
+    /// The app uses `shared`; tests inject a fake tap, preferences, display manager and OSD
+    /// so no real event tap, DDC traffic or on-screen pill is involved.
+    init(
+        preferences: @escaping () -> Preferences = { Preferences.shared },
+        displayManager: @escaping () -> DisplayManager = { DisplayManager.shared },
+        tapFactory: @escaping TapFactory = MediaKeyInterceptor.systemTap,
+        tapSwitch: @escaping TapSwitch = { CGEvent.tapEnable(tap: $0, enable: $1) },
+        presentOSD: @escaping OSDPresenter = { OSDOverlay.shared.show(icon: $0, value: $1, on: $2) }
+    ) {
+        self.preferences = preferences
+        self.displayManager = displayManager
+        self.tapFactory = tapFactory
+        self.tapSwitch = tapSwitch
+        self.presentOSD = presentOSD
+    }
+
+    private static func systemTap(mask: CGEventMask, userInfo: UnsafeMutableRawPointer) -> CFMachPort? {
+        CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: mask,
+            callback: mediaKeyCallback,
+            userInfo: userInfo
+        )
+    }
+
+    /// Runs after every DDC job already queued has finished (tests only need it to wait).
+    func waitForPendingWork() {
+        ddcQueue.sync {}
+    }
 
     func start() {
         guard eventTap == nil else { return }
@@ -25,14 +68,7 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
                                 (1 << CGEventType.keyUp.rawValue) |
                                 (1 << 14) // NX_SYSDEFINED
 
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: mediaKeyCallback,
-            userInfo: selfPtr
-        ) else {
+        guard let tap = tapFactory(mask, selfPtr) else {
             print("[Glint] Failed to create event tap. Grant Accessibility permission.")
             isActive = false
             return
@@ -41,13 +77,19 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
         eventTap = tap
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
+        tapSwitch(tap, true)
         isActive = true
+    }
+
+    /// macOS switches a tap off when its callback is too slow (or on user input); turn it
+    /// back on so the keys keep working.
+    fileprivate func reenableTap() {
+        if let tap = eventTap { tapSwitch(tap, true) }
     }
 
     func stop() {
         if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
+            tapSwitch(tap, false)
             if let source = runLoopSource {
                 CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
             }
@@ -58,7 +100,7 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
     }
 
     /// Called from the C callback. Returns immediately — DDC work is dispatched async.
-    fileprivate func handleMediaKey(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> CGEvent? {
+    func handleMediaKey(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> CGEvent? {
         guard type == CGEventType(rawValue: 14)! else { return event }
 
         let nsEvent = NSEvent(cgEvent: event)
@@ -70,9 +112,9 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
         let key = MediaKey(data1: nsEvent.data1)
         let action = Self.action(
             for: key,
-            prefs: Preferences.shared,
-            ddcBrightnessAvailable: DisplayManager.shared.ddcBrightnessAvailable,
-            ddcVolumeAvailable: DisplayManager.shared.ddcVolumeAvailable
+            prefs: preferences(),
+            ddcBrightnessAvailable: displayManager().ddcBrightnessAvailable,
+            ddcVolumeAvailable: displayManager().ddcVolumeAvailable
         )
 
         guard action != .passThrough else { return event }
@@ -87,17 +129,17 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             return
         case .brightness(let step):
             ddcQueue.async {
-                DisplayManager.shared.adjustBrightness(by: step)
+                self.displayManager().adjustBrightness(by: step)
                 self.showOSD(.brightness)
             }
         case .volume(let step):
             ddcQueue.async {
-                DisplayManager.shared.adjustVolume(by: step)
+                self.displayManager().adjustVolume(by: step)
                 self.showOSD(.volume)
             }
         case .toggleMute:
             ddcQueue.async {
-                let muted = DisplayManager.shared.toggleMute()
+                let muted = self.displayManager().toggleMute()
                 self.showMuteOSD(muted: muted)
             }
         }
@@ -109,9 +151,9 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
     func simulate(_ key: MediaKey) {
         let action = Self.action(
             for: key,
-            prefs: Preferences.shared,
-            ddcBrightnessAvailable: DisplayManager.shared.ddcBrightnessAvailable,
-            ddcVolumeAvailable: DisplayManager.shared.ddcVolumeAvailable
+            prefs: preferences(),
+            ddcBrightnessAvailable: displayManager().ddcBrightnessAvailable,
+            ddcVolumeAvailable: displayManager().ddcVolumeAvailable
         )
         perform(action)
     }
@@ -162,7 +204,7 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
     private enum OSDType { case brightness, volume }
 
     private func showOSD(_ type: OSDType) {
-        let dm = DisplayManager.shared
+        let dm = displayManager()
         let cursorDisplayID = dm.displayUnderCursor()
         let cursorScreen = dm.screenUnderCursor()
 
@@ -181,24 +223,27 @@ final class MediaKeyInterceptor: ObservableObject, @unchecked Sendable {
             icon = "speaker.wave.2.fill"
             percent = dm.currentVolumePercent()
         }
+        let present = presentOSD
         Task { @MainActor in
-            OSDOverlay.shared.show(icon: icon, value: percent, on: cursorScreen)
+            present(icon, percent, cursorScreen)
         }
     }
 
     private func showMuteOSD(muted: Bool) {
-        let cursorScreen = DisplayManager.shared.screenUnderCursor()
+        let dm = displayManager()
+        let cursorScreen = dm.screenUnderCursor()
         let icon = muted ? "speaker.slash.fill" : "speaker.wave.2.fill"
-        let percent = muted ? 0 : DisplayManager.shared.currentVolumePercent()
+        let percent = muted ? 0 : dm.currentVolumePercent()
+        let present = presentOSD
         Task { @MainActor in
-            OSDOverlay.shared.show(icon: icon, value: percent, on: cursorScreen)
+            present(icon, percent, cursorScreen)
         }
     }
 }
 
 // MARK: - C Callback
 
-private func mediaKeyCallback(
+func mediaKeyCallback(
     proxy: CGEventTapProxy,
     type: CGEventType,
     event: CGEvent,
@@ -207,11 +252,7 @@ private func mediaKeyCallback(
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
         if let userInfo = userInfo {
             let interceptor = Unmanaged<MediaKeyInterceptor>.fromOpaque(userInfo).takeUnretainedValue()
-            DispatchQueue.main.async {
-                if let tap = interceptor.eventTap {
-                    CGEvent.tapEnable(tap: tap, enable: true)
-                }
-            }
+            DispatchQueue.main.async { interceptor.reenableTap() }
         }
         return Unmanaged.passRetained(event)
     }

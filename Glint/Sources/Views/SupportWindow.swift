@@ -16,14 +16,18 @@ import MillerKit
 final class SupportWindowController: @unchecked Sendable {
     static let shared = SupportWindowController()
 
-    private var window: NSWindow?
+    private(set) var window: NSWindow?
+    /// False only in tests: the window is built but never ordered onto the real screen,
+    /// and the app is not activated.
+    private let presentsWindow: Bool
 
-    private init() {}
+    init(presentsWindow: Bool = true) {
+        self.presentsWindow = presentsWindow
+    }
 
     @MainActor func show() {
         if let window = window {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            present(window)
             return
         }
 
@@ -42,9 +46,14 @@ final class SupportWindowController: @unchecked Sendable {
         UITestMode.place(window)
         #endif
         window.isReleasedWhenClosed = false
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        present(window)
 
         self.window = window
+    }
+
+    @MainActor private func present(_ window: NSWindow) {
+        guard presentsWindow else { return }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

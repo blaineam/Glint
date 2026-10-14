@@ -16,6 +16,21 @@ struct GlintApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private let preferences: Preferences
+    private let settings: SettingsWindowController
+
+    override init() {
+        preferences = .shared
+        settings = .shared
+        super.init()
+    }
+
+    /// Tests inject a throwaway Preferences and a settings controller that never shows.
+    init(preferences: Preferences, settings: SettingsWindowController) {
+        self.preferences = preferences
+        self.settings = settings
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // GlintTests runs hosted inside Glint.app. Under XCTest, skip the menu
@@ -24,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil { return }
 
         // Show menu bar icon unless user chose invisible mode
-        if !Preferences.shared.hideMenuBarIcon {
+        if !preferences.hideMenuBarIcon {
             setupMenuBar()
         }
 
@@ -49,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // it instead of calling MainActor-isolated methods from a
             // nonisolated closure (a Swift 6 warning today, an error later).
             MainActor.assumeIsolated {
-                if Preferences.shared.hideMenuBarIcon {
+                if self?.preferences.hideMenuBarIcon == true {
                     self?.removeMenuBar()
                 } else {
                     self?.setupMenuBar()
@@ -71,9 +86,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Called when the user opens the app a second time (e.g., from Applications).
     /// In invisible mode this is the only way to access settings.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if Preferences.shared.hideMenuBarIcon {
+        if preferences.hideMenuBarIcon {
             // In invisible mode: open settings directly
-            SettingsWindowController.shared.show()
+            settings.show()
         } else if statusItem?.button != nil {
             // In menu bar mode: show the popover
             togglePopover()

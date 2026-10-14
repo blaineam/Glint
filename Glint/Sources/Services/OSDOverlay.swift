@@ -6,17 +6,25 @@ import SwiftUI
 final class OSDOverlay {
     static let shared = OSDOverlay()
 
-    private var window: NSPanel?
+    private(set) var window: NSPanel?
     private var hideTask: Task<Void, Never>?
     private var hostingView: NSHostingView<OSDPillView>?
-    private var isVisible = false
+    private(set) var isVisible = false
 
     private let pillWidth: CGFloat = 200
     private let pillHeight: CGFloat = 28
 
-    private init() {}
+    /// False only in tests: the pill is built, positioned and timed as usual but never
+    /// ordered onto the real screen.
+    private let presentsWindow: Bool
+    private let hideDelay: Duration
 
-    private static var hideDelay: Duration {
+    init(presentsWindow: Bool = true, hideDelay: Duration = OSDOverlay.defaultHideDelay) {
+        self.presentsWindow = presentsWindow
+        self.hideDelay = hideDelay
+    }
+
+    nonisolated static var defaultHideDelay: Duration {
         #if DEBUG
         if UITestMode.isActive { return UITestMode.osdHideDelay }
         #endif
@@ -76,7 +84,7 @@ final class OSDOverlay {
         // Only fade in if not already visible
         if !isVisible {
             window?.alphaValue = 0
-            window?.orderFrontRegardless()
+            if presentsWindow { window?.orderFrontRegardless() }
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.15
                 window?.animator().alphaValue = 1
@@ -86,7 +94,7 @@ final class OSDOverlay {
 
         // Reset hide timer
         hideTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.hideDelay)
+            try? await Task.sleep(for: self?.hideDelay ?? .zero)
             guard !Task.isCancelled, let self else { return }
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.3
