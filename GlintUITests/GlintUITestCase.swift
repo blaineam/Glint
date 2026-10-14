@@ -25,11 +25,27 @@ class GlintUITestCase: XCTestCase {
             app.terminate()
         }
         app = nil
+        waitForNoRunningInstances()
+    }
+
+    static let bundleID = "com.blainemiller.Glint.debug"
+
+    /// `XCUIApplication.terminate()` returns once the app is asked to quit, but under load
+    /// the old process can still be winding down (or LaunchServices can still know it) when
+    /// the next test launches the same bundle ID. The new launch then attaches to the dying
+    /// process and XCTest reports "does not have a process ID". Wait (never kill) until no
+    /// instance of the debug app is left before the next launch.
+    func waitForNoRunningInstances() {
+        let isGone = { NSRunningApplication.runningApplications(withBundleIdentifier: Self.bundleID).isEmpty }
+        if isGone() { return }
+        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in isGone() }, object: nil)
+        _ = XCTWaiter().wait(for: [expectation], timeout: 30)
     }
 
     /// Launches with the given fixture environment. Pinned to English so labels and the
     /// percent formatting ("6.25%") are deterministic.
     func launch(_ environment: [String: String] = [:], waitForHarness: Bool = true) {
+        waitForNoRunningInstances()
         app.launchArguments = ["-UITestMode", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launchEnvironment = environment
         app.launch()
