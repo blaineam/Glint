@@ -90,6 +90,11 @@ export default {
       destination: 'platform=macOS,arch=arm64',
       xcodegen: true,
       derivedDataPath: '/tmp/soren-dd-glint-ui',
+      // Soren passes CODE_SIGNING_ALLOWED=NO, which leaves Apple's XCTRunner template with its
+      // original signature after the build strips its resources: "GlintUITests-Runner.app is
+      // damaged and can't be opened" (codesign: code has no resources but signature indicates
+      // they must be present). Re-sign the runner ad hoc so the seal is valid.
+      extraArgs: ['CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_IDENTITY=-'],
       description: 'GlintUITests: menu-bar popover, media keys + OSD, Settings, Support, status item, invisible mode, permission alert (DEBUG -UITestMode fixtures)',
     },
 
