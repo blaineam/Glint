@@ -143,7 +143,7 @@
     for (var h = 0; h < htmlNodes.length; h++) {
       var hkey = htmlNodes[h].getAttribute('data-i18n-html');
       if (Object.prototype.hasOwnProperty.call(dict, hkey)) {
-        htmlNodes[h].innerHTML = dict[hkey];
+        setSafeHTML(htmlNodes[h], dict[hkey]);
       }
     }
     var attrNodes = document.querySelectorAll('[data-i18n-attr]');
@@ -260,6 +260,38 @@
         });
       })(nodes[i]);
     }
+  }
+
+  // Translation values may carry inline markup (data-i18n-html). Parse them
+  // inertly and rebuild only allowlisted tags/attributes, so a tampered
+  // dictionary can never inject script or event handlers.
+  var SAFE_TAGS = { A: 1, B: 1, BR: 1, CODE: 1, EM: 1, I: 1, SMALL: 1, SPAN: 1, STRONG: 1, SUB: 1, SUP: 1, U: 1 };
+  var SAFE_ATTRS = { href: 1, target: 1, rel: 1, class: 1, title: 1, lang: 1 };
+  function cloneSafe(src, doc) {
+    var out = doc.createDocumentFragment();
+    for (var n = src.firstChild; n; n = n.nextSibling) {
+      if (n.nodeType === 3) {
+        out.appendChild(doc.createTextNode(n.nodeValue));
+      } else if (n.nodeType === 1) {
+        if (!SAFE_TAGS[n.tagName]) { out.appendChild(cloneSafe(n, doc)); continue; }
+        var el = doc.createElement(n.tagName.toLowerCase());
+        for (var i = 0; i < n.attributes.length; i++) {
+          var an = n.attributes[i].name.toLowerCase();
+          var av = n.attributes[i].value;
+          if (!SAFE_ATTRS[an]) continue;
+          if (an === 'href' && !/^(https?:|mailto:|#|\/|\.)/i.test(av.trim())) continue;
+          el.setAttribute(an, av);
+        }
+        el.appendChild(cloneSafe(n, doc));
+        out.appendChild(el);
+      }
+    }
+    return out;
+  }
+  function setSafeHTML(node, html) {
+    var parsed = new DOMParser().parseFromString(String(html), 'text/html');
+    node.textContent = '';
+    node.appendChild(cloneSafe(parsed.body, document));
   }
 
   function switchTo(lang) {
