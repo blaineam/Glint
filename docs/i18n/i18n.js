@@ -199,13 +199,23 @@
   }
 
   // One URL for `lang`, or null when the manifest does not list that file.
+  // A swapped-in screenshot must stay on this site: only http(s) URLs on our own
+  // origin are ever written back to src/srcset, whatever the DOM or manifest held.
+  function sameOriginUrl(u) {
+    try {
+      var x = new URL(u, document.baseURI);
+      if (x.protocol !== 'http:' && x.protocol !== 'https:') return null;
+      return x.origin === window.location.origin ? u : null;
+    } catch (e) { return null; }
+  }
+
   function localizeUrl(url, lang, files) {
     var at = url.indexOf(SCREEN_SEGMENT);
-    if (at < 0) return url; // not a screenshot URL: leave it alone
+    if (at < 0) return sameOriginUrl(url); // not a screenshot URL: leave it alone
     var rest = url.slice(at + SCREEN_SEGMENT.length).split('?')[0].split('#')[0];
     var hash = files[lang + '/' + rest];
     if (!hash) return null;
-    return url.slice(0, at) + '/screens/' + lang + '/' + rest + '?v=' + hash;
+    return sameOriginUrl(url.slice(0, at) + '/screens/' + lang + '/' + rest + '?v=' + encodeURIComponent(hash));
   }
 
   function localizeSrcset(srcset, lang, files) {
