@@ -1,6 +1,6 @@
 [package]
 name = "glint"
-version = "1.6.0"
+version = "1.7.0"
 edition = "2021"
 description = "DDC display control from your keyboard: brightness and monitor speakers for external displays on Linux."
 license = "MIT"

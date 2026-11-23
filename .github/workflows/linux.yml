@@ -87,20 +87,7 @@ jobs:
 
       - name: Package
         working-directory: linux
-        run: |
-          set -e
-          mkdir -p ../dist
-          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf; do
-            cargo deb --no-build --no-strip --target "$t" --output ../dist/
-            cargo generate-rpm --target "$t" --output ../dist/
-            arch=$(echo "$t" | cut -d- -f1)
-            stage=$(mktemp -d)/glint-linux-$arch
-            mkdir -p "$stage"
-            cp "target/$t/release/glint" packaging/install.sh packaging/glint.service packaging/glint.desktop res/glint.png "$stage/"
-            cp ../LICENSE "$stage/"
-            tar -C "$(dirname "$stage")" -czf "../dist/glint-linux-$arch.tar.gz" "glint-linux-$arch"
-          done
-          ls -l ../dist
+        run: packaging/build-release.sh "$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" ../dist
 
       - name: Install the .deb and .rpm
         run: |

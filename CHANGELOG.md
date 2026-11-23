@@ -12,6 +12,7 @@
   - Same settings and rules as Mac and Windows (sync with system volume via `pactl`, intercept/always-intercept, write-only volume, mute memory, write verification), a StatusNotifierItem tray menu, notification-based level indicator, launch at login as a systemd user service, and the 9 languages, chosen from the POSIX locale.
   - `sudo glint setup` (run by the packages and `install.sh`) installs a udev rule granting the seat user (`uaccess`) access to I²C, uinput and keyboards, and loads `i2c-dev` and `uinput`; `--remove` undoes it. `glint status`, `glint brightness …` and `glint volume …` on the command line.
 - **Shared core** — the step math, settings model, mute and routing rules and UI strings now live in `core/` (crate `glint-core`), used by both the Windows and Linux apps; `core/tools/gen_strings.py` generates the strings for both.
+- **Linux packages carry the release version** — `.deb`/`.rpm` versions come from the release tag (`linux/packaging/build-release.sh`, shared by CI and releases), and a `Linux release assets` workflow can rebuild a release's Linux packages without re-running the Mac and Windows jobs. (The first v1.7.0 upload was labelled 1.6.0; it was replaced.)
 - **CI** — a `Linux` workflow runs fmt, clippy (warnings as errors) and tests, cross-builds all three binaries, smoke-tests them on Rocky Linux 8, Ubuntu 20.04, Arch and Debian (ARM64 and ARMv7 under QEMU), and installs the `.deb` and `.rpm`; releases attach the Linux packages.
 
 ## v1.6.0

@@ -1,0 +1,53 @@
+# Rebuilds the Linux packages from main and attaches them to an existing release, without
+# re-running the Mac (notarization) and Windows jobs. For fixing a release's Linux assets.
+name: Linux release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach to (e.g. v1.7.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf
+
+      - name: Build tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild,cargo-deb,cargo-generate-rpm
+
+      - name: Zig (cross linker)
+        run: pip install ziglang
+
+      - name: Build and package
+        working-directory: linux
+        env:
+          TAG: ${{ inputs.tag }}
+        run: packaging/build-release.sh "${TAG#v}" ../dist
+
+      - name: Check the package versions
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          v=$(printf '%s' "${TAG#v}" | sed 's/-/~/')
+          dpkg-deb -f dist/glint_*_amd64.deb Version | grep -qx "$v"
+          ls dist | grep -q "glint-$v-1.x86_64.rpm"
+
+      - name: Attach to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
