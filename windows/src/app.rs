@@ -40,7 +40,7 @@ use crate::logic::{self, Direction, HotkeyScheme, Settings, STEP_OPTIONS};
 use crate::osd::Osd;
 use crate::settings;
 use crate::tray::{app_icon, Tray, WM_APP_TRAY};
-use crate::worker::{self, Cmd, Snapshot, WorkerPrefs, WM_APP_OSD, WM_APP_SNAPSHOT};
+use crate::worker::{self, Cmd, Snapshot, WorkerPrefs, WM_APP_DDC_IGNORED, WM_APP_OSD, WM_APP_SNAPSHOT};
 
 pub const VERSION: &str = match option_env!("GLINT_VERSION") {
     Some(v) => v,
@@ -418,6 +418,19 @@ impl App {
             }
             WM_APP_SLIDER => {
                 self.slider(wparam.0, lparam.0 as f64);
+                Some(LRESULT(0))
+            }
+            WM_APP_DDC_IGNORED => {
+                let name = self
+                    .snapshot
+                    .lock()
+                    .ok()
+                    .and_then(|d| d.get(wparam.0).map(|d| d.name.clone()))
+                    .unwrap_or_default();
+                self.tray.borrow().notify(
+                    t("Monitor isn't applying changes"),
+                    &t("{} accepted the change over DDC/CI but didn't apply it. A KVM, dock or adapter may be blocking DDC/CI, or a picture mode (HDR, sRGB, eco, dynamic contrast) may lock it.").replace("{}", &name),
+                );
                 Some(LRESULT(0))
             }
             WM_APP_SHOW => {

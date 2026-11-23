@@ -3,19 +3,40 @@
 
 use windows::core::BOOL;
 use windows::Win32::Devices::Display::{
-    DestroyPhysicalMonitors, DisplayConfigGetDeviceInfo, GetDisplayConfigBufferSizes,
-    GetNumberOfPhysicalMonitorsFromHMONITOR, GetPhysicalMonitorsFromHMONITOR, GetVCPFeatureAndVCPFeatureReply,
-    QueryDisplayConfig, SetVCPFeature, DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME,
-    DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME, DISPLAYCONFIG_DEVICE_INFO_HEADER, DISPLAYCONFIG_MODE_INFO,
-    DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED, DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL,
-    DISPLAYCONFIG_OUTPUT_TECHNOLOGY_LVDS, DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED, DISPLAYCONFIG_PATH_INFO,
-    DISPLAYCONFIG_SOURCE_DEVICE_NAME, DISPLAYCONFIG_TARGET_DEVICE_NAME, PHYSICAL_MONITOR, QDC_ONLY_ACTIVE_PATHS,
+    CapabilitiesRequestAndCapabilitiesReply, DestroyPhysicalMonitors, DisplayConfigGetDeviceInfo,
+    GetCapabilitiesStringLength, GetDisplayConfigBufferSizes, GetNumberOfPhysicalMonitorsFromHMONITOR,
+    GetPhysicalMonitorsFromHMONITOR, GetVCPFeatureAndVCPFeatureReply, QueryDisplayConfig, SetVCPFeature,
+    DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME, DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME,
+    DISPLAYCONFIG_DEVICE_INFO_HEADER, DISPLAYCONFIG_MODE_INFO, DISPLAYCONFIG_OUTPUT_TECHNOLOGY_DISPLAYPORT_EMBEDDED,
+    DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL, DISPLAYCONFIG_OUTPUT_TECHNOLOGY_LVDS,
+    DISPLAYCONFIG_OUTPUT_TECHNOLOGY_UDI_EMBEDDED, DISPLAYCONFIG_PATH_INFO, DISPLAYCONFIG_SOURCE_DEVICE_NAME,
+    DISPLAYCONFIG_TARGET_DEVICE_NAME, PHYSICAL_MONITOR, QDC_ONLY_ACTIVE_PATHS,
 };
 use windows::Win32::Foundation::{ERROR_SUCCESS, HANDLE, LPARAM, RECT};
 use windows::Win32::Graphics::Gdi::{EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO, MONITORINFOEXW};
 
 pub const VCP_BRIGHTNESS: u8 = 0x10;
 pub const VCP_VOLUME: u8 = 0x62;
+
+/// The monitor's MCCS capabilities string ("(prot(monitor)type(lcd)model(...)vcp(10 12 62 ...))").
+/// Logged at each scan: it shows whether the real monitor answers DDC/CI and which
+/// controls it says it supports (0x10 brightness, 0x62 volume).
+pub fn capabilities(mon: &Monitor) -> Option<String> {
+    let handle = mon.physical.first()?.hPhysicalMonitor;
+    let mut len = 0u32;
+    // SAFETY: valid physical monitor handle; the buffer is sized from the reported length.
+    unsafe {
+        if GetCapabilitiesStringLength(handle, &mut len) == 0 || len == 0 {
+            return None;
+        }
+        let mut buf = vec![0u8; len as usize];
+        if CapabilitiesRequestAndCapabilitiesReply(handle, &mut buf) == 0 {
+            return None;
+        }
+        let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+        Some(String::from_utf8_lossy(&buf[..end]).into_owned())
+    }
+}
 
 /// One logical display (an HMONITOR). Cloned outputs can put several physical monitors
 /// behind one HMONITOR; reads use the first, writes go to all.
@@ -190,6 +211,7 @@ pub fn read_vcp(mon: &Monitor, code: u8) -> Option<(u32, u32)> {
         let mut max = 0u32;
         // SAFETY: valid physical monitor handle and out-parameters.
         let ok = unsafe { GetVCPFeatureAndVCPFeatureReply(handle, code, None, &mut cur, Some(&mut max)) } != 0;
+        crate::gdebug!("ddc read '{}' vcp 0x{code:02X}: ok={ok} cur={cur} max={max}", mon.name);
         if ok && max > 0 {
             return Some((cur.min(max), max));
         }
@@ -204,9 +226,9 @@ pub fn read_vcp(mon: &Monitor, code: u8) -> Option<(u32, u32)> {
 pub fn write_vcp(mon: &Monitor, code: u8, value: u32) -> bool {
     let mut any = false;
     for pm in &mon.physical {
-        if write_one(pm.hPhysicalMonitor, code, value) {
-            any = true;
-        }
+        let ok = write_one(pm.hPhysicalMonitor, code, value);
+        crate::gdebug!("ddc write '{}' vcp 0x{code:02X} = {value}: ok={ok}", mon.name);
+        any |= ok;
     }
     any
 }

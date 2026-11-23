@@ -19,6 +19,8 @@ use crate::wmi::Wmi;
 
 pub const WM_APP_OSD: u32 = 0x8000 + 10;
 pub const WM_APP_SNAPSHOT: u32 = 0x8000 + 11;
+/// A monitor accepted DDC writes but didn't apply them; wparam = display index.
+pub const WM_APP_DDC_IGNORED: u32 = 0x8000 + 12;
 
 pub const OSD_BRIGHTNESS: usize = 0;
 pub const OSD_VOLUME: usize = 1;
@@ -130,6 +132,9 @@ struct Display {
     key: String,
     brightness: Option<Vcp>,
     volume: Option<Vcp>,
+    /// The first real DDC write of each control is read back once to check the monitor
+    /// applied it (KVMs and EDID emulators often answer reads but drop writes).
+    verified: [bool; 2],
 }
 
 struct Worker {
@@ -299,11 +304,18 @@ impl Worker {
                 brightness.map(|v| (v.cur, v.max, v.assumed)),
                 volume.map(|v| (v.cur, v.max, v.assumed))
             );
+            if !mon.internal && !mon.physical.is_empty() {
+                let caps = ddc::capabilities(&mon)
+                    .map(|c| c.chars().take(400).collect::<String>())
+                    .unwrap_or_else(|| "none (no DDC/CI reply)".into());
+                glog!("display '{}' capabilities: {caps}", mon.name);
+            }
             self.displays.push(Display {
                 mon,
                 key,
                 brightness,
                 volume,
+                verified: [false; 2],
             });
         }
         self.publish();
@@ -331,6 +343,32 @@ impl Worker {
         self.displays.iter().position(|d| {
             p.x >= d.mon.rect.left && p.x < d.mon.rect.right && p.y >= d.mon.rect.top && p.y < d.mon.rect.bottom
         })
+    }
+
+    /// Reads a control back after its first write on a display. Assumed (write-only)
+    /// controls are skipped: their monitors don't answer reads by definition.
+    fn verify(&mut self, i: usize, slot: usize, code: u8, wanted: u32) {
+        let d = &self.displays[i];
+        let assumed = if slot == 0 { d.brightness } else { d.volume }.is_some_and(|v| v.assumed);
+        if d.verified[slot] || assumed {
+            return;
+        }
+        self.displays[i].verified[slot] = true;
+        std::thread::sleep(Duration::from_millis(80));
+        let name = self.displays[i].mon.name.clone();
+        let back = ddc::read_vcp(&self.displays[i].mon, code).map(|(cur, _)| cur);
+        match logic::write_took(wanted, back) {
+            Some(true) => glog!("'{name}' applied DDC 0x{code:02X} = {wanted}"),
+            Some(false) => {
+                glog!(
+                    "'{name}' accepted DDC 0x{code:02X} = {wanted} but still reports {back:?}: something between the \
+                     PC and the monitor (KVM, dock, adapter, EDID emulator) is dropping DDC/CI writes, or a picture \
+                     mode (HDR, sRGB, eco, dynamic contrast) locks this control"
+                );
+                self.post(WM_APP_DDC_IGNORED, i, 0);
+            }
+            None => glog!("'{name}': couldn't read DDC 0x{code:02X} back after writing {wanted}"),
+        }
     }
 
     // ---- Brightness ----
@@ -362,7 +400,11 @@ impl Worker {
         let ok = if self.displays[i].mon.internal {
             self.wmi().map(|w| w.set_brightness(raw)).unwrap_or(false)
         } else {
-            ddc::write_vcp(&self.displays[i].mon, VCP_BRIGHTNESS, raw)
+            let ok = ddc::write_vcp(&self.displays[i].mon, VCP_BRIGHTNESS, raw);
+            if ok {
+                self.verify(i, 0, VCP_BRIGHTNESS, raw);
+            }
+            ok
         };
         if let Some(v) = self.displays[i].brightness.as_mut() {
             if ok {
@@ -487,6 +529,9 @@ impl Worker {
 
     fn write_volume(&mut self, i: usize, raw: u32) -> bool {
         let ok = ddc::write_vcp(&self.displays[i].mon, VCP_VOLUME, raw);
+        if ok {
+            self.verify(i, 1, VCP_VOLUME, raw);
+        }
         if !ok {
             glog!("volume: write failed on '{}'", self.displays[i].mon.name);
         }

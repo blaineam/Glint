@@ -282,6 +282,12 @@ pub fn brightness_transition(held: Option<Direction>, usages: &[u16]) -> (Option
     (now, now.is_some() && now != held)
 }
 
+/// Whether a monitor applied a DDC write, judged by reading the value back. Off by one is
+/// fine (some monitors round). No read-back at all proves nothing either way.
+pub fn write_took(wanted: u32, read_back: Option<u32>) -> Option<bool> {
+    read_back.map(|r| r.abs_diff(wanted) <= 1)
+}
+
 /// Text shown in the OSD for a percentage.
 pub fn percent_label(p: f64) -> String {
     format!("{}%", p.round() as i64)
@@ -398,6 +404,14 @@ mod tests {
             brightness_transition(Some(Direction::Up), &[0x70]),
             (Some(Direction::Down), true)
         );
+    }
+
+    #[test]
+    fn write_verification() {
+        assert_eq!(write_took(50, Some(50)), Some(true));
+        assert_eq!(write_took(50, Some(49)), Some(true));
+        assert_eq!(write_took(50, Some(80)), Some(false));
+        assert_eq!(write_took(50, None), None);
     }
 
     #[test]
