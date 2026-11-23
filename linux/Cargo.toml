@@ -13,6 +13,8 @@ path = "src/main.rs"
 
 [dependencies]
 glint-core = { path = "../core" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
 ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
 zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }

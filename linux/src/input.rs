@@ -234,7 +234,7 @@ fn run_device(shared: Arc<Shared>, path: PathBuf, file: File) {
             Ok(n) if n >= EVENT_SIZE => n,
             _ => break, // unplugged (KVM switch) or error
         };
-        for chunk in buf[..n].chunks_exact(EVENT_SIZE) {
+        for chunk in buf[..n].as_chunks::<EVENT_SIZE>().0 {
             let e = decode(chunk);
             let mut forward = true;
             if e.kind == EV_KEY {
@@ -291,7 +291,7 @@ fn mirror_leds(shared: Arc<Shared>) {
     let Ok(mut reader) = v.file.try_clone() else { return };
     let mut buf = vec![0u8; EVENT_SIZE * 16];
     while let Ok(n) = reader.read(&mut buf) {
-        for chunk in buf[..n].chunks_exact(EVENT_SIZE) {
+        for chunk in buf[..n].as_chunks::<EVENT_SIZE>().0 {
             let e = decode(chunk);
             if e.kind == EV_LED {
                 for (_, dev) in shared.grabbed.lock().unwrap().iter() {
