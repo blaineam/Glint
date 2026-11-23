@@ -165,6 +165,12 @@ jobs:
 
             Glint lives in the tray. Brightness: your keyboard's brightness keys, or **Ctrl+Alt+Page Up / Page Down** (changeable in the tray menu). Click the tray icon for sliders, right-click for settings. Volume keys drive your monitor's speakers when Windows plays through it.
 
+            ### Install on Linux (experimental — untested, use with caution)
+            Glint for Linux hasn't been tested on real monitors yet. Please report problems with the output of `glint status`.
+            - Ubuntu, Debian, Raspberry Pi OS: `sudo apt install ./glint_*_amd64.deb` (or `_arm64` / `_armhf`)
+            - Rocky, RHEL, Fedora, openSUSE: `sudo dnf install ./glint-*.x86_64.rpm` (or `.aarch64`)
+            - SteamOS and others: extract `glint-linux-x86_64.tar.gz` (or `aarch64` / `armv7`) and run `./install.sh`
+
             ---
             _See [CHANGELOG](../../blob/main/CHANGELOG.md) for details._
           files: dist/Glint.dmg

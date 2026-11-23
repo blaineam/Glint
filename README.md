@@ -79,7 +79,9 @@ Settings live in `HKCU\Software\wemiller\Glint`; launch at login uses your per-u
 
 Build it yourself with Rust: `cd windows && cargo build --release`.
 
-### Linux (preview)
+### Linux (experimental)
+
+> ⚠️ **Glint for Linux is experimental and hasn't been tested on real monitors yet.** It builds and passes its tests on every supported architecture, and CI runs it on Rocky Linux 8, Ubuntu, Arch and Debian ARM, but nobody has driven a real monitor with it. Use with caution, and please [open an issue](../../issues) with the output of `glint status` if something doesn't work.
 
 Glint for Linux targets **Rocky Linux / RHEL 8+, Ubuntu, Raspberry Pi OS and SteamOS**, and runs on any systemd distribution (Debian, Fedora, Arch, openSUSE, Mint, Pop!_OS…). It's one static binary per architecture, so it doesn't depend on your distribution's library versions: x86_64, ARM64 (Raspberry Pi 4/5 with 64-bit OS, ARM laptops) and ARMv7 (32-bit Raspberry Pi OS).
 
