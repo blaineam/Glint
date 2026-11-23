@@ -135,6 +135,10 @@ mod tests {
         assert_eq!(lookup("Volume step", Some(0)), Some("Lautstärkeschritt"));
         assert_eq!(lookup("not a key", Some(0)), None);
         assert!(has_key("Volume step"));
+        // Hotkey key names follow local keyboards.
+        assert_eq!(lookup("Ctrl", Some(0)), Some("Strg"));
+        assert_eq!(lookup("Page Up", Some(0)), Some("Bild auf"));
+        assert_eq!(lookup("Page Down", Some(2)), Some("Page suiv."));
         assert!(!has_key("not a key"));
     }
 

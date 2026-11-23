@@ -121,8 +121,9 @@ impl HotkeyScheme {
 
     pub fn label(self) -> String {
         match self {
-            HotkeyScheme::CtrlAltPage => "Ctrl+Alt+Page Down / Page Up".into(),
-            HotkeyScheme::CtrlAltF1F2 => "Ctrl+Alt+F1 / F2".into(),
+            // Key names as printed on local keyboards (German "Strg", "Bild ab"…).
+            HotkeyScheme::CtrlAltPage => format!("{}+Alt+{} / {}", t("Ctrl"), t("Page Down"), t("Page Up")),
+            HotkeyScheme::CtrlAltF1F2 => format!("{}+Alt+F1 / F2", t("Ctrl")),
             HotkeyScheme::F1F2 => format!("F1 / F2 {}", t("(Apple keyboard top row)")),
             HotkeyScheme::F14F15 => format!("F14 / F15 {}", t("(Apple keyboards)")),
             HotkeyScheme::Off => t("Off").into(),

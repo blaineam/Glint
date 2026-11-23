@@ -77,6 +77,10 @@ OWN = {
         "(in uso da un’altra app)", "(別のアプリが使用中)", "(다른 앱에서 사용 중)", "(em uso por outro app)",
         "(已被其他应用占用)",
     ],
+    # Key names as printed on each language's keyboards (and as the welcome text says them).
+    "Ctrl": ["Strg", "Ctrl", "Ctrl", "Ctrl", "Ctrl", "Ctrl", "Ctrl", "Ctrl"],
+    "Page Down": ["Bild ab", "Av Pág", "Page suiv.", "Pag giù", "Page Down", "Page Down", "Page Down", "Page Down"],
+    "Page Up": ["Bild auf", "Re Pág", "Page préc.", "Pag su", "Page Up", "Page Up", "Page Up", "Page Up"],
     "Off": ["Aus", "Desactivado", "Désactivé", "Disattivato", "オフ", "끔", "Desativado", "关闭"],
     "(Apple keyboard top row)": [
         "(obere Reihe der Apple-Tastatur)", "(fila superior del teclado Apple)",

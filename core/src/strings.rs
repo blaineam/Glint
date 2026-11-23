@@ -3,7 +3,7 @@
 
 pub const LANG_COUNT: usize = 8;
 
-pub static TABLE: [(&str, [&str; LANG_COUNT]); 43] = [
+pub static TABLE: [(&str, [&str; LANG_COUNT]); 46] = [
     ("(Apple keyboard top row)", ["(obere Reihe der Apple-Tastatur)", "(fila superior del teclado Apple)", "(rangée du haut du clavier Apple)", "(fila superiore della tastiera Apple)", "(Apple キーボードの最上段)", "(Apple 키보드 맨 윗줄)", "(fileira superior do teclado Apple)", "(Apple 键盘最上排)"]),
     ("(Apple keyboards)", ["(Apple-Tastaturen)", "(teclados Apple)", "(claviers Apple)", "(tastiere Apple)", "(Apple キーボード)", "(Apple 키보드)", "(teclados Apple)", "(Apple 键盘)"]),
     ("(built-in)", ["(integriert)", "(integrada)", "(intégré)", "(integrato)", "(内蔵)", "(내장)", "(integrada)", "(内建)"]),
@@ -16,6 +16,7 @@ pub static TABLE: [(&str, [&str; LANG_COUNT]); 43] = [
     ("Brightness keys (or Ctrl+Alt+Page Up / Page Down) and volume keys now control your monitor. Open the tray icon for settings.", ["Helligkeitstasten (oder Strg+Alt+Bild auf/ab) und Lautstärketasten steuern jetzt deinen Monitor. Die Einstellungen findest du im Symbol im Infobereich.", "Las teclas de brillo (o Ctrl+Alt+Re Pág / Av Pág) y de volumen ya controlan tu monitor. Abre el icono de la bandeja para ver los ajustes.", "Les touches de luminosité (ou Ctrl+Alt+Page préc. / Page suiv.) et de volume contrôlent maintenant votre écran. Ouvrez l’icône de la zone de notification pour les réglages.", "I tasti luminosità (o Ctrl+Alt+Pag su / Pag giù) e volume ora controllano il monitor. Apri l’icona nell’area di notifica per le impostazioni.", "輝度キー(または Ctrl+Alt+Page Up / Page Down)と音量キーでモニタを操作できます。設定はトレイアイコンから開けます。", "밝기 키(또는 Ctrl+Alt+Page Up / Page Down)와 음량 키로 이제 모니터를 제어합니다. 설정은 트레이 아이콘에서 열 수 있습니다.", "As teclas de brilho (ou Ctrl+Alt+Page Up / Page Down) e de volume agora controlam seu monitor. Abra o ícone da bandeja para os ajustes.", "亮度键(或 Ctrl+Alt+Page Up / Page Down)和音量键现在可以控制显示器。打开托盘图标即可进行设置。"]),
     ("Brightness step", ["Helligkeitsschritt", "Paso de brillo", "Pas de luminosité", "Passo luminosità", "輝度の調整幅", "밝기 조절 단위", "Incremento de brilho", "亮度步长"]),
     ("Built-in display", ["Integriertes Display", "Pantalla integrada", "Écran intégré", "Display integrato", "内蔵ディスプレイ", "내장 디스플레이", "Tela integrada", "内建显示器"]),
+    ("Ctrl", ["Strg", "Ctrl", "Ctrl", "Ctrl", "Ctrl", "Ctrl", "Ctrl", "Ctrl"]),
     ("Debug logging", ["Debug-Protokollierung", "Registro de depuración", "Journalisation de débogage", "Log di debug", "デバッグログ", "디버그 로깅", "Registro de depuração", "调试日志"]),
     ("Diagnostics", ["Diagnose", "Diagnóstico", "Diagnostics", "Diagnostica", "診断", "진단", "Diagnóstico", "诊断"]),
     ("Display {}", ["Display {}", "Pantalla {}", "Écran {}", "Display {}", "ディスプレイ {}", "디스플레이 {}", "Tela {}", "显示器 {}"]),
@@ -36,6 +37,8 @@ pub static TABLE: [(&str, [&str; LANG_COUNT]); 43] = [
     ("No display answered DDC/CI. Try Rescan displays.", ["Kein Display hat auf DDC/CI geantwortet. Versuche „Displays neu suchen“.", "Ninguna pantalla respondió a DDC/CI. Prueba «Volver a buscar pantallas».", "Aucun écran n’a répondu en DDC/CI. Essayez « Rechercher à nouveau les écrans ».", "Nessun display ha risposto via DDC/CI. Prova «Cerca di nuovo i display».", "DDC/CI に応答したディスプレイはありません。「ディスプレイを再検出」をお試しください。", "DDC/CI에 응답한 디스플레이가 없습니다. ‘디스플레이 다시 찾기’를 사용해 보세요.", "Nenhuma tela respondeu via DDC/CI. Tente “Procurar telas novamente”.", "没有显示器响应 DDC/CI。请试试“重新扫描显示器”。"]),
     ("Off", ["Aus", "Desactivado", "Désactivé", "Disattivato", "オフ", "끔", "Desativado", "关闭"]),
     ("Open log folder", ["Protokollordner öffnen", "Abrir carpeta de registros", "Ouvrir le dossier des journaux", "Apri cartella dei log", "ログフォルダを開く", "로그 폴더 열기", "Abrir pasta de registros", "打开日志文件夹"]),
+    ("Page Down", ["Bild ab", "Av Pág", "Page suiv.", "Pag giù", "Page Down", "Page Down", "Page Down", "Page Down"]),
+    ("Page Up", ["Bild auf", "Re Pág", "Page préc.", "Pag su", "Page Up", "Page Up", "Page Up", "Page Up"]),
     ("Quit Glint", ["Glint beenden", "Salir de Glint", "Quitter Glint", "Esci da Glint", "Glint を終了", "Glint 종료", "Encerrar Glint", "退出 Glint"]),
     ("Rescan displays", ["Displays neu suchen", "Volver a buscar pantallas", "Rechercher à nouveau les écrans", "Cerca di nuovo i display", "ディスプレイを再検出", "디스플레이 다시 찾기", "Procurar telas novamente", "重新扫描显示器"]),
     ("Right-click the tray icon for settings.", ["Rechtsklick auf das Symbol im Infobereich öffnet die Einstellungen.", "Haz clic con el botón derecho en el icono de la bandeja para ver los ajustes.", "Faites un clic droit sur l’icône de la zone de notification pour les réglages.", "Fai clic con il tasto destro sull’icona nell’area di notifica per le impostazioni.", "設定はトレイアイコンを右クリックしてください。", "설정은 트레이 아이콘을 오른쪽 클릭하세요.", "Clique com o botão direito no ícone da bandeja para ver os ajustes.", "右键单击托盘图标可打开设置。"]),

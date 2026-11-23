@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- **Hotkey names follow the keyboard's language** — the *Brightness hotkeys* menu (Windows and Linux) showed "Ctrl+Alt+Page Down / Page Up" in every language while the welcome message used local key names; it now reads e.g. "Strg+Alt+Bild ab / Bild auf" in German, "Ctrl+Alt+Av Pág / Re Pág" in Spanish.
+
 ### Added
 - **Glint for Linux (preview)** in `linux/`: Rocky Linux/RHEL 8+, Ubuntu, Raspberry Pi OS and SteamOS first, and any systemd distribution. Static musl binaries for x86_64, ARM64 and ARMv7 (no glibc dependency, so the same build runs on Rocky 8 and current releases), as `.deb`, `.rpm` and a tarball with a per-user `install.sh` for SteamOS.
   - DDC/CI spoken directly over `/dev/i2c-N`, with monitors found through `/sys/class/drm` and EDID (buses matched by EDID for NVIDIA's proprietary driver); laptop and Steam Deck panels through systemd-logind.
