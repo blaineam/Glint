@@ -7,6 +7,9 @@ license = "MIT"
 repository = "https://github.com/blaineam/Glint"
 publish = false
 
+[dependencies]
+glint-core = { path = "../core" }
+
 [[bin]]
 name = "Glint"
 path = "src/main.rs"

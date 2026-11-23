@@ -1,0 +1,13 @@
+#!/bin/sh
+# Glint: load the i2c-dev and uinput modules now (they also load at boot) and apply the
+# udev rule so the logged-in user can reach monitors and keys without logging out.
+set -e
+if [ "$1" = "configure" ]; then
+    modprobe i2c-dev 2>/dev/null || true
+    modprobe uinput 2>/dev/null || true
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules || true
+        udevadm trigger --action=change --subsystem-match=i2c-dev --subsystem-match=misc --subsystem-match=input || true
+    fi
+fi
+exit 0

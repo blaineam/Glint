@@ -1,0 +1,67 @@
+[package]
+name = "glint"
+version = "1.6.0"
+edition = "2021"
+description = "DDC display control from your keyboard: brightness and monitor speakers for external displays on Linux."
+license = "MIT"
+repository = "https://github.com/blaineam/Glint"
+publish = false
+
+[[bin]]
+name = "glint"
+path = "src/main.rs"
+
+[dependencies]
+glint-core = { path = "../core" }
+libc = "0.2"
+ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
+zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }
+
+[package.metadata.deb]
+maintainer = "Blaine Miller (https://github.com/blaineam/Glint)"
+copyright = "Blaine Miller, MIT License"
+license-file = ["../LICENSE", "0"]
+section = "utils"
+priority = "optional"
+depends = ""
+recommends = "pulseaudio-utils"
+extended-description = """\
+Glint makes your keyboard's brightness and volume keys control an external monitor's real \
+backlight and built-in speakers over DDC/CI, on X11, Wayland, SteamOS and the console. It \
+also drives laptop panels through systemd-logind and adds a tray menu. The package installs \
+a udev rule giving the user at the seat access to I2C buses and keyboards, and loads the \
+i2c-dev and uinput modules."""
+maintainer-scripts = "packaging/debian/"
+assets = [
+    ["target/release/glint", "usr/bin/", "755"],
+    ["packaging/60-glint.rules", "usr/lib/udev/rules.d/", "644"],
+    ["packaging/glint-modules.conf", "usr/lib/modules-load.d/glint.conf", "644"],
+    ["packaging/glint.system-path.service", "usr/lib/systemd/user/glint.service", "644"],
+    ["packaging/glint.desktop", "usr/share/applications/", "644"],
+    ["res/glint.png", "usr/share/icons/hicolor/256x256/apps/glint.png", "644"],
+]
+
+[package.metadata.generate-rpm]
+summary = "DDC display control from your keyboard"
+url = "https://glint.wemiller.com"
+post_install_script = """\
+modprobe i2c-dev >/dev/null 2>&1 || :
+modprobe uinput >/dev/null 2>&1 || :
+udevadm control --reload-rules >/dev/null 2>&1 || :
+udevadm trigger --action=change --subsystem-match=i2c-dev --subsystem-match=misc --subsystem-match=input >/dev/null 2>&1 || :
+"""
+assets = [
+    { source = "target/release/glint", dest = "/usr/bin/glint", mode = "755" },
+    { source = "packaging/60-glint.rules", dest = "/usr/lib/udev/rules.d/60-glint.rules", mode = "644" },
+    { source = "packaging/glint-modules.conf", dest = "/usr/lib/modules-load.d/glint.conf", mode = "644" },
+    { source = "packaging/glint.system-path.service", dest = "/usr/lib/systemd/user/glint.service", mode = "644" },
+    { source = "packaging/glint.desktop", dest = "/usr/share/applications/glint.desktop", mode = "644" },
+    { source = "res/glint.png", dest = "/usr/share/icons/hicolor/256x256/apps/glint.png", mode = "644" },
+]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

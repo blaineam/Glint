@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Glint for Linux (preview)** in `linux/`: Rocky Linux/RHEL 8+, Ubuntu, Raspberry Pi OS and SteamOS first, and any systemd distribution. Static musl binaries for x86_64, ARM64 and ARMv7 (no glibc dependency, so the same build runs on Rocky 8 and current releases), as `.deb`, `.rpm` and a tarball with a per-user `install.sh` for SteamOS.
+  - DDC/CI spoken directly over `/dev/i2c-N`, with monitors found through `/sys/class/drm` and EDID (buses matched by EDID for NVIDIA's proprietary driver); laptop and Steam Deck panels through systemd-logind.
+  - Keys through evdev on X11, Wayland, Game Mode and the console: keyboards with brightness/volume keys are grabbed and everything else is passed through a uinput virtual keyboard (lock-key LEDs mirrored back), so volume keys can be taken when sound goes to a monitor. Same hotkey choices as Windows. Keyboards plugged in or switched in by a KVM are picked up within two seconds; monitors are rescanned on hotplug.
+  - Same settings and rules as Mac and Windows (sync with system volume via `pactl`, intercept/always-intercept, write-only volume, mute memory, write verification), a StatusNotifierItem tray menu, notification-based level indicator, launch at login as a systemd user service, and the 9 languages, chosen from the POSIX locale.
+  - `sudo glint setup` (run by the packages and `install.sh`) installs a udev rule granting the seat user (`uaccess`) access to I²C, uinput and keyboards, and loads `i2c-dev` and `uinput`; `--remove` undoes it. `glint status`, `glint brightness …` and `glint volume …` on the command line.
+- **Shared core** — the step math, settings model, mute and routing rules and UI strings now live in `core/` (crate `glint-core`), used by both the Windows and Linux apps; `core/tools/gen_strings.py` generates the strings for both.
+- **CI** — a `Linux` workflow runs fmt, clippy (warnings as errors) and tests, cross-builds all three binaries, smoke-tests them on Rocky Linux 8, Ubuntu 20.04, Arch and Debian (ARM64 and ARMv7 under QEMU), and installs the `.deb` and `.rpm`; releases attach the Linux packages.
+
 ## v1.6.0
 
 ### Added

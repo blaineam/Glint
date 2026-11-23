@@ -12,10 +12,15 @@ checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 name = "glint"
 version = "1.6.0"
 dependencies = [
+ "glint-core",
  "windows",
  "windows-core",
  "winresource",
 ]
+
+[[package]]
+name = "glint-core"
+version = "1.6.0"
 
 [[package]]
 name = "hashbrown"

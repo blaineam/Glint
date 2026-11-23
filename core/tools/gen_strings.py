@@ -2,14 +2,14 @@
 """Generates src/strings.rs: Glint for Windows' UI strings in the Mac app's 8 languages.
 
 Strings the Mac app already has are taken from Glint/Resources/Localizable.xcstrings so both
-apps say the same thing; Windows-only strings are translated here. Run from windows/:
+apps say the same thing; Windows-only strings are translated here. Run from core/:
     python3 tools/gen_strings.py
 """
 import json
 import pathlib
 
 LANGS = ["de", "es", "fr", "it", "ja", "ko", "pt-BR", "zh-Hans"]
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent  # core/
 MAC = json.loads((ROOT.parent / "Glint/Resources/Localizable.xcstrings").read_text())["strings"]
 
 FROM_MAC = [
@@ -161,6 +161,46 @@ OWN = {
         "{}이(가) DDC/CI로 변경을 받았지만 적용하지 않았습니다. KVM, 독 또는 어댑터가 DDC/CI를 막고 있거나 화면 모드(HDR, sRGB, 절전, 다이내믹 명암비)가 잠그고 있을 수 있습니다.",
         "{} aceitou a alteração via DDC/CI, mas não a aplicou. Um KVM, dock ou adaptador pode estar bloqueando o DDC/CI, ou um modo de imagem (HDR, sRGB, eco, contraste dinâmico) pode travá-la.",
         "{} 通过 DDC/CI 接受了更改,但没有应用。可能是 KVM、扩展坞或转接器阻断了 DDC/CI,或者某种画面模式(HDR、sRGB、节能、动态对比度)锁定了它。",
+    ],
+    "Sync all displays and system volume": [
+        "Alle Displays und die Systemlautstärke synchronisieren",
+        "Sincronizar todas las pantallas y el volumen del sistema",
+        "Synchroniser tous les écrans et le volume du système",
+        "Sincronizza tutti i display e il volume di sistema",
+        "すべてのディスプレイとシステムの音量を同期",
+        "모든 디스플레이와 시스템 음량 동기화",
+        "Sincronizar todas as telas e o volume do sistema",
+        "同步所有显示器和系统音量",
+    ],
+    "Keys can't be taken from the desktop. Run sudo glint setup once.": [
+        "Tasten können dem Desktop nicht abgenommen werden. Führe einmal sudo glint setup aus.",
+        "No se pueden tomar las teclas del escritorio. Ejecuta sudo glint setup una vez.",
+        "Impossible de prendre les touches au bureau. Lancez sudo glint setup une fois.",
+        "Non è possibile sottrarre i tasti al desktop. Esegui sudo glint setup una volta.",
+        "デスクトップからキーを受け取れません。sudo glint setup を一度実行してください。",
+        "데스크톱에서 키를 가져올 수 없습니다. sudo glint setup을 한 번 실행하세요.",
+        "Não é possível tirar as teclas da área de trabalho. Execute sudo glint setup uma vez.",
+        "无法从桌面接管按键。请运行一次 sudo glint setup。",
+    ],
+    "Glint keeps running without a tray icon. Run glint again, or open it from your app menu, to bring the icon back.": [
+        "Glint läuft ohne Symbol weiter. Starte glint erneut oder öffne es aus dem Anwendungsmenü, um das Symbol zurückzuholen.",
+        "Glint sigue funcionando sin icono en la bandeja. Vuelve a ejecutar glint, o ábrelo desde el menú de aplicaciones, para recuperar el icono.",
+        "Glint continue de fonctionner sans icône. Relancez glint, ou ouvrez-le depuis le menu des applications, pour faire revenir l’icône.",
+        "Glint continua a funzionare senza icona. Esegui di nuovo glint, o aprilo dal menu delle applicazioni, per far tornare l’icona.",
+        "Glint はトレイアイコンなしで動き続けます。アイコンを戻すには、glint をもう一度実行するか、アプリメニューから開いてください。",
+        "Glint는 트레이 아이콘 없이 계속 실행됩니다. 아이콘을 다시 표시하려면 glint를 다시 실행하거나 앱 메뉴에서 여세요.",
+        "O Glint continua em execução sem ícone. Execute glint de novo, ou abra-o no menu de aplicativos, para trazer o ícone de volta.",
+        "Glint 会在没有托盘图标的情况下继续运行。再次运行 glint,或从应用菜单中打开它,即可恢复图标。",
+    ],
+    "Brightness keys (or Ctrl+Alt+Page Up / Page Down) and volume keys now control your monitor. Open the tray icon for settings.": [
+        "Helligkeitstasten (oder Strg+Alt+Bild auf/ab) und Lautstärketasten steuern jetzt deinen Monitor. Die Einstellungen findest du im Symbol im Infobereich.",
+        "Las teclas de brillo (o Ctrl+Alt+Re Pág / Av Pág) y de volumen ya controlan tu monitor. Abre el icono de la bandeja para ver los ajustes.",
+        "Les touches de luminosité (ou Ctrl+Alt+Page préc. / Page suiv.) et de volume contrôlent maintenant votre écran. Ouvrez l’icône de la zone de notification pour les réglages.",
+        "I tasti luminosità (o Ctrl+Alt+Pag su / Pag giù) e volume ora controllano il monitor. Apri l’icona nell’area di notifica per le impostazioni.",
+        "輝度キー(または Ctrl+Alt+Page Up / Page Down)と音量キーでモニタを操作できます。設定はトレイアイコンから開けます。",
+        "밝기 키(또는 Ctrl+Alt+Page Up / Page Down)와 음량 키로 이제 모니터를 제어합니다. 설정은 트레이 아이콘에서 열 수 있습니다.",
+        "As teclas de brilho (ou Ctrl+Alt+Page Up / Page Down) e de volume agora controlam seu monitor. Abra o ícone da bandeja para os ajustes.",
+        "亮度键(或 Ctrl+Alt+Page Up / Page Down)和音量键现在可以控制显示器。打开托盘图标即可进行设置。",
     ],
     "Glint is running": [
         "Glint läuft", "Glint se está ejecutando", "Glint est en cours d’exécution", "Glint è in esecuzione",

@@ -1,0 +1,14 @@
+[Unit]
+Description=Glint: DDC display control from the keyboard
+Documentation=https://glint.wemiller.com
+After=graphical-session.target
+
+[Service]
+# GLINT_BACKGROUND keeps a hidden tray icon hidden at login.
+Environment=GLINT_BACKGROUND=1
+ExecStart=%h/.local/bin/glint
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

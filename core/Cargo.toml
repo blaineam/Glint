@@ -1,0 +1,10 @@
+[package]
+name = "glint-core"
+version = "1.6.0"
+edition = "2021"
+description = "Glint's platform-independent logic shared by the Windows and Linux apps: step math, settings model, mute and routing rules, UI strings."
+license = "MIT"
+publish = false
+
+[lib]
+path = "src/lib.rs"

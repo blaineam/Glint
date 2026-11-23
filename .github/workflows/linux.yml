@@ -1,0 +1,115 @@
+# Glint for Linux: lint, test, build static binaries for x86_64 / ARM64 / ARMv7, package
+# them (.deb, .rpm, tarball) and smoke-test each binary on real distribution images.
+# Release builds are attached to GitHub Releases by release.yml.
+name: Linux
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'linux/**'
+      - 'core/**'
+      - '.github/workflows/linux.yml'
+  pull_request:
+    paths:
+      - 'linux/**'
+      - 'core/**'
+      - '.github/workflows/linux.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf
+          rustup component add clippy rustfmt
+
+      - name: Build tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild,cargo-deb,cargo-generate-rpm
+
+      - name: Zig (cross linker)
+        run: pip install ziglang
+
+      - name: Format
+        run: |
+          (cd core && cargo fmt --check)
+          (cd linux && cargo fmt --check)
+
+      - name: Clippy
+        run: |
+          (cd core && cargo clippy --all-targets -- -D warnings)
+          (cd linux && cargo clippy --locked --all-targets -- -D warnings)
+
+      - name: Test
+        run: |
+          (cd core && cargo test)
+          (cd linux && cargo test --locked)
+
+      - name: Build static binaries
+        working-directory: linux
+        run: |
+          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf; do
+            cargo zigbuild --release --locked --target "$t"
+          done
+          ls -l target/*-musl*/release/glint
+
+      - name: QEMU (to run the ARM binaries)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Smoke-test on distribution images
+        working-directory: linux
+        run: |
+          set -e
+          run() { # platform image binary
+            echo "== $2 ($1)"
+            docker run --rm --platform "$1" -v "$PWD/$3:/glint:ro" "$2" /glint --version
+            docker run --rm --platform "$1" -v "$PWD/$3:/glint:ro" "$2" /glint status
+          }
+          x64=target/x86_64-unknown-linux-musl/release/glint
+          run linux/amd64 rockylinux:8 $x64
+          run linux/amd64 ubuntu:20.04 $x64
+          run linux/amd64 archlinux:latest $x64
+          run linux/arm64 debian:bookworm target/aarch64-unknown-linux-musl/release/glint
+          run linux/arm/v7 debian:bookworm target/armv7-unknown-linux-musleabihf/release/glint
+
+      - name: Package
+        working-directory: linux
+        run: |
+          set -e
+          mkdir -p ../dist
+          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf; do
+            cargo deb --no-build --no-strip --target "$t" --output ../dist/
+            cargo generate-rpm --target "$t" --output ../dist/
+            arch=$(echo "$t" | cut -d- -f1)
+            stage=$(mktemp -d)/glint-linux-$arch
+            mkdir -p "$stage"
+            cp "target/$t/release/glint" packaging/install.sh packaging/glint.service packaging/glint.desktop res/glint.png "$stage/"
+            cp ../LICENSE "$stage/"
+            tar -C "$(dirname "$stage")" -czf "../dist/glint-linux-$arch.tar.gz" "glint-linux-$arch"
+          done
+          ls -l ../dist
+
+      - name: Install the .deb and .rpm
+        run: |
+          set -e
+          docker run --rm -v "$PWD/dist:/d:ro" ubuntu:24.04 sh -c 'apt-get -qq update >/dev/null && apt-get -qq install -y /d/glint_*_amd64.deb >/dev/null && glint --version && test -f /usr/lib/udev/rules.d/60-glint.rules && test -f /usr/lib/systemd/user/glint.service'
+          docker run --rm -v "$PWD/dist:/d:ro" rockylinux:8 sh -c 'rpm -i /d/glint-*.x86_64.rpm && glint --version && test -f /usr/lib/udev/rules.d/60-glint.rules'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Glint-linux
+          path: dist/*
+          retention-days: 14

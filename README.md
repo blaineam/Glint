@@ -79,6 +79,32 @@ Settings live in `HKCU\Software\wemiller\Glint`; launch at login uses your per-u
 
 Build it yourself with Rust: `cd windows && cargo build --release`.
 
+### Linux (preview)
+
+Glint for Linux targets **Rocky Linux / RHEL 8+, Ubuntu, Raspberry Pi OS and SteamOS**, and runs on any systemd distribution (Debian, Fedora, Arch, openSUSE, Mint, Pop!_OS…). It's one static binary per architecture, so it doesn't depend on your distribution's library versions: x86_64, ARM64 (Raspberry Pi 4/5 with 64-bit OS, ARM laptops) and ARMv7 (32-bit Raspberry Pi OS).
+
+| You have | Download from [Releases](../../releases) | Install |
+|---|---|---|
+| Ubuntu, Debian, Raspberry Pi OS, Mint | `glint_<version>_amd64.deb` / `_arm64.deb` / `_armhf.deb` | `sudo apt install ./glint_*.deb` |
+| Rocky, RHEL, Alma, Fedora, openSUSE | `glint-<version>-1.x86_64.rpm` / `.aarch64.rpm` | `sudo dnf install ./glint-*.rpm` |
+| SteamOS, Arch, anything else | `glint-linux-x86_64.tar.gz` (or `aarch64` / `armv7`) | extract, then `./install.sh` |
+
+Then open **Glint** from your app menu (or run `glint`) and turn on *Launch at login* in its tray menu. The packages do the one-time system setup for you; with the tarball, `install.sh` runs it (`sudo glint setup`). On SteamOS, set a password first with `passwd` in Konsole; Glint then works in Desktop Mode and in Game Mode.
+
+**What the one-time setup does, and why:** Linux only lets regular users talk to I²C buses (where DDC/CI lives) and read keyboards after a udev rule allows it. Glint's rule gives *the user sitting at the computer* (systemd's `uaccess`, the same mechanism that hands you the sound card and webcam) access to `/dev/i2c-*`, `/dev/uinput` and keyboard input devices, and loads the `i2c-dev` and `uinput` modules. Nothing is opened to other users or remote logins. `sudo glint setup --remove` undoes it.
+
+How it works on Linux:
+
+- **Keys** are read through evdev, so they work the same under X11, Wayland, SteamOS Game Mode and the console. Keyboards with brightness or volume keys are taken over and every other key is passed straight through a virtual keyboard, so Glint can *take* the volume keys when sound goes to a monitor instead of the desktop also changing its own volume. Mac-layout keyboards' brightness keys work; any keyboard can use Ctrl+Alt+Page Up / Page Down (or the other hotkey choices).
+- **Monitors** are found through `/sys/class/drm` and their EDID; Glint speaks DDC/CI directly over the monitor's I²C bus (no ddcutil needed). With NVIDIA's proprietary driver, buses are matched to monitors by EDID.
+- **Laptop and Steam Deck screens** are set through systemd-logind, as your desktop does.
+- **Volume** follows the same rules as on Mac and Windows: monitor speakers over DDC when the sound goes to a monitor (HDMI/DisplayPort, named by the monitor's ELD), and with *Sync* on, the system volume (PipeWire or PulseAudio through `pactl`) and every monitor together.
+- **Tray icon** (StatusNotifierItem) on KDE Plasma, SteamOS Desktop Mode, XFCE, Cinnamon, LXQt, Budgie, Ubuntu's GNOME and Raspberry Pi OS. On GNOME without the AppIndicator extension there's no icon, but keys still work and every setting is in `~/.config/glint/glint.conf`. The level indicator is a desktop notification.
+- **Command line:** `glint status` shows what Glint found and can control; `glint brightness up|down|0-100` and `glint volume up|down|mute|0-100` work with a running Glint, handy for desktop shortcuts.
+- **Differences from Mac/Windows:** Wayland has no global cursor position, so brightness keys change every display (in sync mode, all to one level, the default) instead of only the one under the cursor; there are no sliders (SNI menus have 10% levels instead); HDR brightness isn't adjusted.
+
+Build it yourself with Rust: `cd linux && cargo build --release`.
+
 ### Build from source
 
 ```bash

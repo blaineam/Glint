@@ -209,3 +209,53 @@ jobs:
           gh release upload "$GITHUB_REF_NAME" \
             ../dist/Glint-windows-x64.exe ../dist/Glint-windows-arm64.exe ../dist/Glint-windows-SHA256SUMS.txt \
             --clobber --repo "$GITHUB_REPOSITORY"
+
+  linux:
+    name: Linux build
+    # After the Mac job so the GitHub Release already exists; this only attaches assets.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf
+
+      - name: Build tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild,cargo-deb,cargo-generate-rpm
+
+      - name: Zig (cross linker)
+        run: pip install ziglang
+
+      - name: Test
+        run: |
+          (cd core && cargo test)
+          (cd linux && cargo test --locked)
+
+      - name: Build and package
+        working-directory: linux
+        run: |
+          set -e
+          export GLINT_VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p ../dist
+          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl armv7-unknown-linux-musleabihf; do
+            cargo zigbuild --release --locked --target "$t"
+            cargo deb --no-build --no-strip --target "$t" --output ../dist/
+            cargo generate-rpm --target "$t" --output ../dist/
+            arch=$(echo "$t" | cut -d- -f1)
+            stage=$(mktemp -d)/glint-linux-$arch
+            mkdir -p "$stage"
+            cp "target/$t/release/glint" packaging/install.sh packaging/glint.service packaging/glint.desktop res/glint.png ../LICENSE "$stage/"
+            tar -C "$(dirname "$stage")" -czf "../dist/glint-linux-$arch.tar.gz" "glint-linux-$arch"
+          done
+          (cd ../dist && sha256sum * > Glint-linux-SHA256SUMS.txt && cat Glint-linux-SHA256SUMS.txt)
+
+      - name: Attach to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"

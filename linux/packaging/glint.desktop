@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Glint
+GenericName=Monitor brightness and volume
+Comment=Control your external monitor's brightness and speakers from the keyboard
+Exec=glint
+Icon=glint
+Terminal=false
+Categories=Utility;Settings;HardwareSettings;
+Keywords=brightness;monitor;display;DDC;volume;
+StartupNotify=false

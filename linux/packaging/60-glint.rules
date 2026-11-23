@@ -1,0 +1,8 @@
+# Glint: DDC display control from the keyboard (https://glint.wemiller.com).
+# Lets the user logged in at the seat (systemd "uaccess", the same mechanism that gives
+# them their sound card and webcam) talk DDC/CI to monitors over I2C, read keyboards'
+# brightness and volume keys, and create Glint's virtual keyboard. Nothing is granted to
+# remote logins or other users. Remove with: sudo glint setup --remove
+KERNEL=="i2c-[0-9]*", SUBSYSTEM=="i2c-dev", TAG+="uaccess"
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_KEY}=="1", TAG+="uaccess"
