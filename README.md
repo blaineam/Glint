@@ -66,7 +66,7 @@ Download `Glint-windows-x64.exe` (or `Glint-windows-arm64.exe` for Snapdragon/AR
 
 Glint for Windows lives in the tray:
 
-- **Brightness:** Windows has no brightness key code (laptop Fn keys are handled by firmware, desktop keyboards have none), so brightness uses hotkeys: **Ctrl+Alt+Page Down / Page Up** by default, or Ctrl+Alt+F1/F2 or F14/F15 (Apple keyboards) from the tray menu. The display under the cursor changes; *Sync brightness across displays* moves them all together. Laptop panels are controlled too (through WMI).
+- **Brightness:** keyboards with brightness keys (Mac-layout keyboards from Logitech, Keychron and others) work directly: Glint reads their HID brightness codes, which Windows otherwise ignores. Every keyboard also gets hotkeys: **Ctrl+Alt+Page Down / Page Up** by default, or Ctrl+Alt+F1/F2, plain F1/F2 (an Apple keyboard without Boot Camp drivers sends F1/F2 from its brightness keys) or F14/F15 from the tray menu. The display under the cursor changes; *Sync brightness across displays* moves them all together. Laptop panels are controlled too (through WMI).
 - **Volume:** when Windows plays through a monitor (HDMI, DisplayPort, USB-C), the volume and mute keys drive that monitor's speakers over DDC. Otherwise Windows handles them as usual.
 - **Tray menu:** per-display brightness, step sizes (1–10%, default 6.25%), launch at login, an option to hide the tray icon (run Glint again to bring it back), and a log folder for when a monitor doesn't answer.
 

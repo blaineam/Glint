@@ -14,6 +14,8 @@ mod audio;
 #[cfg(windows)]
 mod ddc;
 #[cfg(windows)]
+mod hidkeys;
+#[cfg(windows)]
 mod log;
 #[cfg(windows)]
 mod osd;

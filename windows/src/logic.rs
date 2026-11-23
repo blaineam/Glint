@@ -110,14 +110,16 @@ pub fn endpoint_matches_monitor(endpoint_name: &str, monitor_name: &str) -> bool
 pub enum HotkeyScheme {
     CtrlAltPage,
     CtrlAltF1F2,
+    F1F2,
     F14F15,
     Off,
 }
 
 impl HotkeyScheme {
-    pub const ALL: [HotkeyScheme; 4] = [
+    pub const ALL: [HotkeyScheme; 5] = [
         HotkeyScheme::CtrlAltPage,
         HotkeyScheme::CtrlAltF1F2,
+        HotkeyScheme::F1F2,
         HotkeyScheme::F14F15,
         HotkeyScheme::Off,
     ];
@@ -126,6 +128,7 @@ impl HotkeyScheme {
         match self {
             HotkeyScheme::CtrlAltPage => "Ctrl+Alt+Page Down / Page Up",
             HotkeyScheme::CtrlAltF1F2 => "Ctrl+Alt+F1 / F2",
+            HotkeyScheme::F1F2 => "F1 / F2 (Apple keyboard top row)",
             HotkeyScheme::F14F15 => "F14 / F15 (Apple keyboards)",
             HotkeyScheme::Off => "Off",
         }
@@ -137,6 +140,7 @@ impl HotkeyScheme {
             HotkeyScheme::CtrlAltF1F2 => 1,
             HotkeyScheme::F14F15 => 2,
             HotkeyScheme::Off => 3,
+            HotkeyScheme::F1F2 => 4,
         }
     }
 
@@ -145,6 +149,7 @@ impl HotkeyScheme {
             1 => HotkeyScheme::CtrlAltF1F2,
             2 => HotkeyScheme::F14F15,
             3 => HotkeyScheme::Off,
+            4 => HotkeyScheme::F1F2,
             _ => HotkeyScheme::CtrlAltPage,
         }
     }
@@ -198,6 +203,30 @@ pub fn monitor_key(name: &str, index_among_same_name: usize) -> String {
     } else {
         format!("{base}#{index_among_same_name}")
     }
+}
+
+/// HID Consumer page (0x0C) usages for "Display Brightness Increment/Decrement". Keyboards
+/// with brightness keys (Mac-layout keyboards from Logitech, Keychron and others, and Apple
+/// keyboards with a driver) send these; Windows turns them into no key code at all.
+pub const USAGE_BRIGHTNESS_UP: u16 = 0x6F;
+pub const USAGE_BRIGHTNESS_DOWN: u16 = 0x70;
+
+/// Which brightness key a consumer-control report holds down, if any.
+pub fn brightness_key(usages: &[u16]) -> Option<Direction> {
+    if usages.contains(&USAGE_BRIGHTNESS_UP) {
+        Some(Direction::Up)
+    } else if usages.contains(&USAGE_BRIGHTNESS_DOWN) {
+        Some(Direction::Down)
+    } else {
+        None
+    }
+}
+
+/// Consumer keys report press and release but never auto-repeat, so Glint repeats a held
+/// key itself. Returns the new held state and whether this report is a fresh press.
+pub fn brightness_transition(held: Option<Direction>, usages: &[u16]) -> (Option<Direction>, bool) {
+    let now = brightness_key(usages);
+    (now, now.is_some() && now != held)
 }
 
 /// Text shown in the OSD for a percentage.
@@ -292,6 +321,30 @@ mod tests {
         assert!(!endpoint_matches_monitor("Speakers (Realtek Audio)", "DELL U2720Q"));
         assert!(!endpoint_matches_monitor("", "DELL U2720Q"));
         assert!(!endpoint_matches_monitor("LG", "LG ULTRAFINE"));
+    }
+
+    #[test]
+    fn brightness_keys_from_consumer_reports() {
+        assert_eq!(brightness_key(&[0x6F]), Some(Direction::Up));
+        assert_eq!(brightness_key(&[0x70]), Some(Direction::Down));
+        assert_eq!(brightness_key(&[0xE9]), None); // volume up
+        assert_eq!(brightness_key(&[]), None);
+    }
+
+    #[test]
+    fn brightness_press_hold_release() {
+        // Press fires once; the same report again (hold) does not; release clears.
+        assert_eq!(brightness_transition(None, &[0x6F]), (Some(Direction::Up), true));
+        assert_eq!(
+            brightness_transition(Some(Direction::Up), &[0x6F]),
+            (Some(Direction::Up), false)
+        );
+        assert_eq!(brightness_transition(Some(Direction::Up), &[]), (None, false));
+        // Rolling from up to down is a new press.
+        assert_eq!(
+            brightness_transition(Some(Direction::Up), &[0x70]),
+            (Some(Direction::Down), true)
+        );
     }
 
     #[test]

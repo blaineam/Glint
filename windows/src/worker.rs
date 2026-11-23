@@ -34,6 +34,8 @@ pub enum Cmd {
         dir: Direction,
         step: f64,
         sync: bool,
+        /// From a hardware brightness key, which Windows already applies to a built-in panel.
+        skip_internal: bool,
     },
     SetBrightness {
         index: usize,
@@ -143,7 +145,13 @@ impl Worker {
                 match cmd {
                     Cmd::Quit => return,
                     Cmd::Rescan => self.rescan(),
-                    Cmd::Brightness { point, dir, step, sync } => self.brightness(point, dir, step, sync, presses),
+                    Cmd::Brightness {
+                        point,
+                        dir,
+                        step,
+                        sync,
+                        skip_internal,
+                    } => self.brightness(point, dir, step, sync, skip_internal, presses),
                     Cmd::SetBrightness { index, percent } => self.set_brightness(index, percent),
                     Cmd::Volume { endpoint, dir, step } => self.volume(&endpoint, dir, step, presses),
                     Cmd::ToggleMute { endpoint } => self.toggle_mute(&endpoint),
@@ -269,8 +277,19 @@ impl Worker {
         ok
     }
 
-    fn brightness(&mut self, point: (i32, i32), dir: Direction, step: f64, sync: bool, presses: u32) {
+    fn brightness(
+        &mut self,
+        point: (i32, i32),
+        dir: Direction,
+        step: f64,
+        sync: bool,
+        skip_internal: bool,
+        presses: u32,
+    ) {
         let Some(target) = self.display_at(point) else { return };
+        if skip_internal && self.displays[target].mon.internal {
+            return;
+        }
         let Some(cur) = self.fresh_brightness(target) else {
             glog!("brightness: '{}' has no DDC brightness", self.displays[target].mon.name);
             return;
@@ -280,6 +299,9 @@ impl Worker {
         if sync {
             let pct = logic::step_percent(logic::raw_to_percent(cur.cur, cur.max), step, dir, presses);
             for i in 0..self.displays.len() {
+                if skip_internal && self.displays[i].mon.internal {
+                    continue;
+                }
                 if let Some(v) = self.fresh_brightness(i) {
                     failed |= !self.write_brightness(i, logic::percent_to_raw(pct, v.max));
                 }
@@ -416,18 +438,21 @@ mod tests {
                 dir: Direction::Up,
                 step: 5.0,
                 sync: false,
+                skip_internal: false,
             },
             Cmd::Brightness {
                 point: (1, 1),
                 dir: Direction::Up,
                 step: 5.0,
                 sync: false,
+                skip_internal: false,
             },
             Cmd::Brightness {
                 point: (2, 2),
                 dir: Direction::Down,
                 step: 5.0,
                 sync: false,
+                skip_internal: false,
             },
             Cmd::Volume {
                 endpoint: vec![],
@@ -444,7 +469,7 @@ mod tests {
         ];
         let out = coalesce(cmds);
         let presses: Vec<u32> = out.iter().map(|(_, p)| *p).collect();
-        assert_eq!(presses, vec![2, 1, 2, 1]);
+        assert_eq!(presses, vec![2, 1, 2, 2]); // the merged rescans run once
         assert!(matches!(out[0].0, Cmd::Brightness { point: (1, 1), .. }));
     }
 

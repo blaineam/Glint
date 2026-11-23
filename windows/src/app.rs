@@ -27,11 +27,12 @@ use windows::Win32::UI::WindowsAndMessaging::{
     TranslateMessage, UnhookWindowsHookEx, HMENU, IDOK, KBDLLHOOKSTRUCT, MB_ICONINFORMATION, MB_OKCANCEL, MF_CHECKED,
     MF_GRAYED, MF_POPUP, MF_SEPARATOR, MF_STRING, MSG, SW_SHOWNORMAL, TPM_BOTTOMALIGN, TPM_RETURNCMD, TPM_RIGHTBUTTON,
     WH_KEYBOARD_LL, WINDOW_EX_STYLE, WM_CONTEXTMENU, WM_DESTROY, WM_DEVICECHANGE, WM_DISPLAYCHANGE, WM_HOTKEY,
-    WM_KEYDOWN, WM_LBUTTONUP, WM_NULL, WM_POWERBROADCAST, WM_SYSKEYDOWN, WM_TIMER, WNDCLASSW, WS_OVERLAPPED,
+    WM_INPUT, WM_KEYDOWN, WM_LBUTTONUP, WM_NULL, WM_POWERBROADCAST, WM_SYSKEYDOWN, WM_TIMER, WNDCLASSW, WS_OVERLAPPED,
 };
 
 use crate::audio::Audio;
 use crate::glog;
+use crate::hidkeys;
 use crate::logic::{self, Direction, HotkeyScheme, Settings, STEP_OPTIONS};
 use crate::osd::Osd;
 use crate::settings;
@@ -50,6 +51,10 @@ const WM_APP_AUDIO_CHANGED: u32 = 0x8000 + 4;
 
 const TIMER_RESCAN: usize = 10;
 const TIMER_ROUTE: usize = 11;
+const TIMER_KEY_REPEAT: usize = 12;
+/// Held hardware brightness key: first repeat after this delay, then every REPEAT_MS.
+const REPEAT_DELAY_MS: u32 = 400;
+const REPEAT_MS: u32 = 110;
 
 const HK_DOWN: i32 = 1;
 const HK_UP: i32 = 2;
@@ -91,6 +96,9 @@ struct App {
     osd: Option<Osd>,
     tray: RefCell<Tray>,
     hotkeys_ok: Cell<bool>,
+    hid: RefCell<hidkeys::Decoder>,
+    hid_held: Cell<Option<Direction>>,
+    hid_last: RefCell<Vec<u16>>,
     taskbar_created: u32,
     _audio_notifier: Option<(IMMDeviceEnumerator, IMMNotificationClient)>,
 }
@@ -224,6 +232,9 @@ pub fn run() {
             osd: Osd::new(),
             tray: RefCell::new(Tray::new(hwnd)),
             hotkeys_ok: Cell::new(false),
+            hid: RefCell::new(hidkeys::Decoder::default()),
+            hid_held: Cell::new(None),
+            hid_last: RefCell::new(Vec::new()),
             taskbar_created: RegisterWindowMessageW(w!("TaskbarCreated")),
             _audio_notifier: register_audio_notifier(hwnd),
         };
@@ -232,13 +243,18 @@ pub fn run() {
         });
         with_app(|app| {
             app.apply_hotkeys();
+            let raw = hidkeys::register(app.hwnd);
+            glog!(
+                "hardware brightness keys (raw input): {}",
+                if raw { "listening" } else { "unavailable" }
+            );
             app.refresh_route();
             if !app.settings.borrow().tray_hidden {
                 app.tray.borrow_mut().show(&app.tooltip());
                 if !settings::has_seen_welcome() {
                     app.tray.borrow().notify(
                         "Glint is running",
-                        "Brightness: Ctrl+Alt+Page Up / Page Down. Volume keys drive your monitor's speakers. \
+                        "Brightness keys (or Ctrl+Alt+Page Up / Page Down) and volume keys now control your monitor. \
                          Click the tray icon for settings.",
                     );
                     settings::mark_welcome_seen();
@@ -395,14 +411,26 @@ impl App {
                 } else {
                     Direction::Down
                 };
-                let p = cursor();
-                let s = self.settings.borrow();
-                self.send(Cmd::Brightness {
-                    point: (p.x, p.y),
-                    dir,
-                    step: s.brightness_step,
-                    sync: s.sync,
-                });
+                self.brightness(dir, false);
+                Some(LRESULT(0))
+            }
+            WM_INPUT => {
+                self.raw_input(lparam);
+                // DefWindowProc must still see WM_INPUT to clean up.
+                None
+            }
+            WM_TIMER if wparam.0 == TIMER_KEY_REPEAT => {
+                match self.hid_held.get() {
+                    Some(dir) => {
+                        self.brightness(dir, true);
+                        // SAFETY: our own timer; re-arming changes its interval.
+                        unsafe { SetTimer(Some(self.hwnd), TIMER_KEY_REPEAT, REPEAT_MS, None) };
+                    }
+                    None => {
+                        // SAFETY: our own timer.
+                        let _ = unsafe { KillTimer(Some(self.hwnd), TIMER_KEY_REPEAT) };
+                    }
+                }
                 Some(LRESULT(0))
             }
             WM_APP_OSD => {
@@ -450,6 +478,48 @@ impl App {
                 Some(LRESULT(0))
             }
             _ => None,
+        }
+    }
+
+    fn brightness(&self, dir: Direction, skip_internal: bool) {
+        let p = cursor();
+        let (step, sync) = {
+            let s = self.settings.borrow();
+            (s.brightness_step, s.sync)
+        };
+        self.send(Cmd::Brightness {
+            point: (p.x, p.y),
+            dir,
+            step,
+            sync,
+            skip_internal,
+        });
+    }
+
+    /// Hardware brightness keys (HID consumer usages 0x6F/0x70) from any keyboard.
+    fn raw_input(&self, lparam: LPARAM) {
+        let Ok(mut decoder) = self.hid.try_borrow_mut() else {
+            return;
+        };
+        let Some(usages) = decoder.read(lparam) else { return };
+        drop(decoder);
+        if !usages.is_empty() && *self.hid_last.borrow() != usages {
+            // Logged so an unrecognised keyboard can be diagnosed from the log folder.
+            glog!("consumer keys: {:02X?}", usages);
+        }
+        *self.hid_last.borrow_mut() = usages.clone();
+        let (held, pressed) = logic::brightness_transition(self.hid_held.get(), &usages);
+        self.hid_held.set(held);
+        if pressed {
+            if let Some(dir) = held {
+                // Windows itself applies these keys to a built-in laptop panel.
+                self.brightness(dir, true);
+                // SAFETY: our own timer.
+                unsafe { SetTimer(Some(self.hwnd), TIMER_KEY_REPEAT, REPEAT_DELAY_MS, None) };
+            }
+        } else if held.is_none() {
+            // SAFETY: our own timer.
+            let _ = unsafe { KillTimer(Some(self.hwnd), TIMER_KEY_REPEAT) };
         }
     }
 
@@ -515,6 +585,7 @@ impl App {
             let keys = match scheme {
                 HotkeyScheme::CtrlAltPage => Some((ctrl_alt, VK_NEXT, VK_PRIOR)),
                 HotkeyScheme::CtrlAltF1F2 => Some((ctrl_alt, VK_F1, VK_F2)),
+                HotkeyScheme::F1F2 => Some((HOT_KEY_MODIFIERS(0), VK_F1, VK_F2)),
                 HotkeyScheme::F14F15 => Some((HOT_KEY_MODIFIERS(0), VK_F14, VK_F15)),
                 HotkeyScheme::Off => None,
             };
