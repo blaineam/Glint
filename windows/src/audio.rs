@@ -11,18 +11,12 @@ use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ};
 
 // Defined here rather than pulled from feature-gated modules: these are stable,
 // documented property keys (mmdeviceapi.h, devpkey.h).
-const PKEY_AUDIOENDPOINT_FORMFACTOR: PROPERTYKEY = PROPERTYKEY {
-    fmtid: GUID::from_u128(0x1da5d803_d492_4edd_8c23_e0c0ffee7f0e),
-    pid: 0,
-};
-const PKEY_DEVICE_DEVICEDESC: PROPERTYKEY = PROPERTYKEY {
-    fmtid: GUID::from_u128(0xa45c254e_df1c_4efd_8020_67d146a850e0),
-    pid: 2,
-};
-const PKEY_DEVICE_FRIENDLYNAME: PROPERTYKEY = PROPERTYKEY {
-    fmtid: GUID::from_u128(0xa45c254e_df1c_4efd_8020_67d146a850e0),
-    pid: 14,
-};
+const PKEY_AUDIOENDPOINT_FORMFACTOR: PROPERTYKEY =
+    PROPERTYKEY { fmtid: GUID::from_u128(0x1da5d803_d492_4edd_8c23_e0c0ffee7f0e), pid: 0 };
+const PKEY_DEVICE_DEVICEDESC: PROPERTYKEY =
+    PROPERTYKEY { fmtid: GUID::from_u128(0xa45c254e_df1c_4efd_8020_67d146a850e0), pid: 2 };
+const PKEY_DEVICE_FRIENDLYNAME: PROPERTYKEY =
+    PROPERTYKEY { fmtid: GUID::from_u128(0xa45c254e_df1c_4efd_8020_67d146a850e0), pid: 14 };
 /// EndpointFormFactor::DigitalAudioDisplayDevice
 const FORM_FACTOR_DISPLAY: u32 = 9;
 
@@ -60,10 +54,7 @@ impl Audio {
                     }
                 }
             }
-            Some(Endpoint {
-                names,
-                is_display: form == FORM_FACTOR_DISPLAY,
-            })
+            Some(Endpoint { names, is_display: form == FORM_FACTOR_DISPLAY })
         }
     }
 
@@ -79,9 +70,7 @@ impl Audio {
     pub fn system_volume(&self) -> Option<f64> {
         let ep = self.endpoint_volume()?;
         // SAFETY: COM call.
-        unsafe { ep.GetMasterVolumeLevelScalar() }
-            .ok()
-            .map(|v| (v as f64 * 100.0).clamp(0.0, 100.0))
+        unsafe { ep.GetMasterVolumeLevelScalar() }.ok().map(|v| (v as f64 * 100.0).clamp(0.0, 100.0))
     }
 
     pub fn set_system_volume(&self, percent: f64) -> bool {

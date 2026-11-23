@@ -86,10 +86,7 @@ impl Osd {
             let mut cursor = POINT::default();
             let _ = GetCursorPos(&mut cursor);
             let hmon = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
-            let mut info = MONITORINFO {
-                cbSize: std::mem::size_of::<MONITORINFO>() as u32,
-                ..Default::default()
-            };
+            let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
             if !GetMonitorInfoW(hmon, &mut info).as_bool() {
                 return;
             }
@@ -107,16 +104,8 @@ impl Osd {
                 OSD_MUTED => GLYPH_MUTE,
                 _ => GLYPH_VOLUME,
             };
-            let label = if kind == OSD_MUTED {
-                t("Muted").to_string()
-            } else {
-                percent_label(percent)
-            };
-            let fraction = if kind == OSD_MUTED {
-                0.0
-            } else {
-                (percent / 100.0).clamp(0.0, 1.0)
-            };
+            let label = if kind == OSD_MUTED { t("Muted").to_string() } else { percent_label(percent) };
+            let fraction = if kind == OSD_MUTED { 0.0 } else { (percent / 100.0).clamp(0.0, 1.0) };
 
             let screen_dc = HDC::default();
             let mem = CreateCompatibleDC(Some(screen_dc));
@@ -147,22 +136,12 @@ impl Osd {
             let glyph_font = font((20.0 * scale) as i32, FW_NORMAL.0 as i32, w!("Segoe MDL2 Assets"));
             let text_font = font((15.0 * scale) as i32, FW_SEMIBOLD.0 as i32, w!("Segoe UI"));
             let prev_font = SelectObject(mem, HGDIOBJ(glyph_font.0));
-            let mut glyph_rect = RECT {
-                left: 0,
-                top: 0,
-                right: h,
-                bottom: h,
-            };
+            let mut glyph_rect = RECT { left: 0, top: 0, right: h, bottom: h };
             let mut g: Vec<u16> = glyph.encode_utf16().collect();
             DrawTextW(mem, &mut g, &mut glyph_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             SelectObject(mem, HGDIOBJ(text_font.0));
             let pad = (18.0 * scale) as i32;
-            let mut text_rect = RECT {
-                left: w - (64.0 * scale) as i32,
-                top: 0,
-                right: w - pad,
-                bottom: h,
-            };
+            let mut text_rect = RECT { left: w - (64.0 * scale) as i32, top: 0, right: w - pad, bottom: h };
             let mut t: Vec<u16> = label.encode_utf16().collect();
             DrawTextW(mem, &mut t, &mut text_rect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
             SelectObject(mem, prev_font);
@@ -237,15 +216,7 @@ impl Osd {
             let _ = DeleteDC(mem);
 
             let _ = ShowWindow(self.hwnd, SW_SHOWNOACTIVATE);
-            let _ = SetWindowPos(
-                self.hwnd,
-                Some(HWND_TOPMOST),
-                0,
-                0,
-                0,
-                0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-            );
+            let _ = SetWindowPos(self.hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
             SetTimer(Some(self.hwnd), HIDE_TIMER, SHOW_MS, None);
         }
     }
@@ -298,12 +269,7 @@ struct Premul {
 
 impl Premul {
     fn new(r: u8, g: u8, b: u8, a: f64) -> Premul {
-        Premul {
-            r: r as f64 * a,
-            g: g as f64 * a,
-            b: b as f64 * a,
-            a,
-        }
+        Premul { r: r as f64 * a, g: g as f64 * a, b: b as f64 * a, a }
     }
 
     fn over(self, r: u8, g: u8, b: u8, a: f64) -> Premul {

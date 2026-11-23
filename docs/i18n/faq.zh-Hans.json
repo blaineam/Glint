@@ -5,6 +5,7 @@
   "back-to-the-overview.e274c2": "返回概览",
   "can-i-control-multiple.2973d6": "可以控制多台显示器吗？",
   "can-i-install-it.9ac23d": "可以用 Homebrew 安装吗？",
+  "does-glint-work-on.6e586a": "Glint 能在 Windows 上使用吗?",
   "does-glint-work-with.7c15a2": "Glint 支持我的显示器吗？",
   "does-it-conflict-with.a2c902": "会和其他显示器 App 冲突吗？",
   "download-for-mac.752ca6": "下载 Mac 版",
@@ -33,5 +34,6 @@
   "why-isn-t-glint.ff8a43": "为什么 Glint 不在 Mac App Store 上？",
   "yes-brew-install-cask.3a7df2": "可以：<code>brew install --cask blaineam/tap/glint</code>",
   "yes-glint-detects-all.4a21d0": "当然！Glint 会识别所有已连接的外接显示器。关闭同步模式时，亮度键只调节光标所在的那台显示器；开启同步模式后，首次按键会将所有显示器（包括内置屏幕）同步到相同亮度，之后一起调节。",
+  "yes-glint-for-windows.cf9cf6": "可以。Windows 10 和 11 版 Glint 是一个小巧的托盘应用,无需安装程序,也无需管理员权限:<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">下载适用于大多数 PC 的版本</a>或<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">适用于 ARM PC 的版本</a>。带亮度键的键盘可以直接使用,任何键盘都可以用 Ctrl+Alt+Page Up / Page Down。在显示器会锁定背光的 HDR 显示器上,Glint 会改为调节 Windows 的 SDR 内容亮度。",
   "your-keyboard-your-monitor.69fac5": "你的键盘。<br><span>你的显示器。</span>"
 }

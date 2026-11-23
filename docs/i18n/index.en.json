@@ -4,10 +4,12 @@
   "_title": "Glint — DDC Display Control for Mac",
   "a-mac-with-apple.3b5e98": "A Mac with Apple silicon on macOS 13 Ventura or later. Intel Macs can keep using Glint 1.4.3 from the GitHub releases.",
   "all-the-ways-to.53ba1c": "All the ways to support →",
+  "also-on-windows.167aa8": "Also on Windows",
   "analytics-or-trackers.251691": "analytics or trackers",
   "brightness-keys-change-only.fd9ba0": "Brightness keys change only the display your cursor is on. Turn on sync mode and every screen moves together.",
   "brightness.e1a2b6": "Brightness",
   "can-i-install-it.9ac23d": "Can I install it with Homebrew?",
+  "does-glint-work-on.6e586a": "Does Glint work on Windows?",
   "does-glint-work-with.7c15a2": "Does Glint work with my monitor?",
   "does-it-conflict-with.a2c902": "Does it conflict with other display apps?",
   "download-for-mac.752ca6": "Download for Mac",
@@ -48,5 +50,6 @@
   "why-does-glint-need.8e8c95": "Why does Glint need Accessibility access?",
   "why-isn-t-glint.ff8a43": "Why isn't Glint on the Mac App Store?",
   "yes-brew-install-cask.3a7df2": "Yes: <code>brew install --cask blaineam/tap/glint</code>",
+  "yes-glint-for-windows.cf9cf6": "Yes. Glint for Windows 10 and 11 is a tiny tray app with no installer and no admin rights: <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">download it for most PCs</a> or <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">for ARM PCs</a>. Keyboards with brightness keys work as they are, and any keyboard can use Ctrl+Alt+Page Up / Page Down. On an HDR display, where monitors lock their backlight, it adjusts Windows’ SDR content brightness instead.",
   "your-keyboard-your-monitor.69fac5": "Your keyboard.<br><span>Your monitor.</span>"
 }

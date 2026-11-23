@@ -4,10 +4,12 @@
   "_title": "Glint — Mac 上的 DDC 显示器控制工具",
   "a-mac-with-apple.3b5e98": "搭载 Apple 芯片、运行 macOS 13 Ventura 或更高版本的 Mac。Intel Mac 可以继续使用 GitHub 发布页中的 Glint 1.4.3。",
   "all-the-ways-to.53ba1c": "所有支持方式 →",
+  "also-on-windows.167aa8": "也支持 Windows",
   "analytics-or-trackers.251691": "分析或跟踪器",
   "brightness-keys-change-only.fd9ba0": "亮度键只调节光标所在的那块屏幕。打开同步模式，所有屏幕一起变化。",
   "brightness.e1a2b6": "亮度",
   "can-i-install-it.9ac23d": "可以用 Homebrew 安装吗？",
+  "does-glint-work-on.6e586a": "Glint 能在 Windows 上使用吗?",
   "does-glint-work-with.7c15a2": "Glint 支持我的显示器吗？",
   "does-it-conflict-with.a2c902": "会和其他显示器 App 冲突吗？",
   "download-for-mac.752ca6": "下载 Mac 版",
@@ -48,5 +50,6 @@
   "why-does-glint-need.8e8c95": "Glint 为什么需要“辅助功能”权限？",
   "why-isn-t-glint.ff8a43": "为什么 Glint 不在 Mac App Store 上？",
   "yes-brew-install-cask.3a7df2": "可以：<code>brew install --cask blaineam/tap/glint</code>",
+  "yes-glint-for-windows.cf9cf6": "可以。Windows 10 和 11 版 Glint 是一个小巧的托盘应用,无需安装程序,也无需管理员权限:<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">下载适用于大多数 PC 的版本</a>或<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">适用于 ARM PC 的版本</a>。带亮度键的键盘可以直接使用,任何键盘都可以用 Ctrl+Alt+Page Up / Page Down。在显示器会锁定背光的 HDR 显示器上,Glint 会改为调节 Windows 的 SDR 内容亮度。",
   "your-keyboard-your-monitor.69fac5": "你的键盘。<br><span>你的显示器。</span>"
 }

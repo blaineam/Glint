@@ -42,6 +42,8 @@ pub fn capabilities(mon: &Monitor) -> Option<String> {
 /// behind one HMONITOR; reads use the first, writes go to all.
 pub struct Monitor {
     pub name: String,
+    /// For HDR state and SDR content brightness (see `hdr`).
+    pub target: Option<crate::hdr::Target>,
     pub rect: RECT,
     pub internal: bool,
     pub physical: Vec<PHYSICAL_MONITOR>,
@@ -62,6 +64,7 @@ fn wide_to_string(buf: &[u16]) -> String {
 }
 
 struct PathName {
+    target: crate::hdr::Target,
     gdi_name: String,
     friendly: String,
     internal: bool,
@@ -122,6 +125,7 @@ fn display_config_names() -> Vec<PathName> {
         }
         let tech = tgt.outputTechnology;
         out.push(PathName {
+            target: crate::hdr::Target { adapter: p.targetInfo.adapterId, id: p.targetInfo.id },
             gdi_name: wide_to_string(&src.viewGdiDeviceName),
             friendly: wide_to_string(&tgt.monitorFriendlyDeviceName),
             internal: tech == DISPLAYCONFIG_OUTPUT_TECHNOLOGY_INTERNAL
@@ -145,21 +149,14 @@ pub fn enumerate() -> Vec<Monitor> {
     let mut hmons: Vec<HMONITOR> = Vec::new();
     // SAFETY: the callback only pushes into the Vec for the duration of this call.
     unsafe {
-        let _ = EnumDisplayMonitors(
-            None,
-            None,
-            Some(collect_monitor),
-            LPARAM(&mut hmons as *mut Vec<HMONITOR> as isize),
-        );
+        let _ =
+            EnumDisplayMonitors(None, None, Some(collect_monitor), LPARAM(&mut hmons as *mut Vec<HMONITOR> as isize));
     }
     let names = display_config_names();
     let mut out = Vec::new();
     for (i, hmon) in hmons.into_iter().enumerate() {
         let mut info = MONITORINFOEXW {
-            monitorInfo: MONITORINFO {
-                cbSize: std::mem::size_of::<MONITORINFOEXW>() as u32,
-                ..Default::default()
-            },
+            monitorInfo: MONITORINFO { cbSize: std::mem::size_of::<MONITORINFOEXW>() as u32, ..Default::default() },
             ..Default::default()
         };
         // SAFETY: MONITORINFOEXW starts with MONITORINFO and cbSize says which one it is.
@@ -183,6 +180,7 @@ pub fn enumerate() -> Vec<Monitor> {
             rect: info.monitorInfo.rcMonitor,
             internal,
             physical,
+            target: path.map(|p| p.target),
         });
     }
     out

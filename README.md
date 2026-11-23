@@ -67,10 +67,13 @@ Download `Glint-windows-x64.exe` (or `Glint-windows-arm64.exe` for Snapdragon/AR
 Glint for Windows lives in the tray and has the Mac app's controls:
 
 - **Brightness:** keyboards with brightness keys (Mac-layout keyboards from Logitech, Keychron and others) work directly: Glint reads their HID brightness codes, which Windows otherwise ignores. Every keyboard also gets hotkeys: **Ctrl+Alt+Page Down / Page Up** by default, or Ctrl+Alt+F1/F2, plain F1/F2 (an Apple keyboard without Boot Camp drivers sends F1/F2 from its brightness keys) or F14/F15. The display under the cursor changes. Laptop panels are controlled too, through WMI.
+- **HDR displays:** monitors lock their backlight in HDR mode, so for a display Windows drives in HDR, Glint adjusts Windows' *SDR content brightness* instead (the slider in Settings › Display › HDR): desktop and app content gets brighter or dimmer; HDR video and games aren't affected. Turning HDR off switches back to the backlight on the next key press. The flyout labels it *Brightness (HDR)*.
 - **Volume:** when Windows plays through a monitor (HDMI, DisplayPort, USB-C), the volume and mute keys drive that monitor's speakers over DDC. Otherwise Windows handles them.
 - **Sync all displays and Windows volume** (on by default, like the Mac's *Sync with built-in display*): brightness keys move every display to the cursor display's level, and volume keys move Windows' volume and every monitor's speakers together.
 - **Click the tray icon** for brightness and volume sliders per display. **Right-click** for settings: *Keyboard Controls* (intercept brightness/volume keys, always intercept, write-only volume, hotkeys, step sizes 1–10% with 6.25% default), on-screen indicator, launch at login, hide the tray icon (open Glint again to bring it back), rescan displays and *Diagnostics* (debug logging, log folder).
 - In the same 9 languages as the Mac app, following the Windows display language.
+
+If your keyboard's brightness keys also bring up Windows' own brightness indicator, switch the keyboard's Fn-lock so the top row sends F1/F2 and pick *F1 / F2* as the brightness hotkeys: Windows then never sees a brightness key. Windows has no setting to hide its indicator.
 
 Settings live in `HKCU\Software\wemiller\Glint`; launch at login uses your per-user Run key. Known limits: keys aren't caught while an app running as administrator is focused (Windows doesn't let standard-user hooks see those), and some KVMs and docks don't pass DDC/CI through.
 

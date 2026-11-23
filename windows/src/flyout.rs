@@ -38,6 +38,15 @@ const SS_ENDELLIPSIS: u32 = 0x4000;
 /// The "46%" label beside each slider has the slider's id plus this.
 const VALUE_LABEL_OFFSET: usize = 1000;
 
+/// "Brightness", or "Brightness (HDR)" when it is Windows' SDR content brightness.
+pub fn brightness_label(hdr: bool) -> String {
+    if hdr {
+        format!("{} (HDR)", t("Brightness"))
+    } else {
+        t("Brightness").to_string()
+    }
+}
+
 pub fn encode_id(index: usize, is_volume: bool) -> usize {
     ID_BASE + index * 2 + is_volume as usize
 }
@@ -97,11 +106,8 @@ unsafe extern "system" fn flyout_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
                 let slider = HWND(lparam.0 as *mut _);
                 let id = GetDlgCtrlID(slider) as usize;
                 let pos = SendMessageW(slider, TBM_GETPOS, None, None).0;
-                let _ = SetDlgItemTextW(
-                    hwnd,
-                    (id + VALUE_LABEL_OFFSET) as i32,
-                    &HSTRING::from(percent_label(pos as f64)),
-                );
+                let _ =
+                    SetDlgItemTextW(hwnd, (id + VALUE_LABEL_OFFSET) as i32, &HSTRING::from(percent_label(pos as f64)));
                 let owner = HWND(GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut _);
                 let _ = PostMessageW(Some(owner), WM_APP_SLIDER, WPARAM(id), LPARAM(pos));
                 LRESULT(0)
@@ -111,10 +117,7 @@ unsafe extern "system" fn flyout_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lpar
                 let hdc = HDC(wparam.0 as *mut _);
                 let child = HWND(lparam.0 as *mut _);
                 let muted = GetDlgCtrlID(child) == 1;
-                SetTextColor(
-                    hdc,
-                    COLORREF(GetSysColor(if muted { COLOR_GRAYTEXT } else { COLOR_WINDOWTEXT })),
-                );
+                SetTextColor(hdc, COLORREF(GetSysColor(if muted { COLOR_GRAYTEXT } else { COLOR_WINDOWTEXT })));
                 SetBkColor(hdc, COLORREF(GetSysColor(COLOR_WINDOW)));
                 LRESULT(GetSysColorBrush(COLOR_WINDOW).0 as isize)
             }
@@ -147,10 +150,7 @@ impl Flyout {
             };
             RegisterClassW(&class);
         }
-        Some(Flyout {
-            owner,
-            current: Cell::new(None),
-        })
+        Some(Flyout { owner, current: Cell::new(None) })
     }
 
     /// Opens the flyout near `anchor` (the tray click), above the taskbar.
@@ -164,10 +164,7 @@ impl Flyout {
             }
             let Ok(instance) = GetModuleHandleW(None) else { return };
             let hmon = MonitorFromPoint(anchor, MONITOR_DEFAULTTONEAREST);
-            let mut info = MONITORINFO {
-                cbSize: std::mem::size_of::<MONITORINFO>() as u32,
-                ..Default::default()
-            };
+            let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
             let _ = GetMonitorInfoW(hmon, &mut info);
             let (mut dpi, mut _dpi_y) = (96u32, 96u32);
             let _ = GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &mut dpi, &mut _dpi_y);
@@ -199,18 +196,10 @@ impl Flyout {
                 };
                 items.push(Item::Name(name));
                 if let Some(b) = d.brightness {
-                    items.push(Item::Slider {
-                        id: encode_id(i, false),
-                        label: t("Brightness").into(),
-                        value: b,
-                    });
+                    items.push(Item::Slider { id: encode_id(i, false), label: brightness_label(d.hdr), value: b });
                 }
                 if let Some(v) = d.volume {
-                    items.push(Item::Slider {
-                        id: encode_id(i, true),
-                        label: t("Volume").into(),
-                        value: v,
-                    });
+                    items.push(Item::Slider { id: encode_id(i, true), label: t("Volume").into(), value: v });
                 }
             }
             if !any {
@@ -313,14 +302,7 @@ impl Flyout {
                         y += row_h;
                     }
                     Item::Note(text) => {
-                        child(
-                            w!("STATIC"),
-                            text,
-                            0,
-                            1,
-                            (pad, y + px(6.0), width - pad * 2, px(18.0)),
-                            font,
-                        );
+                        child(w!("STATIC"), text, 0, 1, (pad, y + px(6.0), width - pad * 2, px(18.0)), font);
                         y += px(26.0);
                     }
                 }

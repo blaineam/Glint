@@ -85,9 +85,8 @@ impl Decoder {
             if report_len == 0 || base.add(report_len * count) > end {
                 return None;
             }
-            let reports: Vec<Vec<u8>> = (0..count)
-                .map(|i| std::slice::from_raw_parts(base.add(i * report_len), report_len).to_vec())
-                .collect();
+            let reports: Vec<Vec<u8>> =
+                (0..count).map(|i| std::slice::from_raw_parts(base.add(i * report_len), report_len).to_vec()).collect();
             let preparsed = PHIDP_PREPARSED_DATA(self.preparsed(device)?.as_ptr() as isize);
             let mut usages = Vec::new();
             for mut report in reports {

@@ -5,6 +5,7 @@
   "back-to-the-overview.e274c2": "Voltar à visão geral",
   "can-i-control-multiple.2973d6": "Posso controlar vários monitores?",
   "can-i-install-it.9ac23d": "Posso instalar com o Homebrew?",
+  "does-glint-work-on.6e586a": "O Glint funciona no Windows?",
   "does-glint-work-with.7c15a2": "O Glint funciona com o meu monitor?",
   "does-it-conflict-with.a2c902": "Entra em conflito com outros apps de tela?",
   "download-for-mac.752ca6": "Baixar para Mac",
@@ -33,5 +34,6 @@
   "why-isn-t-glint.ff8a43": "Por que o Glint não está na Mac App Store?",
   "yes-brew-install-cask.3a7df2": "Sim: <code>brew install --cask blaineam/tap/glint</code>",
   "yes-glint-detects-all.4a21d0": "Sim! O Glint detecta todos os monitores externos conectados. Com o modo de sincronização desativado, as teclas de brilho ajustam apenas o monitor onde está o cursor. Com o modo de sincronização ativado, todos os monitores (incluindo a tela integrada) são igualados ao mesmo brilho no primeiro toque e, depois, ajustados em conjunto.",
+  "yes-glint-for-windows.cf9cf6": "Sim. O Glint para Windows 10 e 11 é um pequeno app da bandeja, sem instalador e sem permissão de administrador: <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">baixe para a maioria dos PCs</a> ou <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">para PCs ARM</a>. Teclados com teclas de brilho funcionam como estão, e qualquer teclado pode usar Ctrl+Alt+Page Up / Page Down. Em uma tela HDR, onde os monitores travam a luz de fundo, ele ajusta o brilho de conteúdo SDR do Windows.",
   "your-keyboard-your-monitor.69fac5": "Seu teclado.<br><span>Seu monitor.</span>"
 }

@@ -35,11 +35,7 @@ pub fn app_icon(small: bool) -> HICON {
     // SAFETY: loading a resource from our own module; falls back to the stock icon.
     unsafe {
         let module = GetModuleHandleW(None).ok();
-        let (cx, cy) = if small {
-            (GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON))
-        } else {
-            (0, 0)
-        };
+        let (cx, cy) = if small { (GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON)) } else { (0, 0) };
         if let Some(m) = module {
             if let Ok(h) = LoadImageW(
                 Some(m.into()),
@@ -58,11 +54,7 @@ pub fn app_icon(small: bool) -> HICON {
 
 impl Tray {
     pub fn new(hwnd: HWND) -> Tray {
-        Tray {
-            hwnd,
-            icon: app_icon(true),
-            visible: false,
-        }
+        Tray { hwnd, icon: app_icon(true), visible: false }
     }
 
     fn data(&self) -> NOTIFYICONDATAW {
@@ -90,9 +82,7 @@ impl Tray {
                 // Already there (e.g. after TaskbarCreated): update instead.
                 let _ = Shell_NotifyIconW(NIM_MODIFY, &nid);
             }
-            nid.Anonymous = NOTIFYICONDATAW_0 {
-                uVersion: NOTIFYICON_VERSION_4,
-            };
+            nid.Anonymous = NOTIFYICONDATAW_0 { uVersion: NOTIFYICON_VERSION_4 };
             let _ = Shell_NotifyIconW(NIM_SETVERSION, &nid);
         }
         self.visible = true;

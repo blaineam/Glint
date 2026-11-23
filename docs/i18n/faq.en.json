@@ -5,6 +5,7 @@
   "back-to-the-overview.e274c2": "Back to the overview",
   "can-i-control-multiple.2973d6": "Can I control multiple monitors?",
   "can-i-install-it.9ac23d": "Can I install it with Homebrew?",
+  "does-glint-work-on.6e586a": "Does Glint work on Windows?",
   "does-glint-work-with.7c15a2": "Does Glint work with my monitor?",
   "does-it-conflict-with.a2c902": "Does it conflict with other display apps?",
   "download-for-mac.752ca6": "Download for Mac",
@@ -33,5 +34,6 @@
   "why-isn-t-glint.ff8a43": "Why isn't Glint on the Mac App Store?",
   "yes-brew-install-cask.3a7df2": "Yes: <code>brew install --cask blaineam/tap/glint</code>",
   "yes-glint-detects-all.4a21d0": "Yes! Glint detects all connected external displays. With sync mode off, brightness keys adjust only the display your cursor is on. With sync mode on, all displays (including the built-in screen) are synced to the same brightness on first press, then adjusted together.",
+  "yes-glint-for-windows.cf9cf6": "Yes. Glint for Windows 10 and 11 is a tiny tray app with no installer and no admin rights: <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">download it for most PCs</a> or <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">for ARM PCs</a>. Keyboards with brightness keys work as they are, and any keyboard can use Ctrl+Alt+Page Up / Page Down. On an HDR display, where monitors lock their backlight, it adjusts Windows’ SDR content brightness instead.",
   "your-keyboard-your-monitor.69fac5": "Your keyboard.<br><span>Your monitor.</span>"
 }

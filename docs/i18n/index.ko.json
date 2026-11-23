@@ -4,10 +4,12 @@
   "_title": "Glint — Mac용 DDC 디스플레이 제어",
   "a-mac-with-apple.3b5e98": "macOS 13 Ventura 이상을 사용하는 Apple 실리콘 Mac. Intel Mac에서는 GitHub 릴리스의 Glint 1.4.3을 계속 쓸 수 있습니다.",
   "all-the-ways-to.53ba1c": "모든 후원 방법 보기 →",
+  "also-on-windows.167aa8": "Windows에서도 사용 가능",
   "analytics-or-trackers.251691": "분석·추적 도구",
   "brightness-keys-change-only.fd9ba0": "밝기 키는 커서가 있는 디스플레이만 바꿉니다. 동기화 모드를 켜면 모든 화면이 함께 움직입니다.",
   "brightness.e1a2b6": "밝기",
   "can-i-install-it.9ac23d": "Homebrew로 설치할 수 있나요?",
+  "does-glint-work-on.6e586a": "Glint를 Windows에서도 쓸 수 있나요?",
   "does-glint-work-with.7c15a2": "제 모니터에서도 Glint가 작동하나요?",
   "does-it-conflict-with.a2c902": "다른 디스플레이 앱과 충돌하나요?",
   "download-for-mac.752ca6": "Mac용 다운로드",
@@ -48,5 +50,6 @@
   "why-does-glint-need.8e8c95": "Glint에 손쉬운 사용 권한이 필요한 이유는 무엇인가요?",
   "why-isn-t-glint.ff8a43": "Glint가 Mac App Store에 없는 이유는 무엇인가요?",
   "yes-brew-install-cask.3a7df2": "네. <code>brew install --cask blaineam/tap/glint</code>",
+  "yes-glint-for-windows.cf9cf6": "네. Windows 10/11용 Glint는 설치 프로그램도 관리자 권한도 필요 없는 작은 트레이 앱입니다. <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">대부분의 PC용</a> 또는 <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">ARM PC용</a>을 내려받으세요. 밝기 키가 있는 키보드는 그대로 작동하고, 어떤 키보드든 Ctrl+Alt+Page Up / Page Down을 쓸 수 있습니다. 모니터가 백라이트를 고정하는 HDR 디스플레이에서는 대신 Windows의 SDR 콘텐츠 밝기를 조절합니다.",
   "your-keyboard-your-monitor.69fac5": "내 키보드로,<br><span>내 모니터를.</span>"
 }

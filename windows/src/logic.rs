@@ -66,11 +66,7 @@ pub fn step_percent(current: f64, step: f64, dir: Direction, presses: u32) -> f6
 /// Picks the nearest offered step for a stored value, so a corrupted or old setting still
 /// lands on a menu item.
 pub fn nearest_step(value: f64) -> f64 {
-    STEP_OPTIONS
-        .iter()
-        .copied()
-        .min_by(|a, b| (a - value).abs().total_cmp(&(b - value).abs()))
-        .unwrap_or(DEFAULT_STEP)
+    STEP_OPTIONS.iter().copied().min_by(|a, b| (a - value).abs().total_cmp(&(b - value).abs())).unwrap_or(DEFAULT_STEP)
 }
 
 /// Mute is one decision across every output Glint controls: if anything is audible,
@@ -88,10 +84,7 @@ pub fn unmute_raw(remembered: Option<u32>, max: u32) -> u32 {
 }
 
 fn normalize(s: &str) -> String {
-    s.chars()
-        .filter(|c| c.is_alphanumeric())
-        .flat_map(char::to_lowercase)
-        .collect()
+    s.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
 }
 
 /// Whether an audio endpoint belongs to a monitor. HDMI/DisplayPort endpoints are named
@@ -247,10 +240,7 @@ pub fn step_from_stored(v: u32) -> f64 {
 /// Stable per-monitor key for remembered values (pre-mute volume): the EDID name with
 /// anything a registry value name dislikes removed.
 pub fn monitor_key(name: &str, index_among_same_name: usize) -> String {
-    let base: String = name
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-        .collect();
+    let base: String = name.chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
     if index_among_same_name == 0 {
         base
     } else {
@@ -286,6 +276,16 @@ pub fn brightness_transition(held: Option<Direction>, usages: &[u16]) -> (Option
 /// fine (some monitors round). No read-back at all proves nothing either way.
 pub fn write_took(wanted: u32, read_back: Option<u32>) -> Option<bool> {
     read_back.map(|r| r.abs_diff(wanted) <= 1)
+}
+
+/// Windows' SDR white level for HDR displays: 1000 = 80 nits (SDR content brightness 0%)
+/// up to 6000 = 480 nits (100%), in steps of 5 nits per percent.
+pub fn sdr_level_to_percent(level: u32) -> f64 {
+    ((level as f64 - 1000.0) / 50.0).clamp(0.0, 100.0)
+}
+
+pub fn percent_to_sdr_level(percent: f64) -> u32 {
+    (1000.0 + percent.clamp(0.0, 100.0) * 50.0).round() as u32
 }
 
 /// Text shown in the OSD for a percentage.
@@ -372,10 +372,7 @@ mod tests {
     #[test]
     fn endpoint_matching() {
         assert!(endpoint_matches_monitor("DELL U2720Q", "DELL U2720Q"));
-        assert!(endpoint_matches_monitor(
-            "DELL U2720Q (NVIDIA High Definition Audio)",
-            "DELL U2720Q"
-        ));
+        assert!(endpoint_matches_monitor("DELL U2720Q (NVIDIA High Definition Audio)", "DELL U2720Q"));
         assert!(endpoint_matches_monitor("LG HDR 4K", "lg hdr-4k"));
         assert!(!endpoint_matches_monitor("Speakers (Realtek Audio)", "DELL U2720Q"));
         assert!(!endpoint_matches_monitor("", "DELL U2720Q"));
@@ -394,16 +391,10 @@ mod tests {
     fn brightness_press_hold_release() {
         // Press fires once; the same report again (hold) does not; release clears.
         assert_eq!(brightness_transition(None, &[0x6F]), (Some(Direction::Up), true));
-        assert_eq!(
-            brightness_transition(Some(Direction::Up), &[0x6F]),
-            (Some(Direction::Up), false)
-        );
+        assert_eq!(brightness_transition(Some(Direction::Up), &[0x6F]), (Some(Direction::Up), false));
         assert_eq!(brightness_transition(Some(Direction::Up), &[]), (None, false));
         // Rolling from up to down is a new press.
-        assert_eq!(
-            brightness_transition(Some(Direction::Up), &[0x70]),
-            (Some(Direction::Down), true)
-        );
+        assert_eq!(brightness_transition(Some(Direction::Up), &[0x70]), (Some(Direction::Down), true));
     }
 
     #[test]
@@ -412,6 +403,19 @@ mod tests {
         assert_eq!(write_took(50, Some(49)), Some(true));
         assert_eq!(write_took(50, Some(80)), Some(false));
         assert_eq!(write_took(50, None), None);
+    }
+
+    #[test]
+    fn sdr_white_level_mapping() {
+        assert_eq!(sdr_level_to_percent(1000), 0.0);
+        assert_eq!(sdr_level_to_percent(6000), 100.0);
+        assert_eq!(sdr_level_to_percent(3500), 50.0);
+        assert_eq!(sdr_level_to_percent(500), 0.0);
+        assert_eq!(percent_to_sdr_level(0.0), 1000);
+        assert_eq!(percent_to_sdr_level(100.0), 6000);
+        assert_eq!(percent_to_sdr_level(56.25), 3813);
+        assert_eq!(percent_to_sdr_level(150.0), 6000);
+        assert_eq!(sdr_level_to_percent(percent_to_sdr_level(40.0)), 40.0);
     }
 
     #[test]
@@ -437,45 +441,22 @@ mod tests {
 
     #[test]
     fn volume_routing_matches_mac() {
-        let base = RouteInput {
-            intercept: true,
-            endpoint_is_display: true,
-            any_capable: true,
-            ..Default::default()
-        };
+        let base = RouteInput { intercept: true, endpoint_is_display: true, any_capable: true, ..Default::default() };
         // Playing through a monitor Glint can drive.
-        assert!(route_volume_keys(RouteInput {
-            matched_capable: true,
-            matched_any: true,
-            ..base
-        }));
+        assert!(route_volume_keys(RouteInput { matched_capable: true, matched_any: true, ..base }));
         // Names don't match any monitor: fall back to any capable monitor.
         assert!(route_volume_keys(base));
         // Playing through a monitor that doesn't answer DDC volume: Windows keeps it...
-        let uncapable = RouteInput {
-            matched_any: true,
-            ..base
-        };
+        let uncapable = RouteInput { matched_any: true, ..base };
         assert!(!route_volume_keys(uncapable));
         // ...unless "always intercept volume" is on.
-        assert!(route_volume_keys(RouteInput {
-            always: true,
-            ..uncapable
-        }));
+        assert!(route_volume_keys(RouteInput { always: true, ..uncapable }));
         // Headphones/speakers: Windows keeps it, unless sync mode drives everything.
-        let speakers = RouteInput {
-            endpoint_is_display: false,
-            ..base
-        };
+        let speakers = RouteInput { endpoint_is_display: false, ..base };
         assert!(!route_volume_keys(speakers));
         assert!(route_volume_keys(RouteInput { sync: true, ..speakers }));
         // Intercept off wins over everything.
-        assert!(!route_volume_keys(RouteInput {
-            intercept: false,
-            sync: true,
-            always: true,
-            ..base
-        }));
+        assert!(!route_volume_keys(RouteInput { intercept: false, sync: true, always: true, ..base }));
     }
 
     #[test]

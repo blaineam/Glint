@@ -18,6 +18,8 @@ mod ddc;
 #[cfg(windows)]
 mod flyout;
 #[cfg(windows)]
+mod hdr;
+#[cfg(windows)]
 mod hidkeys;
 #[cfg(windows)]
 mod log;

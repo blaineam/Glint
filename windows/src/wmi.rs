@@ -19,11 +19,7 @@ use windows::Win32::System::Wmi::{
 fn variant(vt: VARENUM, value: VARIANT_0_0_0) -> VARIANT {
     VARIANT {
         Anonymous: VARIANT_0 {
-            Anonymous: ManuallyDrop::new(VARIANT_0_0 {
-                vt,
-                Anonymous: value,
-                ..Default::default()
-            }),
+            Anonymous: ManuallyDrop::new(VARIANT_0_0 { vt, Anonymous: value, ..Default::default() }),
         },
     }
 }
@@ -110,42 +106,17 @@ impl Wmi {
 
             let mut class = None;
             self.services
-                .GetObject(
-                    &BSTR::from("WmiMonitorBrightnessMethods"),
-                    Default::default(),
-                    None,
-                    Some(&mut class),
-                    None,
-                )
+                .GetObject(&BSTR::from("WmiMonitorBrightnessMethods"), Default::default(), None, Some(&mut class), None)
                 .ok()?;
             let class = class?;
             let mut in_def = None;
-            class
-                .GetMethod(w!("WmiSetBrightness"), 0, &mut in_def, std::ptr::null_mut())
-                .ok()?;
+            class.GetMethod(w!("WmiSetBrightness"), 0, &mut in_def, std::ptr::null_mut()).ok()?;
             let params = in_def?.SpawnInstance(0).ok()?;
             // Microsoft's WmiSetBrightness sample: Timeout as VT_I4, Brightness as VT_UI1.
-            params
-                .Put(w!("Timeout"), 0, &variant(VT_I4, VARIANT_0_0_0 { lVal: 0 }), 0)
-                .ok()?;
-            params
-                .Put(
-                    w!("Brightness"),
-                    0,
-                    &variant(VT_UI1, VARIANT_0_0_0 { bVal: percent }),
-                    0,
-                )
-                .ok()?;
+            params.Put(w!("Timeout"), 0, &variant(VT_I4, VARIANT_0_0_0 { lVal: 0 }), 0).ok()?;
+            params.Put(w!("Brightness"), 0, &variant(VT_UI1, VARIANT_0_0_0 { bVal: percent }), 0).ok()?;
             self.services
-                .ExecMethod(
-                    &path,
-                    &BSTR::from("WmiSetBrightness"),
-                    Default::default(),
-                    None,
-                    &params,
-                    None,
-                    None,
-                )
+                .ExecMethod(&path, &BSTR::from("WmiSetBrightness"), Default::default(), None, &params, None, None)
                 .ok()?;
         }
         Some(())

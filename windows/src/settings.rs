@@ -105,12 +105,8 @@ pub fn load() -> Settings {
     let d = Settings::default();
     let flag = |name: &str, default: bool| get_dword(KEY, name).map(|v| v != 0).unwrap_or(default);
     Settings {
-        brightness_step: get_dword(KEY, "BrightnessStep")
-            .map(step_from_stored)
-            .unwrap_or(d.brightness_step),
-        volume_step: get_dword(KEY, "VolumeStep")
-            .map(step_from_stored)
-            .unwrap_or(d.volume_step),
+        brightness_step: get_dword(KEY, "BrightnessStep").map(step_from_stored).unwrap_or(d.brightness_step),
+        volume_step: get_dword(KEY, "VolumeStep").map(step_from_stored).unwrap_or(d.volume_step),
         sync: flag("Sync", d.sync),
         intercept_brightness: flag("InterceptBrightness", d.intercept_brightness),
         always_brightness: flag("AlwaysBrightness", d.always_brightness),
@@ -118,9 +114,7 @@ pub fn load() -> Settings {
         always_volume: flag("AlwaysVolume", d.always_volume),
         write_only_volume: flag("WriteOnlyVolume", d.write_only_volume),
         debug_logging: flag("DebugLogging", d.debug_logging),
-        hotkeys: get_dword(KEY, "Hotkeys")
-            .map(HotkeyScheme::from_u32)
-            .unwrap_or(d.hotkeys),
+        hotkeys: get_dword(KEY, "Hotkeys").map(HotkeyScheme::from_u32).unwrap_or(d.hotkeys),
         show_osd: flag("ShowOSD", d.show_osd),
         tray_hidden: flag("TrayHidden", d.tray_hidden),
     }

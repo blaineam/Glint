@@ -13,6 +13,7 @@ use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
 use crate::audio::Audio;
 use crate::ddc::{self, Monitor, VCP_BRIGHTNESS, VCP_VOLUME};
 use crate::glog;
+use crate::hdr;
 use crate::logic::{self, Direction};
 use crate::settings;
 use crate::wmi::Wmi;
@@ -84,6 +85,8 @@ pub struct DisplayInfo {
     pub internal: bool,
     pub brightness: Option<f64>,
     pub volume: Option<f64>,
+    /// Brightness is Windows' SDR content brightness because the display is in HDR.
+    pub hdr: bool,
 }
 
 impl DisplayInfo {
@@ -101,25 +104,17 @@ struct Vcp {
     at: Instant,
     /// Never read back from the monitor (write-only); Glint's own value is the truth.
     assumed: bool,
+    /// Windows' SDR content brightness (display in HDR), not the monitor's backlight.
+    sdr: bool,
 }
 
 impl Vcp {
     fn read(cur: u32, max: u32) -> Vcp {
-        Vcp {
-            cur,
-            max,
-            at: Instant::now(),
-            assumed: false,
-        }
+        Vcp { cur, max, at: Instant::now(), assumed: false, sdr: false }
     }
 
     fn assumed() -> Vcp {
-        Vcp {
-            cur: ASSUMED_START,
-            max: 100,
-            at: Instant::now(),
-            assumed: true,
-        }
+        Vcp { cur: ASSUMED_START, max: 100, at: Instant::now(), assumed: true, sdr: false }
     }
 
     fn percent(&self) -> f64 {
@@ -203,6 +198,13 @@ fn coalesce(cmds: Vec<Cmd>) -> Vec<(Cmd, u32)> {
     out
 }
 
+/// SDR content brightness for a display Windows is driving in HDR (percent, max 100).
+fn sdr_brightness(mon: &Monitor) -> Option<Vcp> {
+    let t = mon.target.filter(|t| hdr::active(*t))?;
+    let pct = hdr::sdr_brightness(t)?;
+    Some(Vcp { sdr: true, ..Vcp::read(pct.round() as u32, 100) })
+}
+
 /// Displays whose speakers the volume keys drive: the ones Windows plays through when the
 /// names match, otherwise every display with DDC volume. Pure so it can be tested.
 fn pick_volume_targets(names: &[(String, bool)], endpoint: &[String]) -> Vec<usize> {
@@ -236,20 +238,11 @@ impl Worker {
                             self.rescan();
                         }
                     }
-                    Cmd::Brightness {
-                        point,
-                        dir,
-                        step,
-                        sync,
-                        skip_internal,
-                    } => self.brightness(point, dir, step, sync, skip_internal, presses),
+                    Cmd::Brightness { point, dir, step, sync, skip_internal } => {
+                        self.brightness(point, dir, step, sync, skip_internal, presses)
+                    }
                     Cmd::SetBrightness { index, percent, all } => self.set_brightness(index, percent, all),
-                    Cmd::Volume {
-                        endpoint,
-                        dir,
-                        step,
-                        sync,
-                    } => self.volume(&endpoint, dir, step, sync, presses),
+                    Cmd::Volume { endpoint, dir, step, sync } => self.volume(&endpoint, dir, step, sync, presses),
                     Cmd::SetVolume { index, percent } => self.set_volume(index, percent),
                     Cmd::ToggleMute { endpoint, sync } => self.toggle_mute(&endpoint, sync),
                 }
@@ -286,6 +279,12 @@ impl Worker {
             let (brightness, volume) = if mon.internal {
                 let b = self.wmi().and_then(|w| w.brightness()).map(|cur| Vcp::read(cur, 100));
                 (b, None)
+            } else if let Some(b) = sdr_brightness(&mon) {
+                // HDR: the backlight is locked, so brightness is Windows' SDR content brightness.
+                let v = ddc::read_vcp(&mon, VCP_VOLUME)
+                    .map(|(cur, max)| Vcp::read(cur, max))
+                    .or_else(|| (!mon.physical.is_empty() && self.prefs.write_only_volume).then(Vcp::assumed));
+                (Some(b), v)
             } else {
                 let has_ddc = !mon.physical.is_empty();
                 let b = ddc::read_vcp(&mon, VCP_BRIGHTNESS)
@@ -297,9 +296,10 @@ impl Worker {
                 (b, v)
             };
             glog!(
-                "display '{}' internal={} ddc_handles={} brightness={:?} volume={:?}",
+                "display '{}' internal={} hdr={} ddc_handles={} brightness={:?} volume={:?}",
                 mon.name,
                 mon.internal,
+                brightness.is_some_and(|v| v.sdr),
                 mon.physical.len(),
                 brightness.map(|v| (v.cur, v.max, v.assumed)),
                 volume.map(|v| (v.cur, v.max, v.assumed))
@@ -310,13 +310,7 @@ impl Worker {
                     .unwrap_or_else(|| "none (no DDC/CI reply)".into());
                 glog!("display '{}' capabilities: {caps}", mon.name);
             }
-            self.displays.push(Display {
-                mon,
-                key,
-                brightness,
-                volume,
-                verified: [false; 2],
-            });
+            self.displays.push(Display { mon, key, brightness, volume, verified: [false; 2] });
         }
         self.publish();
     }
@@ -330,6 +324,7 @@ impl Worker {
                 internal: d.mon.internal,
                 brightness: d.brightness.map(|v| v.percent()),
                 volume: d.volume.map(|v| v.percent()),
+                hdr: d.brightness.is_some_and(|v| v.sdr),
             })
             .collect();
         if let Ok(mut s) = self.snapshot.lock() {
@@ -376,28 +371,40 @@ impl Worker {
     /// Current brightness, re-read when the cache is stale (never for assumed values).
     fn fresh_brightness(&mut self, i: usize) -> Option<Vcp> {
         let cached = self.displays[i].brightness;
+        // HDR can be switched at any time; the check is cheap, so a switch takes effect on
+        // the next key press.
+        let hdr_now = !self.displays[i].mon.internal && self.displays[i].mon.target.is_some_and(hdr::active);
         if let Some(v) = cached {
-            if v.assumed || v.at.elapsed() < CACHE_TTL {
+            if v.sdr == hdr_now && (v.assumed || v.at.elapsed() < CACHE_TTL) {
                 return Some(v);
             }
         }
         let read = if self.displays[i].mon.internal {
             self.wmi().and_then(|w| w.brightness()).map(|cur| Vcp::read(cur, 100))
+        } else if hdr_now {
+            let v = sdr_brightness(&self.displays[i].mon);
+            if v.is_some() {
+                self.displays[i].brightness = v;
+                return v;
+            }
+            None
         } else {
             ddc::read_vcp(&self.displays[i].mon, VCP_BRIGHTNESS).map(|(cur, max)| Vcp::read(cur, max))
         };
         // A failed re-read keeps the last known value (some monitors answer writes but
         // drop reads); a display never read stays unsupported unless "always" is on.
-        let v = read.or(cached.map(|c| Vcp {
-            at: Instant::now(),
-            ..c
-        }));
+        let v = read.or(cached.map(|c| Vcp { at: Instant::now(), ..c }));
         self.displays[i].brightness = v;
         v
     }
 
     fn write_brightness(&mut self, i: usize, raw: u32) -> bool {
-        let ok = if self.displays[i].mon.internal {
+        let sdr_target = self.displays[i].brightness.filter(|v| v.sdr).and(self.displays[i].mon.target);
+        let ok = if let Some(t) = sdr_target {
+            let ok = hdr::set_sdr_brightness(t, raw as f64);
+            crate::gdebug!("hdr '{}': SDR content brightness = {raw}%: ok={ok}", self.displays[i].mon.name);
+            ok
+        } else if self.displays[i].mon.internal {
             self.wmi().map(|w| w.set_brightness(raw)).unwrap_or(false)
         } else {
             let ok = ddc::write_vcp(&self.displays[i].mon, VCP_BRIGHTNESS, raw);
@@ -429,17 +436,12 @@ impl Worker {
             return;
         }
         // Sync mode (Mac behaviour): every display moves to the cursor display's level.
-        let base = if skip_internal && self.displays[target].mon.internal {
-            None
-        } else {
-            self.fresh_brightness(target)
-        };
+        let base =
+            if skip_internal && self.displays[target].mon.internal { None } else { self.fresh_brightness(target) };
         let base = base.or_else(|| {
             if sync {
                 (0..self.displays.len()).find_map(|i| {
-                    (!(skip_internal && self.displays[i].mon.internal))
-                        .then(|| self.fresh_brightness(i))
-                        .flatten()
+                    (!(skip_internal && self.displays[i].mon.internal)).then(|| self.fresh_brightness(i)).flatten()
                 })
             } else {
                 None
@@ -479,11 +481,7 @@ impl Worker {
         if index >= self.displays.len() {
             return;
         }
-        let targets: Vec<usize> = if all {
-            (0..self.displays.len()).collect()
-        } else {
-            vec![index]
-        };
+        let targets: Vec<usize> = if all { (0..self.displays.len()).collect() } else { vec![index] };
         for i in targets {
             if let Some(v) = self.fresh_brightness(i) {
                 if !self.write_brightness(i, logic::percent_to_raw(percent, v.max)) {
@@ -497,18 +495,13 @@ impl Worker {
     // ---- Volume ----
 
     fn volume_targets(&self, endpoint: &[String]) -> Vec<usize> {
-        let names: Vec<(String, bool)> = self
-            .displays
-            .iter()
-            .map(|d| (d.mon.name.clone(), d.volume.is_some()))
-            .collect();
+        let names: Vec<(String, bool)> =
+            self.displays.iter().map(|d| (d.mon.name.clone(), d.volume.is_some())).collect();
         pick_volume_targets(&names, endpoint)
     }
 
     fn all_volume_displays(&self) -> Vec<usize> {
-        (0..self.displays.len())
-            .filter(|&i| self.displays[i].volume.is_some())
-            .collect()
+        (0..self.displays.len()).filter(|&i| self.displays[i].volume.is_some()).collect()
     }
 
     fn fresh_volume(&mut self, i: usize) -> Option<Vcp> {
@@ -519,10 +512,7 @@ impl Worker {
             }
         }
         let read = ddc::read_vcp(&self.displays[i].mon, VCP_VOLUME).map(|(cur, max)| Vcp::read(cur, max));
-        let v = read.or(cached.map(|c| Vcp {
-            at: Instant::now(),
-            ..c
-        }));
+        let v = read.or(cached.map(|c| Vcp { at: Instant::now(), ..c }));
         self.displays[i].volume = v;
         v
     }
@@ -551,12 +541,7 @@ impl Worker {
             let displays = self.all_volume_displays();
             let system = self.audio.as_ref().and_then(|a| a.system_volume());
             let base = system
-                .or_else(|| {
-                    displays
-                        .first()
-                        .and_then(|&i| self.fresh_volume(i))
-                        .map(|v| v.percent())
-                })
+                .or_else(|| displays.first().and_then(|&i| self.fresh_volume(i)).map(|v| v.percent()))
                 .unwrap_or(ASSUMED_START as f64);
             let pct = logic::step_percent(base, step, dir, presses);
             if let Some(a) = &self.audio {
@@ -599,20 +584,9 @@ impl Worker {
     }
 
     fn toggle_mute(&mut self, endpoint: &[String], sync: bool) {
-        let targets = if sync {
-            self.all_volume_displays()
-        } else {
-            self.volume_targets(endpoint)
-        };
-        let current: Vec<(usize, Vcp)> = targets
-            .iter()
-            .filter_map(|&i| self.fresh_volume(i).map(|v| (i, v)))
-            .collect();
-        let system_muted = if sync {
-            self.audio.as_ref().and_then(|a| a.system_muted())
-        } else {
-            None
-        };
+        let targets = if sync { self.all_volume_displays() } else { self.volume_targets(endpoint) };
+        let current: Vec<(usize, Vcp)> = targets.iter().filter_map(|&i| self.fresh_volume(i).map(|v| (i, v))).collect();
+        let system_muted = if sync { self.audio.as_ref().and_then(|a| a.system_muted()) } else { None };
         if current.is_empty() && system_muted.is_none() {
             return;
         }
@@ -655,22 +629,11 @@ mod tests {
     use super::*;
 
     fn bright(x: i32, dir: Direction) -> Cmd {
-        Cmd::Brightness {
-            point: (x, x),
-            dir,
-            step: 5.0,
-            sync: false,
-            skip_internal: false,
-        }
+        Cmd::Brightness { point: (x, x), dir, step: 5.0, sync: false, skip_internal: false }
     }
 
     fn vol(dir: Direction) -> Cmd {
-        Cmd::Volume {
-            endpoint: vec![],
-            dir,
-            step: 5.0,
-            sync: false,
-        }
+        Cmd::Volume { endpoint: vec![], dir, step: 5.0, sync: false }
     }
 
     #[test]
@@ -692,34 +655,17 @@ mod tests {
 
     #[test]
     fn coalesce_keeps_mute_separate() {
-        let cmds = vec![
-            Cmd::ToggleMute {
-                endpoint: vec![],
-                sync: false,
-            },
-            Cmd::ToggleMute {
-                endpoint: vec![],
-                sync: false,
-            },
-        ];
+        let cmds =
+            vec![Cmd::ToggleMute { endpoint: vec![], sync: false }, Cmd::ToggleMute { endpoint: vec![], sync: false }];
         assert_eq!(coalesce(cmds).len(), 2);
     }
 
     #[test]
     fn coalesce_keeps_last_menu_level() {
         let cmds = vec![
-            Cmd::SetVolume {
-                index: 0,
-                percent: 10.0,
-            },
-            Cmd::SetVolume {
-                index: 0,
-                percent: 40.0,
-            },
-            Cmd::SetVolume {
-                index: 1,
-                percent: 70.0,
-            },
+            Cmd::SetVolume { index: 0, percent: 10.0 },
+            Cmd::SetVolume { index: 0, percent: 40.0 },
+            Cmd::SetVolume { index: 1, percent: 70.0 },
         ];
         let out = coalesce(cmds);
         assert_eq!(out.len(), 2);
@@ -733,10 +679,7 @@ mod tests {
             ("LG HDR 4K".to_string(), true),
             ("Built-in display".to_string(), false),
         ];
-        assert_eq!(
-            pick_volume_targets(&names, &["LG HDR 4K (NVIDIA High Definition Audio)".into()]),
-            vec![1]
-        );
+        assert_eq!(pick_volume_targets(&names, &["LG HDR 4K (NVIDIA High Definition Audio)".into()]), vec![1]);
         // No name match: every capable monitor.
         assert_eq!(pick_volume_targets(&names, &["Speakers".into()]), vec![0, 1]);
         assert_eq!(pick_volume_targets(&names, &[]), vec![0, 1]);

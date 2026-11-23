@@ -133,14 +133,7 @@ struct AudioNotifier {
 impl AudioNotifier {
     fn poke(&self) {
         // SAFETY: posting to our own window.
-        let _ = unsafe {
-            PostMessageW(
-                Some(HWND(self.hwnd as *mut _)),
-                WM_APP_AUDIO_CHANGED,
-                WPARAM(0),
-                LPARAM(0),
-            )
-        };
+        let _ = unsafe { PostMessageW(Some(HWND(self.hwnd as *mut _)), WM_APP_AUDIO_CHANGED, WPARAM(0), LPARAM(0)) };
     }
 }
 
@@ -258,10 +251,7 @@ pub fn run() {
         with_app(|app| {
             app.apply_hotkeys();
             let raw = hidkeys::register(app.hwnd);
-            glog!(
-                "hardware brightness keys (raw input): {}",
-                if raw { "listening" } else { "unavailable" }
-            );
+            glog!("hardware brightness keys (raw input): {}", if raw { "listening" } else { "unavailable" });
             app.refresh_route();
             if !app.settings.borrow().tray_hidden {
                 app.tray.borrow_mut().show(&app.tooltip());
@@ -346,10 +336,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
 }
 
 fn worker_prefs(s: &Settings) -> WorkerPrefs {
-    WorkerPrefs {
-        always_brightness: s.always_brightness,
-        write_only_volume: s.write_only_volume,
-    }
+    WorkerPrefs { always_brightness: s.always_brightness, write_only_volume: s.write_only_volume }
 }
 
 fn cursor() -> POINT {
@@ -362,14 +349,7 @@ fn cursor() -> POINT {
 fn open(target: &str) {
     // SAFETY: opens a URL or folder with the user's default handler.
     unsafe {
-        ShellExecuteW(
-            None,
-            w!("open"),
-            &HSTRING::from(target),
-            PCWSTR::null(),
-            PCWSTR::null(),
-            SW_SHOWNORMAL,
-        );
+        ShellExecuteW(None, w!("open"), &HSTRING::from(target), PCWSTR::null(), PCWSTR::null(), SW_SHOWNORMAL);
     }
 }
 
@@ -421,12 +401,8 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_APP_DDC_IGNORED => {
-                let name = self
-                    .snapshot
-                    .lock()
-                    .ok()
-                    .and_then(|d| d.get(wparam.0).map(|d| d.name.clone()))
-                    .unwrap_or_default();
+                let name =
+                    self.snapshot.lock().ok().and_then(|d| d.get(wparam.0).map(|d| d.name.clone())).unwrap_or_default();
                 self.tray.borrow().notify(
                     t("Monitor isn't applying changes"),
                     &t("{} accepted the change over DDC/CI but didn't apply it. A KVM, dock or adapter may be blocking DDC/CI, or a picture mode (HDR, sRGB, eco, dynamic contrast) may lock it.").replace("{}", &name),
@@ -446,11 +422,7 @@ impl App {
                 Some(LRESULT(0))
             }
             WM_HOTKEY => {
-                let dir = if wparam.0 as i32 == HK_UP {
-                    Direction::Up
-                } else {
-                    Direction::Down
-                };
+                let dir = if wparam.0 as i32 == HK_UP { Direction::Up } else { Direction::Down };
                 self.brightness(dir, false);
                 Some(LRESULT(0))
             }
@@ -527,13 +499,7 @@ impl App {
             let s = self.settings.borrow();
             (s.brightness_step, s.sync)
         };
-        self.send(Cmd::Brightness {
-            point: (p.x, p.y),
-            dir,
-            step,
-            sync,
-            skip_internal,
-        });
+        self.send(Cmd::Brightness { point: (p.x, p.y), dir, step, sync, skip_internal });
     }
 
     /// Hardware brightness keys (HID consumer usages 0x6F/0x70) from any keyboard.
@@ -596,11 +562,7 @@ impl App {
         }
         let route = logic::route_volume_keys(input);
         if route != self.route_volume.get() {
-            glog!(
-                "volume keys -> {} (endpoint {:?})",
-                if route { "Glint" } else { "Windows" },
-                names
-            );
+            glog!("volume keys -> {} (endpoint {:?})", if route { "Glint" } else { "Windows" }, names);
         }
         self.route_volume.set(route);
         *self.endpoint_names.borrow_mut() = names;
@@ -615,17 +577,8 @@ impl App {
         if vk == VK_VOLUME_MUTE.0 as u32 {
             self.send(Cmd::ToggleMute { endpoint, sync });
         } else {
-            let dir = if vk == VK_VOLUME_UP.0 as u32 {
-                Direction::Up
-            } else {
-                Direction::Down
-            };
-            self.send(Cmd::Volume {
-                endpoint,
-                dir,
-                step,
-                sync,
-            });
+            let dir = if vk == VK_VOLUME_UP.0 as u32 { Direction::Up } else { Direction::Down };
+            self.send(Cmd::Volume { endpoint, dir, step, sync });
         }
     }
 
@@ -718,11 +671,7 @@ impl App {
             self.send(Cmd::SetVolume { index, percent: value });
         } else {
             let all = self.settings.borrow().sync;
-            self.send(Cmd::SetBrightness {
-                index,
-                percent: value,
-                all,
-            });
+            self.send(Cmd::SetBrightness { index, percent: value, all });
         }
     }
 
@@ -738,19 +687,16 @@ impl App {
             separator(menu);
 
             // Displays: brightness and volume levels (the flyout has sliders).
-            let controllable: Vec<_> = displays
-                .iter()
-                .enumerate()
-                .filter(|(_, d)| d.brightness.is_some() || d.volume.is_some())
-                .collect();
+            let controllable: Vec<_> =
+                displays.iter().enumerate().filter(|(_, d)| d.brightness.is_some() || d.volume.is_some()).collect();
             if controllable.is_empty() {
                 append(menu, MF_STRING | MF_GRAYED, 0, t("No display answered DDC/CI"));
             }
             for (i, d) in &controllable {
                 let Ok(sub) = CreatePopupMenu() else { continue };
                 for (value, offset, title) in [
-                    (d.brightness, 0, t("Brightness")),
-                    (d.volume, VOLUME_OFFSET, t("Volume")),
+                    (d.brightness, 0, flyout::brightness_label(d.hdr)),
+                    (d.volume, VOLUME_OFFSET, t("Volume").to_string()),
                 ] {
                     let Some(current) = value else { continue };
                     let Ok(levels) = CreatePopupMenu() else { continue };
@@ -772,12 +718,7 @@ impl App {
 
             // Keyboard controls (the Mac's Settings › Keyboard Controls).
             if let Ok(kb) = CreatePopupMenu() {
-                append(
-                    kb,
-                    checked(s.intercept_brightness),
-                    ID_INTERCEPT_B,
-                    t("Intercept brightness keys"),
-                );
+                append(kb, checked(s.intercept_brightness), ID_INTERCEPT_B, t("Intercept brightness keys"));
                 append(
                     kb,
                     greyed(s.intercept_brightness) | checked(s.always_brightness),
@@ -820,10 +761,9 @@ impl App {
                     &format!("    {}", t("Write-only volume")),
                 );
                 separator(kb);
-                for (base, current, title) in [
-                    (ID_BSTEP, s.brightness_step, t("Brightness step")),
-                    (ID_VSTEP, s.volume_step, t("Volume step")),
-                ] {
+                for (base, current, title) in
+                    [(ID_BSTEP, s.brightness_step, t("Brightness step")), (ID_VSTEP, s.volume_step, t("Volume step"))]
+                {
                     if let Ok(sub) = CreatePopupMenu() {
                         for (i, step) in STEP_OPTIONS.iter().enumerate() {
                             append(sub, checked(*step == current), base + i, &step_label(*step));
@@ -904,14 +844,7 @@ impl App {
             ID_DEBUG => {
                 self.update_settings(|s| s.debug_logging = !s.debug_logging);
                 crate::log::set_debug(self.settings.borrow().debug_logging);
-                glog!(
-                    "debug logging {}",
-                    if self.settings.borrow().debug_logging {
-                        "on"
-                    } else {
-                        "off"
-                    }
-                );
+                glog!("debug logging {}", if self.settings.borrow().debug_logging { "on" } else { "off" });
             }
             ID_OSD => self.update_settings(|s| s.show_osd = !s.show_osd),
             ID_LOGIN => settings::set_launch_at_login(!settings::launch_at_login()),
@@ -956,18 +889,11 @@ impl App {
                 if rest >= VOLUME_OFFSET {
                     let level = rest - VOLUME_OFFSET;
                     if level <= 10 {
-                        self.send(Cmd::SetVolume {
-                            index,
-                            percent: level as f64 * 10.0,
-                        });
+                        self.send(Cmd::SetVolume { index, percent: level as f64 * 10.0 });
                     }
                 } else if rest <= 10 {
                     let all = self.settings.borrow().sync;
-                    self.send(Cmd::SetBrightness {
-                        index,
-                        percent: rest as f64 * 10.0,
-                        all,
-                    });
+                    self.send(Cmd::SetBrightness { index, percent: rest as f64 * 10.0, all });
                 }
             }
             _ => {}

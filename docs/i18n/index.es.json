@@ -4,10 +4,12 @@
   "_title": "Glint — Control de pantalla DDC para Mac",
   "a-mac-with-apple.3b5e98": "Un Mac con Apple silicon y macOS 13 Ventura o posterior. Los Mac con Intel pueden seguir usando Glint 1.4.3 desde las versiones de GitHub.",
   "all-the-ways-to.53ba1c": "Todas las formas de apoyar →",
+  "also-on-windows.167aa8": "También para Windows",
   "analytics-or-trackers.251691": "analíticas ni rastreadores",
   "brightness-keys-change-only.fd9ba0": "Las teclas de brillo cambian solo la pantalla en la que está el cursor. Activa el modo sincronizado y todas las pantallas se mueven a la vez.",
   "brightness.e1a2b6": "Brillo",
   "can-i-install-it.9ac23d": "¿Puedo instalarlo con Homebrew?",
+  "does-glint-work-on.6e586a": "¿Glint funciona en Windows?",
   "does-glint-work-with.7c15a2": "¿Glint funciona con mi monitor?",
   "does-it-conflict-with.a2c902": "¿Entra en conflicto con otras apps de pantalla?",
   "download-for-mac.752ca6": "Descargar para Mac",
@@ -48,5 +50,6 @@
   "why-does-glint-need.8e8c95": "¿Por qué Glint necesita acceso a Accesibilidad?",
   "why-isn-t-glint.ff8a43": "¿Por qué Glint no está en el Mac App Store?",
   "yes-brew-install-cask.3a7df2": "Sí: <code>brew install --cask blaineam/tap/glint</code>",
+  "yes-glint-for-windows.cf9cf6": "Sí. Glint para Windows 10 y 11 es una pequeña app de la bandeja, sin instalador ni permisos de administrador: <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">descárgala para la mayoría de PC</a> o <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">para PC ARM</a>. Los teclados con teclas de brillo funcionan tal cual, y cualquier teclado puede usar Ctrl+Alt+Re Pág / Av Pág. En una pantalla HDR, donde los monitores bloquean la retroiluminación, ajusta el brillo del contenido SDR de Windows.",
   "your-keyboard-your-monitor.69fac5": "Tu teclado.<br><span>Tu monitor.</span>"
 }
