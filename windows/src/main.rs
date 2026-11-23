@@ -5,7 +5,9 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
 #![cfg_attr(not(windows), allow(dead_code))]
 
+mod i18n;
 mod logic;
+mod strings;
 
 #[cfg(windows)]
 mod app;
@@ -13,6 +15,8 @@ mod app;
 mod audio;
 #[cfg(windows)]
 mod ddc;
+#[cfg(windows)]
+mod flyout;
 #[cfg(windows)]
 mod hidkeys;
 #[cfg(windows)]

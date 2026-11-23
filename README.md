@@ -64,11 +64,13 @@ v1.4.3.
 
 Download `Glint-windows-x64.exe` (or `Glint-windows-arm64.exe` for Snapdragon/ARM PCs) from [Releases](../../releases), put it anywhere (for example `%LOCALAPPDATA%\Programs\Glint`) and run it. There is no installer and nothing needs admin rights. The exe isn't code-signed yet, so SmartScreen may ask: choose **More info → Run anyway**.
 
-Glint for Windows lives in the tray:
+Glint for Windows lives in the tray and has the Mac app's controls:
 
-- **Brightness:** keyboards with brightness keys (Mac-layout keyboards from Logitech, Keychron and others) work directly: Glint reads their HID brightness codes, which Windows otherwise ignores. Every keyboard also gets hotkeys: **Ctrl+Alt+Page Down / Page Up** by default, or Ctrl+Alt+F1/F2, plain F1/F2 (an Apple keyboard without Boot Camp drivers sends F1/F2 from its brightness keys) or F14/F15 from the tray menu. The display under the cursor changes; *Sync brightness across displays* moves them all together. Laptop panels are controlled too (through WMI).
-- **Volume:** when Windows plays through a monitor (HDMI, DisplayPort, USB-C), the volume and mute keys drive that monitor's speakers over DDC. Otherwise Windows handles them as usual.
-- **Tray menu:** per-display brightness, step sizes (1–10%, default 6.25%), launch at login, an option to hide the tray icon (run Glint again to bring it back), and a log folder for when a monitor doesn't answer.
+- **Brightness:** keyboards with brightness keys (Mac-layout keyboards from Logitech, Keychron and others) work directly: Glint reads their HID brightness codes, which Windows otherwise ignores. Every keyboard also gets hotkeys: **Ctrl+Alt+Page Down / Page Up** by default, or Ctrl+Alt+F1/F2, plain F1/F2 (an Apple keyboard without Boot Camp drivers sends F1/F2 from its brightness keys) or F14/F15. The display under the cursor changes. Laptop panels are controlled too, through WMI.
+- **Volume:** when Windows plays through a monitor (HDMI, DisplayPort, USB-C), the volume and mute keys drive that monitor's speakers over DDC. Otherwise Windows handles them.
+- **Sync all displays and Windows volume** (on by default, like the Mac's *Sync with built-in display*): brightness keys move every display to the cursor display's level, and volume keys move Windows' volume and every monitor's speakers together.
+- **Click the tray icon** for brightness and volume sliders per display. **Right-click** for settings: *Keyboard Controls* (intercept brightness/volume keys, always intercept, write-only volume, hotkeys, step sizes 1–10% with 6.25% default), on-screen indicator, launch at login, hide the tray icon (open Glint again to bring it back), rescan displays and *Diagnostics* (debug logging, log folder).
+- In the same 9 languages as the Mac app, following the Windows display language.
 
 Settings live in `HKCU\Software\wemiller\Glint`; launch at login uses your per-user Run key. Known limits: keys aren't caught while an app running as administrator is focused (Windows doesn't let standard-user hooks see those), and some KVMs and docks don't pass DDC/CI through.
 

@@ -151,9 +151,9 @@ pub fn enumerate() -> Vec<Monitor> {
         let mut name = path.map(|p| p.friendly.clone()).unwrap_or_default();
         if name.is_empty() {
             name = if internal {
-                "Built-in display".into()
+                crate::i18n::t("Built-in display").to_string()
             } else {
-                format!("Display {}", i + 1)
+                crate::i18n::t("Display {}").replace("{}", &(i + 1).to_string())
             };
         }
         let physical = if internal { Vec::new() } else { physical_monitors(hmon) };

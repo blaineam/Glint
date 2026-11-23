@@ -112,7 +112,12 @@ pub fn load() -> Settings {
             .map(step_from_stored)
             .unwrap_or(d.volume_step),
         sync: flag("Sync", d.sync),
+        intercept_brightness: flag("InterceptBrightness", d.intercept_brightness),
+        always_brightness: flag("AlwaysBrightness", d.always_brightness),
         route_volume: flag("RouteVolume", d.route_volume),
+        always_volume: flag("AlwaysVolume", d.always_volume),
+        write_only_volume: flag("WriteOnlyVolume", d.write_only_volume),
+        debug_logging: flag("DebugLogging", d.debug_logging),
         hotkeys: get_dword(KEY, "Hotkeys")
             .map(HotkeyScheme::from_u32)
             .unwrap_or(d.hotkeys),
@@ -125,7 +130,12 @@ pub fn save(s: &Settings) {
     set_dword(KEY, "BrightnessStep", step_to_stored(s.brightness_step));
     set_dword(KEY, "VolumeStep", step_to_stored(s.volume_step));
     set_dword(KEY, "Sync", s.sync as u32);
+    set_dword(KEY, "InterceptBrightness", s.intercept_brightness as u32);
+    set_dword(KEY, "AlwaysBrightness", s.always_brightness as u32);
     set_dword(KEY, "RouteVolume", s.route_volume as u32);
+    set_dword(KEY, "AlwaysVolume", s.always_volume as u32);
+    set_dword(KEY, "WriteOnlyVolume", s.write_only_volume as u32);
+    set_dword(KEY, "DebugLogging", s.debug_logging as u32);
     set_dword(KEY, "Hotkeys", s.hotkeys.to_u32());
     set_dword(KEY, "ShowOSD", s.show_osd as u32);
     set_dword(KEY, "TrayHidden", s.tray_hidden as u32);

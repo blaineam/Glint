@@ -4,7 +4,8 @@
 
 use windows::core::GUID;
 use windows::Win32::Foundation::PROPERTYKEY;
-use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
+use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+use windows::Win32::Media::Audio::{eConsole, eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
 use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
 use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL, STGM_READ};
 
@@ -64,5 +65,40 @@ impl Audio {
                 is_display: form == FORM_FACTOR_DISPLAY,
             })
         }
+    }
+
+    fn endpoint_volume(&self) -> Option<IAudioEndpointVolume> {
+        // SAFETY: COM calls on interfaces owned by this thread.
+        unsafe {
+            let device = self.enumerator.GetDefaultAudioEndpoint(eRender, eConsole).ok()?;
+            device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None).ok()
+        }
+    }
+
+    /// Windows' own volume for the default output, 0–100.
+    pub fn system_volume(&self) -> Option<f64> {
+        let ep = self.endpoint_volume()?;
+        // SAFETY: COM call.
+        unsafe { ep.GetMasterVolumeLevelScalar() }
+            .ok()
+            .map(|v| (v as f64 * 100.0).clamp(0.0, 100.0))
+    }
+
+    pub fn set_system_volume(&self, percent: f64) -> bool {
+        let Some(ep) = self.endpoint_volume() else { return false };
+        // SAFETY: COM call; a null event context is allowed.
+        unsafe { ep.SetMasterVolumeLevelScalar((percent / 100.0).clamp(0.0, 1.0) as f32, std::ptr::null()) }.is_ok()
+    }
+
+    pub fn system_muted(&self) -> Option<bool> {
+        let ep = self.endpoint_volume()?;
+        // SAFETY: COM call.
+        unsafe { ep.GetMute() }.ok().map(|b| b.as_bool())
+    }
+
+    pub fn set_system_mute(&self, muted: bool) -> bool {
+        let Some(ep) = self.endpoint_volume() else { return false };
+        // SAFETY: COM call; a null event context is allowed.
+        unsafe { ep.SetMute(muted, std::ptr::null()) }.is_ok()
     }
 }

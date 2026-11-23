@@ -18,6 +18,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
 };
 
+use crate::i18n::t;
 use crate::logic::percent_label;
 use crate::worker::{OSD_BRIGHTNESS, OSD_MUTED};
 
@@ -107,7 +108,7 @@ impl Osd {
                 _ => GLYPH_VOLUME,
             };
             let label = if kind == OSD_MUTED {
-                "Muted".to_string()
+                t("Muted").to_string()
             } else {
                 percent_label(percent)
             };

@@ -5,11 +5,23 @@
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use windows::Win32::System::SystemInformation::GetLocalTime;
 
 static LOCK: Mutex<()> = Mutex::new(());
+/// Detailed DDC, audio-routing and key logging (Mac "Debug logging"). Startup, display
+/// scans and failures are always logged so a problem report has something to go on.
+static DEBUG: AtomicBool = AtomicBool::new(false);
+
+pub fn set_debug(on: bool) {
+    DEBUG.store(on, Ordering::Relaxed);
+}
+
+pub fn debug_enabled() -> bool {
+    DEBUG.load(Ordering::Relaxed)
+}
 const MAX_BYTES: u64 = 256 * 1024;
 
 pub fn dir() -> Option<PathBuf> {
@@ -43,4 +55,14 @@ pub fn log(msg: &str) {
 #[macro_export]
 macro_rules! glog {
     ($($arg:tt)*) => { $crate::log::log(&format!($($arg)*)) };
+}
+
+/// Logged only with debug logging on.
+#[macro_export]
+macro_rules! gdebug {
+    ($($arg:tt)*) => {
+        if $crate::log::debug_enabled() {
+            $crate::log::log(&format!($($arg)*))
+        }
+    };
 }

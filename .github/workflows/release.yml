@@ -163,7 +163,7 @@ jobs:
             2. Put it anywhere you like, e.g. `%LOCALAPPDATA%\Programs\Glint`, and run it
             3. The exe isn't code-signed yet, so SmartScreen may warn: choose **More info → Run anyway**
 
-            Glint lives in the tray. Brightness: your keyboard's brightness keys, or **Ctrl+Alt+Page Up / Page Down** (changeable in the tray menu). Volume keys drive your monitor's speakers when Windows plays through it.
+            Glint lives in the tray. Brightness: your keyboard's brightness keys, or **Ctrl+Alt+Page Up / Page Down** (changeable in the tray menu). Click the tray icon for sliders, right-click for settings. Volume keys drive your monitor's speakers when Windows plays through it.
 
             ---
             _See [CHANGELOG](../../blob/main/CHANGELOG.md) for details._

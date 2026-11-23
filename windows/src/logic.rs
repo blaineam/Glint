@@ -1,6 +1,8 @@
 //! Platform-independent logic: step math, settings model, name matching and mute
 //! decisions. Kept free of Win32 so `cargo test` runs it on any host.
 
+use crate::i18n::t;
+
 /// Step sizes offered in the tray menu, in percent per key press. Same list as the Mac app.
 pub const STEP_OPTIONS: [f64; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.25, 8.0, 10.0];
 /// 1/16, matching macOS and the Mac app's default.
@@ -124,13 +126,13 @@ impl HotkeyScheme {
         HotkeyScheme::Off,
     ];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self) -> String {
         match self {
-            HotkeyScheme::CtrlAltPage => "Ctrl+Alt+Page Down / Page Up",
-            HotkeyScheme::CtrlAltF1F2 => "Ctrl+Alt+F1 / F2",
-            HotkeyScheme::F1F2 => "F1 / F2 (Apple keyboard top row)",
-            HotkeyScheme::F14F15 => "F14 / F15 (Apple keyboards)",
-            HotkeyScheme::Off => "Off",
+            HotkeyScheme::CtrlAltPage => "Ctrl+Alt+Page Down / Page Up".into(),
+            HotkeyScheme::CtrlAltF1F2 => "Ctrl+Alt+F1 / F2".into(),
+            HotkeyScheme::F1F2 => format!("F1 / F2 {}", t("(Apple keyboard top row)")),
+            HotkeyScheme::F14F15 => format!("F14 / F15 {}", t("(Apple keyboards)")),
+            HotkeyScheme::Off => t("Off").into(),
         }
     }
 
@@ -159,10 +161,25 @@ impl HotkeyScheme {
 pub struct Settings {
     pub brightness_step: f64,
     pub volume_step: f64,
-    /// First key press syncs every display to the cursor display, then all move together.
+    /// Mac "Sync with built-in display": brightness keys move every display (built-in
+    /// included) to the cursor display's level, and volume keys move Windows' volume and
+    /// every monitor's speakers together. On by default, as on the Mac.
     pub sync: bool,
-    /// Volume keys drive the monitor's speakers over DDC when Windows plays through it.
+    /// Brightness keys and hotkeys are handled at all (Mac "Intercept brightness keys").
+    pub intercept_brightness: bool,
+    /// Monitors that accept DDC brightness writes but don't answer reads are still
+    /// controlled, from an assumed 50% (Mac "Always intercept brightness").
+    pub always_brightness: bool,
+    /// Volume keys drive the monitor's speakers over DDC when Windows plays through it
+    /// (Mac "Intercept volume keys").
     pub route_volume: bool,
+    /// Take volume keys whenever Windows plays through a monitor, even if no monitor
+    /// answered DDC volume reads (Mac "Always intercept volume").
+    pub always_volume: bool,
+    /// Skip failed volume reads: start at 50% and track volume in memory (Mac "Write-only
+    /// volume").
+    pub write_only_volume: bool,
+    pub debug_logging: bool,
     pub hotkeys: HotkeyScheme,
     pub show_osd: bool,
     pub tray_hidden: bool,
@@ -173,13 +190,49 @@ impl Default for Settings {
         Settings {
             brightness_step: DEFAULT_STEP,
             volume_step: DEFAULT_STEP,
-            sync: false,
+            sync: true,
+            intercept_brightness: true,
+            always_brightness: false,
             route_volume: true,
+            always_volume: false,
+            write_only_volume: false,
+            debug_logging: false,
             hotkeys: HotkeyScheme::CtrlAltPage,
             show_osd: true,
             tray_hidden: false,
         }
     }
+}
+
+/// What the volume keys need to decide where they go.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RouteInput {
+    pub intercept: bool,
+    pub always: bool,
+    pub sync: bool,
+    /// Windows is playing through a monitor (HDMI/DisplayPort/USB-C).
+    pub endpoint_is_display: bool,
+    /// A monitor that answers DDC volume matches the playing device's name.
+    pub matched_capable: bool,
+    /// Any monitor matches the playing device's name.
+    pub matched_any: bool,
+    pub any_capable: bool,
+}
+
+/// Whether Glint takes the volume keys (true) or leaves them to Windows (false). Mirrors
+/// the Mac: sync mode always takes them (Windows' volume and the monitors move together);
+/// otherwise only when Windows plays through a monitor Glint can drive.
+pub fn route_volume_keys(i: RouteInput) -> bool {
+    if !i.intercept {
+        return false;
+    }
+    if i.sync {
+        return true;
+    }
+    if !i.endpoint_is_display {
+        return false;
+    }
+    i.always || i.matched_capable || (!i.matched_any && i.any_capable)
 }
 
 /// Steps are stored as hundredths of a percent so 6.25 fits a registry DWORD exactly.
@@ -369,11 +422,56 @@ mod tests {
     }
 
     #[test]
+    fn volume_routing_matches_mac() {
+        let base = RouteInput {
+            intercept: true,
+            endpoint_is_display: true,
+            any_capable: true,
+            ..Default::default()
+        };
+        // Playing through a monitor Glint can drive.
+        assert!(route_volume_keys(RouteInput {
+            matched_capable: true,
+            matched_any: true,
+            ..base
+        }));
+        // Names don't match any monitor: fall back to any capable monitor.
+        assert!(route_volume_keys(base));
+        // Playing through a monitor that doesn't answer DDC volume: Windows keeps it...
+        let uncapable = RouteInput {
+            matched_any: true,
+            ..base
+        };
+        assert!(!route_volume_keys(uncapable));
+        // ...unless "always intercept volume" is on.
+        assert!(route_volume_keys(RouteInput {
+            always: true,
+            ..uncapable
+        }));
+        // Headphones/speakers: Windows keeps it, unless sync mode drives everything.
+        let speakers = RouteInput {
+            endpoint_is_display: false,
+            ..base
+        };
+        assert!(!route_volume_keys(speakers));
+        assert!(route_volume_keys(RouteInput { sync: true, ..speakers }));
+        // Intercept off wins over everything.
+        assert!(!route_volume_keys(RouteInput {
+            intercept: false,
+            sync: true,
+            always: true,
+            ..base
+        }));
+    }
+
+    #[test]
     fn default_settings_match_mac() {
         let s = Settings::default();
         assert_eq!(s.brightness_step, 6.25);
         assert_eq!(s.volume_step, 6.25);
         assert!(s.route_volume);
-        assert!(!s.sync);
+        assert!(s.intercept_brightness);
+        assert!(s.sync);
+        assert!(!s.always_brightness && !s.always_volume && !s.write_only_volume && !s.debug_logging);
     }
 }

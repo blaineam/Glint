@@ -31,13 +31,16 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use crate::audio::Audio;
+use crate::flyout::{self, Flyout, WM_APP_SLIDER};
+use crate::gdebug;
 use crate::glog;
 use crate::hidkeys;
+use crate::i18n::t;
 use crate::logic::{self, Direction, HotkeyScheme, Settings, STEP_OPTIONS};
 use crate::osd::Osd;
 use crate::settings;
 use crate::tray::{app_icon, Tray, WM_APP_TRAY};
-use crate::worker::{self, Cmd, Snapshot, WM_APP_OSD, WM_APP_SNAPSHOT};
+use crate::worker::{self, Cmd, Snapshot, WorkerPrefs, WM_APP_OSD, WM_APP_SNAPSHOT};
 
 pub const VERSION: &str = match option_env!("GLINT_VERSION") {
     Some(v) => v,
@@ -78,10 +81,18 @@ const ID_WEBSITE: usize = 106;
 const ID_SUPPORT: usize = 107;
 const ID_LOG: usize = 108;
 const ID_OSD: usize = 109;
+const ID_INTERCEPT_B: usize = 110;
+const ID_ALWAYS_B: usize = 111;
+const ID_ALWAYS_V: usize = 112;
+const ID_WRITE_ONLY: usize = 113;
+const ID_DEBUG: usize = 114;
 const ID_BSTEP: usize = 200;
 const ID_VSTEP: usize = 300;
 const ID_HOTKEY: usize = 400;
-const ID_LEVEL: usize = 1000; // + display * 20 + level (0..=10)
+/// Per-display levels: ID_LEVEL + display * 40 + level (0..=10) for brightness, + 20 for volume.
+const ID_LEVEL: usize = 1000;
+const LEVELS_PER_DISPLAY: usize = 40;
+const VOLUME_OFFSET: usize = 20;
 
 struct App {
     hwnd: HWND,
@@ -94,6 +105,7 @@ struct App {
     route_volume: Cell<bool>,
     endpoint_names: RefCell<Vec<String>>,
     osd: Option<Osd>,
+    flyout: RefCell<Option<Flyout>>,
     tray: RefCell<Tray>,
     hotkeys_ok: Cell<bool>,
     hid: RefCell<hidkeys::Decoder>,
@@ -216,9 +228,10 @@ pub fn run() {
             settings::save(&s);
         }
         settings::repair_launch_at_login();
+        crate::log::set_debug(s.debug_logging);
 
         let snapshot: Snapshot = Arc::new(Mutex::new(Vec::new()));
-        let (tx, worker) = worker::spawn(hwnd, snapshot.clone());
+        let (tx, worker) = worker::spawn(hwnd, snapshot.clone(), worker_prefs(&s));
         let _ = tx.send(Cmd::Rescan);
 
         let app = App {
@@ -230,6 +243,7 @@ pub fn run() {
             route_volume: Cell::new(false),
             endpoint_names: RefCell::new(Vec::new()),
             osd: Osd::new(),
+            flyout: RefCell::new(None),
             tray: RefCell::new(Tray::new(hwnd)),
             hotkeys_ok: Cell::new(false),
             hid: RefCell::new(hidkeys::Decoder::default()),
@@ -253,9 +267,8 @@ pub fn run() {
                 app.tray.borrow_mut().show(&app.tooltip());
                 if !settings::has_seen_welcome() {
                     app.tray.borrow().notify(
-                        "Glint is running",
-                        "Brightness keys (or Ctrl+Alt+Page Up / Page Down) and volume keys now control your monitor. \
-                         Click the tray icon for settings.",
+                        t("Glint is running"),
+                        t("Brightness keys (or Ctrl+Alt+Page Up / Page Down) and volume keys now control your monitor. Click the tray icon for sliders, right-click for settings."),
                     );
                     settings::mark_welcome_seen();
                 }
@@ -332,6 +345,13 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
+fn worker_prefs(s: &Settings) -> WorkerPrefs {
+    WorkerPrefs {
+        always_brightness: s.always_brightness,
+        write_only_volume: s.write_only_volume,
+    }
+}
+
 fn cursor() -> POINT {
     let mut p = POINT::default();
     // SAFETY: out-parameter.
@@ -388,9 +408,16 @@ impl App {
         match msg {
             WM_APP_TRAY => {
                 let event = (lparam.0 as u32) & 0xFFFF;
-                if event == WM_CONTEXTMENU || event == NIN_SELECT || event == NIN_KEYSELECT || event == WM_LBUTTONUP {
+                // Like the Mac's menu-bar popover: click for sliders, right-click for settings.
+                if event == NIN_SELECT || event == NIN_KEYSELECT || event == WM_LBUTTONUP {
+                    self.show_flyout();
+                } else if event == WM_CONTEXTMENU {
                     self.show_menu();
                 }
+                Some(LRESULT(0))
+            }
+            WM_APP_SLIDER => {
+                self.slider(wparam.0, lparam.0 as f64);
                 Some(LRESULT(0))
             }
             WM_APP_SHOW => {
@@ -498,6 +525,9 @@ impl App {
 
     /// Hardware brightness keys (HID consumer usages 0x6F/0x70) from any keyboard.
     fn raw_input(&self, lparam: LPARAM) {
+        if !self.settings.borrow().intercept_brightness {
+            return;
+        }
         let Ok(mut decoder) = self.hid.try_borrow_mut() else {
             return;
         };
@@ -505,7 +535,7 @@ impl App {
         drop(decoder);
         if !usages.is_empty() && *self.hid_last.borrow() != usages {
             // Logged so an unrecognised keyboard can be diagnosed from the log folder.
-            glog!("consumer keys: {:02X?}", usages);
+            gdebug!("consumer keys: {:02X?}", usages);
         }
         *self.hid_last.borrow_mut() = usages.clone();
         let (held, pressed) = logic::brightness_transition(self.hid_held.get(), &usages);
@@ -529,30 +559,33 @@ impl App {
         unsafe { SetTimer(Some(self.hwnd), TIMER_RESCAN, 1500, None) };
     }
 
-    /// Whether volume keys go to a monitor over DDC. Only when Windows is playing through
-    /// a display (HDMI/DisplayPort) and that display (or, when names don't match any
-    /// display, some display) answers DDC volume.
+    /// Whether Glint takes the volume keys (decided here, outside the keyboard hook). See
+    /// `logic::route_volume_keys` for the rules, which mirror the Mac app.
     fn refresh_route(&self) {
-        let enabled = self.settings.borrow().route_volume;
+        let (intercept, always, sync) = {
+            let s = self.settings.borrow();
+            (s.route_volume, s.always_volume, s.sync)
+        };
         let endpoint = self.audio.as_ref().and_then(|a| a.default_endpoint());
-        let mut route = false;
-        let mut names = Vec::new();
-        if let (true, Some(ep)) = (enabled, endpoint) {
-            if ep.is_display {
-                if let Ok(displays) = self.snapshot.lock() {
-                    let matches = |n: &str| ep.names.iter().any(|e| logic::endpoint_matches_monitor(e, n));
-                    let matched_capable = displays.iter().any(|d| d.has_volume && matches(&d.name));
-                    let matched_any = displays.iter().any(|d| matches(&d.name));
-                    let any_capable = displays.iter().any(|d| d.has_volume);
-                    route = matched_capable || (!matched_any && any_capable);
-                }
-            }
-            names = ep.names;
+        let names = endpoint.as_ref().map(|e| e.names.clone()).unwrap_or_default();
+        let mut input = logic::RouteInput {
+            intercept,
+            always,
+            sync,
+            endpoint_is_display: endpoint.as_ref().is_some_and(|e| e.is_display),
+            ..Default::default()
+        };
+        if let Ok(displays) = self.snapshot.lock() {
+            let matches = |n: &str| names.iter().any(|e| logic::endpoint_matches_monitor(e, n));
+            input.matched_capable = displays.iter().any(|d| d.has_volume() && matches(&d.name));
+            input.matched_any = displays.iter().any(|d| matches(&d.name));
+            input.any_capable = displays.iter().any(|d| d.has_volume());
         }
+        let route = logic::route_volume_keys(input);
         if route != self.route_volume.get() {
             glog!(
                 "volume keys -> {} (endpoint {:?})",
-                if route { "monitor DDC" } else { "Windows" },
+                if route { "Glint" } else { "Windows" },
                 names
             );
         }
@@ -562,16 +595,24 @@ impl App {
 
     fn volume_key(&self, vk: u32) {
         let endpoint = self.endpoint_names.borrow().clone();
-        let step = self.settings.borrow().volume_step;
+        let (step, sync) = {
+            let s = self.settings.borrow();
+            (s.volume_step, s.sync)
+        };
         if vk == VK_VOLUME_MUTE.0 as u32 {
-            self.send(Cmd::ToggleMute { endpoint });
+            self.send(Cmd::ToggleMute { endpoint, sync });
         } else {
             let dir = if vk == VK_VOLUME_UP.0 as u32 {
                 Direction::Up
             } else {
                 Direction::Down
             };
-            self.send(Cmd::Volume { endpoint, dir, step });
+            self.send(Cmd::Volume {
+                endpoint,
+                dir,
+                step,
+                sync,
+            });
         }
     }
 
@@ -580,7 +621,10 @@ impl App {
         unsafe {
             let _ = UnregisterHotKey(Some(self.hwnd), HK_DOWN);
             let _ = UnregisterHotKey(Some(self.hwnd), HK_UP);
-            let scheme = self.settings.borrow().hotkeys;
+            let (scheme, enabled) = {
+                let s = self.settings.borrow();
+                (s.hotkeys, s.intercept_brightness)
+            };
             let ctrl_alt = MOD_CONTROL | MOD_ALT;
             let keys = match scheme {
                 HotkeyScheme::CtrlAltPage => Some((ctrl_alt, VK_NEXT, VK_PRIOR)),
@@ -589,6 +633,7 @@ impl App {
                 HotkeyScheme::F14F15 => Some((HOT_KEY_MODIFIERS(0), VK_F14, VK_F15)),
                 HotkeyScheme::Off => None,
             };
+            let keys = if enabled { keys } else { None };
             let ok = match keys {
                 Some((mods, down, up)) => {
                     let a = RegisterHotKey(Some(self.hwnd), HK_DOWN, mods, down.0 as u32).is_ok();
@@ -635,78 +680,163 @@ impl App {
         settings::save(&s);
     }
 
+    fn apply_worker_prefs(&self) {
+        let prefs = worker_prefs(&self.settings.borrow());
+        self.send(Cmd::Prefs(prefs));
+    }
+
+    fn show_flyout(&self) {
+        let displays = self.snapshot.lock().map(|d| d.clone()).unwrap_or_default();
+        let mut slot = self.flyout.borrow_mut();
+        if slot.is_none() {
+            *slot = Flyout::new(self.hwnd);
+        }
+        if let Some(f) = slot.as_ref() {
+            f.show(&displays, cursor());
+        }
+    }
+
+    /// A flyout slider moved: `id` says which display and control, `value` is 0–100.
+    fn slider(&self, id: usize, value: f64) {
+        let Some((index, is_volume)) = flyout::decode_id(id) else {
+            return;
+        };
+        if is_volume {
+            self.send(Cmd::SetVolume { index, percent: value });
+        } else {
+            let all = self.settings.borrow().sync;
+            self.send(Cmd::SetBrightness {
+                index,
+                percent: value,
+                all,
+            });
+        }
+    }
+
     fn show_menu(&self) {
         let displays = self.snapshot.lock().map(|d| d.clone()).unwrap_or_default();
         let s = self.settings.borrow().clone();
         let login = settings::launch_at_login();
+        let greyed = |on: bool| if on { MF_STRING } else { MF_STRING | MF_GRAYED };
         // SAFETY: menus are created, shown and destroyed here.
         let cmd = unsafe {
             let Ok(menu) = CreatePopupMenu() else { return };
             append(menu, MF_STRING | MF_GRAYED, 0, &format!("Glint {VERSION}"));
             separator(menu);
 
+            // Displays: brightness and volume levels (the flyout has sliders).
             let controllable: Vec<_> = displays
                 .iter()
                 .enumerate()
-                .filter(|(_, d)| d.brightness.is_some())
+                .filter(|(_, d)| d.brightness.is_some() || d.volume.is_some())
                 .collect();
             if controllable.is_empty() {
-                append(menu, MF_STRING | MF_GRAYED, 0, "No display answered DDC/CI");
+                append(menu, MF_STRING | MF_GRAYED, 0, t("No display answered DDC/CI"));
             }
             for (i, d) in &controllable {
                 let Ok(sub) = CreatePopupMenu() else { continue };
-                let current = d.brightness.unwrap_or(0.0);
-                for level in (0..=10).rev() {
-                    let pct = level as f64 * 10.0;
-                    let on = (current - pct).abs() < 5.0;
-                    append(sub, checked(on), ID_LEVEL + i * 20 + level, &format!("{}%", level * 10));
+                for (value, offset, title) in [
+                    (d.brightness, 0, t("Brightness")),
+                    (d.volume, VOLUME_OFFSET, t("Volume")),
+                ] {
+                    let Some(current) = value else { continue };
+                    let Ok(levels) = CreatePopupMenu() else { continue };
+                    for level in (0..=10).rev() {
+                        let on = (current - level as f64 * 10.0).abs() < 5.0;
+                        let id = ID_LEVEL + i * LEVELS_PER_DISPLAY + offset + level;
+                        append(levels, checked(on), id, &format!("{}%", level * 10));
+                    }
+                    let label = format!("{title}: {}", logic::percent_label(current));
+                    let _ = AppendMenuW(sub, MF_POPUP, levels.0 as usize, &HSTRING::from(label));
                 }
-                let label = format!("{} \u{2014} {}", d.name, logic::percent_label(current));
+                let mut label = d.name.clone();
+                if let Some(b) = d.brightness {
+                    label.push_str(&format!(" \u{2014} {}", logic::percent_label(b)));
+                }
                 let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(label));
             }
             separator(menu);
 
-            let hotkeys = CreatePopupMenu().ok();
-            if let Some(sub) = hotkeys {
-                for (i, scheme) in HotkeyScheme::ALL.iter().enumerate() {
-                    append(sub, checked(*scheme == s.hotkeys), ID_HOTKEY + i, scheme.label());
-                }
-                let label = if self.hotkeys_ok.get() {
-                    format!("Brightness keys: {}", s.hotkeys.label())
-                } else {
-                    format!("Brightness keys: {} (in use by another app)", s.hotkeys.label())
-                };
-                let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(label));
-            }
-            for (base, current, title) in [
-                (ID_BSTEP, s.brightness_step, "Brightness step"),
-                (ID_VSTEP, s.volume_step, "Volume step"),
-            ] {
+            // Keyboard controls (the Mac's Settings › Keyboard Controls).
+            if let Ok(kb) = CreatePopupMenu() {
+                append(
+                    kb,
+                    checked(s.intercept_brightness),
+                    ID_INTERCEPT_B,
+                    t("Intercept brightness keys"),
+                );
+                append(
+                    kb,
+                    greyed(s.intercept_brightness) | checked(s.always_brightness),
+                    ID_ALWAYS_B,
+                    &format!("    {}", t("Always intercept brightness")),
+                );
                 if let Ok(sub) = CreatePopupMenu() {
-                    for (i, step) in STEP_OPTIONS.iter().enumerate() {
-                        append(sub, checked(*step == current), base + i, &step_label(*step));
+                    for (i, scheme) in HotkeyScheme::ALL.iter().enumerate() {
+                        append(sub, checked(*scheme == s.hotkeys), ID_HOTKEY + i, &scheme.label());
                     }
-                    let label = format!("{title}: {}", step_label(current));
-                    let _ = AppendMenuW(menu, MF_POPUP, sub.0 as usize, &HSTRING::from(label));
+                    let label = if self.hotkeys_ok.get() {
+                        format!("    {}: {}", t("Brightness hotkeys"), s.hotkeys.label())
+                    } else {
+                        format!(
+                            "    {}: {} {}",
+                            t("Brightness hotkeys"),
+                            s.hotkeys.label(),
+                            t("(in use by another app)")
+                        )
+                    };
+                    let _ = AppendMenuW(
+                        kb,
+                        MF_POPUP | greyed(s.intercept_brightness),
+                        sub.0 as usize,
+                        &HSTRING::from(label),
+                    );
                 }
+                separator(kb);
+                append(kb, checked(s.route_volume), ID_ROUTE, t("Intercept volume keys"));
+                append(
+                    kb,
+                    greyed(s.route_volume) | checked(s.always_volume),
+                    ID_ALWAYS_V,
+                    &format!("    {}", t("Always intercept volume")),
+                );
+                append(
+                    kb,
+                    greyed(s.route_volume) | checked(s.write_only_volume),
+                    ID_WRITE_ONLY,
+                    &format!("    {}", t("Write-only volume")),
+                );
+                separator(kb);
+                for (base, current, title) in [
+                    (ID_BSTEP, s.brightness_step, t("Brightness step")),
+                    (ID_VSTEP, s.volume_step, t("Volume step")),
+                ] {
+                    if let Ok(sub) = CreatePopupMenu() {
+                        for (i, step) in STEP_OPTIONS.iter().enumerate() {
+                            append(sub, checked(*step == current), base + i, &step_label(*step));
+                        }
+                        let label = format!("{title}: {}", step_label(current));
+                        let _ = AppendMenuW(kb, MF_POPUP, sub.0 as usize, &HSTRING::from(label));
+                    }
+                }
+                separator(kb);
+                append(kb, checked(s.sync), ID_SYNC, t("Sync all displays and Windows volume"));
+                let _ = AppendMenuW(menu, MF_POPUP, kb.0 as usize, &HSTRING::from(t("Keyboard Controls")));
             }
-            append(menu, checked(s.sync), ID_SYNC, "Sync brightness across displays");
-            append(
-                menu,
-                checked(s.route_volume),
-                ID_ROUTE,
-                "Volume keys control monitor speakers",
-            );
-            append(menu, checked(s.show_osd), ID_OSD, "Show on-screen indicator");
-            append(menu, checked(login), ID_LOGIN, "Launch at login");
-            append(menu, MF_STRING, ID_HIDE, "Hide tray icon\u{2026}");
-            append(menu, MF_STRING, ID_RESCAN, "Rescan displays");
+            append(menu, checked(s.show_osd), ID_OSD, t("Show on-screen indicator"));
+            append(menu, checked(login), ID_LOGIN, t("Launch at login"));
+            append(menu, MF_STRING, ID_HIDE, t("Hide tray icon…"));
+            append(menu, MF_STRING, ID_RESCAN, t("Rescan displays"));
             separator(menu);
-            append(menu, MF_STRING, ID_WEBSITE, "Glint website");
-            append(menu, MF_STRING, ID_SUPPORT, "Support future development");
-            append(menu, MF_STRING, ID_LOG, "Open log folder");
+            if let Ok(diag) = CreatePopupMenu() {
+                append(diag, checked(s.debug_logging), ID_DEBUG, t("Debug logging"));
+                append(diag, MF_STRING, ID_LOG, t("Open log folder"));
+                let _ = AppendMenuW(menu, MF_POPUP, diag.0 as usize, &HSTRING::from(t("Diagnostics")));
+            }
+            append(menu, MF_STRING, ID_WEBSITE, t("Glint website"));
+            append(menu, MF_STRING, ID_SUPPORT, t("Support future development"));
             separator(menu);
-            append(menu, MF_STRING, ID_QUIT, "Quit Glint");
+            append(menu, MF_STRING, ID_QUIT, t("Quit Glint"));
 
             let p = cursor();
             let _ = SetForegroundWindow(self.hwnd);
@@ -734,10 +864,41 @@ impl App {
                 let _ = unsafe { DestroyWindow(self.hwnd) };
             }
             ID_RESCAN => self.send(Cmd::Rescan),
-            ID_SYNC => self.update_settings(|s| s.sync = !s.sync),
+            ID_SYNC => {
+                self.update_settings(|s| s.sync = !s.sync);
+                self.refresh_route();
+            }
+            ID_INTERCEPT_B => {
+                self.update_settings(|s| s.intercept_brightness = !s.intercept_brightness);
+                self.apply_hotkeys();
+            }
+            ID_ALWAYS_B => {
+                self.update_settings(|s| s.always_brightness = !s.always_brightness);
+                self.apply_worker_prefs();
+            }
             ID_ROUTE => {
                 self.update_settings(|s| s.route_volume = !s.route_volume);
                 self.refresh_route();
+            }
+            ID_ALWAYS_V => {
+                self.update_settings(|s| s.always_volume = !s.always_volume);
+                self.refresh_route();
+            }
+            ID_WRITE_ONLY => {
+                self.update_settings(|s| s.write_only_volume = !s.write_only_volume);
+                self.apply_worker_prefs();
+            }
+            ID_DEBUG => {
+                self.update_settings(|s| s.debug_logging = !s.debug_logging);
+                crate::log::set_debug(self.settings.borrow().debug_logging);
+                glog!(
+                    "debug logging {}",
+                    if self.settings.borrow().debug_logging {
+                        "on"
+                    } else {
+                        "off"
+                    }
+                );
             }
             ID_OSD => self.update_settings(|s| s.show_osd = !s.show_osd),
             ID_LOGIN => settings::set_launch_at_login(!settings::launch_at_login()),
@@ -746,8 +907,8 @@ impl App {
                 let answer = unsafe {
                     MessageBoxW(
                         Some(self.hwnd),
-                        w!("Glint keeps running without a tray icon. Open Glint again (Start menu or the exe) to bring the icon back."),
-                        w!("Hide Glint's tray icon?"),
+                        &HSTRING::from(t("Glint keeps running without a tray icon. Open Glint again (Start menu or the exe) to bring the icon back.")),
+                        &HSTRING::from(t("Hide Glint's tray icon?")),
                         MB_OKCANCEL | MB_ICONINFORMATION,
                     )
                 };
@@ -774,12 +935,25 @@ impl App {
                 self.apply_hotkeys();
             }
             c if c >= ID_LEVEL => {
-                let index = (c - ID_LEVEL) / 20;
-                let level = (c - ID_LEVEL) % 20;
-                if index < displays.len() && level <= 10 {
+                let index = (c - ID_LEVEL) / LEVELS_PER_DISPLAY;
+                let rest = (c - ID_LEVEL) % LEVELS_PER_DISPLAY;
+                if index >= displays.len() {
+                    return;
+                }
+                if rest >= VOLUME_OFFSET {
+                    let level = rest - VOLUME_OFFSET;
+                    if level <= 10 {
+                        self.send(Cmd::SetVolume {
+                            index,
+                            percent: level as f64 * 10.0,
+                        });
+                    }
+                } else if rest <= 10 {
+                    let all = self.settings.borrow().sync;
                     self.send(Cmd::SetBrightness {
                         index,
-                        percent: level as f64 * 10.0,
+                        percent: rest as f64 * 10.0,
+                        all,
                     });
                 }
             }
