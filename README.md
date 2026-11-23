@@ -60,6 +60,20 @@ arm64-only (Apple's September 2026 guidance lets apps that require macOS 13+
 drop Intel, and macOS 27 runs only on Apple silicon); Intel Macs should stay on
 v1.4.3.
 
+### Windows 10 / 11 (preview, no admin needed)
+
+Download `Glint-windows-x64.exe` (or `Glint-windows-arm64.exe` for Snapdragon/ARM PCs) from [Releases](../../releases), put it anywhere (for example `%LOCALAPPDATA%\Programs\Glint`) and run it. There is no installer and nothing needs admin rights. The exe isn't code-signed yet, so SmartScreen may ask: choose **More info → Run anyway**.
+
+Glint for Windows lives in the tray:
+
+- **Brightness:** Windows has no brightness key code (laptop Fn keys are handled by firmware, desktop keyboards have none), so brightness uses hotkeys: **Ctrl+Alt+Page Down / Page Up** by default, or Ctrl+Alt+F1/F2 or F14/F15 (Apple keyboards) from the tray menu. The display under the cursor changes; *Sync brightness across displays* moves them all together. Laptop panels are controlled too (through WMI).
+- **Volume:** when Windows plays through a monitor (HDMI, DisplayPort, USB-C), the volume and mute keys drive that monitor's speakers over DDC. Otherwise Windows handles them as usual.
+- **Tray menu:** per-display brightness, step sizes (1–10%, default 6.25%), launch at login, an option to hide the tray icon (run Glint again to bring it back), and a log folder for when a monitor doesn't answer.
+
+Settings live in `HKCU\Software\wemiller\Glint`; launch at login uses your per-user Run key. Known limits: keys aren't caught while an app running as administrator is focused (Windows doesn't let standard-user hooks see those), and some KVMs and docks don't pass DDC/CI through.
+
+Build it yourself with Rust: `cd windows && cargo build --release`.
+
 ### Build from source
 
 ```bash

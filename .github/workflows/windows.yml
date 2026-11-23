@@ -1,0 +1,62 @@
+# Glint for Windows: lint, test and build on every change to windows/.
+# Release builds are attached to GitHub Releases by release.yml.
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'windows/**'
+      - '.github/workflows/windows.yml'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - '.github/workflows/windows.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+    env:
+      RUSTFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
+          rustup component add clippy rustfmt
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+
+      - name: Test
+        run: cargo test --locked --target x86_64-pc-windows-msvc
+
+      - name: Build x64 + ARM64
+        run: |
+          cargo build --release --locked --target x86_64-pc-windows-msvc
+          cargo build --release --locked --target aarch64-pc-windows-msvc
+
+      - name: Report size
+        shell: bash
+        run: ls -l target/*/release/Glint.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Glint-windows
+          path: |
+            windows/target/x86_64-pc-windows-msvc/release/Glint.exe
+            windows/target/aarch64-pc-windows-msvc/release/Glint.exe
+          retention-days: 14

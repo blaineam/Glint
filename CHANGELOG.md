@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.6.0
+
+### Added
+- **Glint for Windows (preview)** — a native Windows 10/11 tray app in `windows/` (Rust, one ~1 MB exe for x64 and ARM64, no installer, no admin rights). It controls external monitors over DDC/CI through the Windows monitor configuration API:
+  - **Brightness hotkeys** — Ctrl+Alt+Page Down / Page Up by default (Ctrl+Alt+F1/F2, F14/F15 or off from the tray menu), since Windows has no brightness key code. Cursor-aware, with *Sync brightness across displays*. Built-in laptop panels are adjusted through WMI.
+  - **Volume and mute keys** drive the monitor's speakers over DDC when Windows plays through a monitor (HDMI, DisplayPort, USB-C); otherwise Windows handles them. Mute is one decision across monitors and restores each monitor's own pre-mute volume, as on the Mac.
+  - **Tray menu** with per-display brightness, brightness/volume step (1–10%, default 6.25%), on-screen indicator, launch at login (per-user Run key), hidden-icon mode (run Glint again to show it), display rescan and a local log folder. A pill OSD shows the level at the bottom of the screen under the cursor.
+  - Monitors are rescanned after display changes, device changes (KVM switches) and resume. DDC runs on its own thread, and held keys are coalesced into one write.
+- **Release pipeline** — tagged releases now attach `Glint-windows-x64.exe`, `Glint-windows-arm64.exe` and SHA-256 sums next to the Mac DMG; a new `Windows` workflow runs fmt, clippy (warnings as errors), tests and both builds on every change to `windows/`.
+
 ## v1.5.1
 
 ### Fixed

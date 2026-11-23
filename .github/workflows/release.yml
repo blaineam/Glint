@@ -151,15 +151,61 @@ jobs:
 
             DDC display control from your keyboard. Tiny, invisible, always ready.
 
-            ### Install
+            ### Install on Mac
             1. Download `Glint.dmg` below
             2. Open the DMG and drag Glint to Applications
             3. Launch Glint and grant Accessibility access when prompted
 
             **Notarized by Apple** — safe to run on any Mac.
 
+            ### Install on Windows 10/11 (no admin needed)
+            1. Download `Glint-windows-x64.exe` (most PCs) or `Glint-windows-arm64.exe` (Snapdragon/ARM PCs) below
+            2. Put it anywhere you like, e.g. `%LOCALAPPDATA%\Programs\Glint`, and run it
+            3. The exe isn't code-signed yet, so SmartScreen may warn: choose **More info → Run anyway**
+
+            Glint lives in the tray. Brightness: **Ctrl+Alt+Page Up / Page Down** (changeable in the tray menu). Volume keys drive your monitor's speakers when Windows plays through it.
+
             ---
             _See [CHANGELOG](../../blob/main/CHANGELOG.md) for details._
           files: dist/Glint.dmg
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') }}
+
+  windows:
+    name: Windows build
+    # After the Mac job so the GitHub Release already exists; this only attaches assets.
+    needs: build
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc aarch64-pc-windows-msvc
+
+      - name: Test
+        run: cargo test --locked --target x86_64-pc-windows-msvc
+
+      - name: Build x64 + ARM64
+        run: |
+          export GLINT_VERSION="${GITHUB_REF_NAME#v}"
+          cargo build --release --locked --target x86_64-pc-windows-msvc
+          cargo build --release --locked --target aarch64-pc-windows-msvc
+          mkdir -p ../dist
+          cp target/x86_64-pc-windows-msvc/release/Glint.exe ../dist/Glint-windows-x64.exe
+          cp target/aarch64-pc-windows-msvc/release/Glint.exe ../dist/Glint-windows-arm64.exe
+          (cd ../dist && sha256sum Glint-windows-*.exe > Glint-windows-SHA256SUMS.txt && cat Glint-windows-SHA256SUMS.txt)
+
+      - name: Attach to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            ../dist/Glint-windows-x64.exe ../dist/Glint-windows-arm64.exe ../dist/Glint-windows-SHA256SUMS.txt \
+            --clobber --repo "$GITHUB_REPOSITORY"

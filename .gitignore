@@ -19,3 +19,6 @@ dist/
 
 # Test binaries
 test_avservice
+
+# Windows (Rust)
+windows/target/
