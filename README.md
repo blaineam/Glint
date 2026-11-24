@@ -62,7 +62,9 @@ v1.4.3.
 
 ### Windows 10 / 11 (preview, no admin needed)
 
-Download `Glint-windows-x64.exe` (or `Glint-windows-arm64.exe` for Snapdragon/ARM PCs) from [Releases](../../releases), put it anywhere (for example `%LOCALAPPDATA%\Programs\Glint`) and run it. There is no installer and nothing needs admin rights. The exe isn't code-signed yet, so SmartScreen may ask: choose **More info → Run anyway**.
+Download `Glint-windows-x64.exe` (or `Glint-windows-arm64.exe` for Snapdragon/ARM PCs) from [Releases](../../releases) and run it. The exe isn't code-signed yet, so SmartScreen may ask: choose **More info → Run anyway**.
+
+On first run Glint offers to **install itself for your user**, with no admin rights: it's copied to `%LOCALAPPDATA%\Programs\Glint`, added to the Start menu and to **Settings › Apps** (uninstall it there like any app), and starts at login. Running a newer downloaded exe later offers to update the installed copy. Choose *No* to keep it portable; the tray menu's *Install Glint…* installs it whenever you like. For scripts: `Glint.exe --install`, `--uninstall [--quiet]`, `--portable`.
 
 Glint for Windows lives in the tray and has the Mac app's controls:
 

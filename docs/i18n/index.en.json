@@ -53,6 +53,6 @@
   "why-does-glint-need.8e8c95": "Why does Glint need Accessibility access?",
   "why-isn-t-glint.ff8a43": "Why isn't Glint on the Mac App Store?",
   "yes-brew-install-cask.3a7df2": "Yes: <code>brew install --cask blaineam/tap/glint</code>",
-  "yes-glint-for-windows.cf9cf6": "Yes. Glint for Windows 10 and 11 is a tiny tray app with no installer and no admin rights: <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">download it for most PCs</a> or <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">for ARM PCs</a>. Keyboards with brightness keys work as they are, and any keyboard can use Ctrl+Alt+Page Up / Page Down. On an HDR display, where monitors lock their backlight, it adjusts Windows’ SDR content brightness instead.",
+  "yes-glint-for-windows.73b2b2": "Yes. Glint for Windows 10 and 11 is a tiny tray app that installs itself for your user on first run, with no admin rights, and can be removed from Settings › Apps: <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">download it for most PCs</a> or <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">for ARM PCs</a>. Keyboards with brightness keys work as they are, and any keyboard can use Ctrl+Alt+Page Up / Page Down. On an HDR display, where monitors lock their backlight, it adjusts Windows’ SDR content brightness instead.",
   "your-keyboard-your-monitor.69fac5": "Your keyboard.<br><span>Your monitor.</span>"
 }

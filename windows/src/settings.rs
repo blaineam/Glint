@@ -62,7 +62,7 @@ pub fn set_dword(subkey: &str, name: &str, value: u32) {
     }
 }
 
-fn get_string(subkey: &str, name: &str) -> Option<String> {
+pub fn get_string(subkey: &str, name: &str) -> Option<String> {
     let mut buf = vec![0u16; 1024];
     let mut size = (buf.len() * 2) as u32;
     // SAFETY: buf/size describe a valid buffer.
@@ -84,7 +84,7 @@ fn get_string(subkey: &str, name: &str) -> Option<String> {
     Some(String::from_utf16_lossy(&buf[..len]))
 }
 
-fn set_string(subkey: &str, name: &str, value: &str) {
+pub fn set_string(subkey: &str, name: &str, value: &str) {
     if let Some(key) = open_for_write(subkey) {
         let wide: Vec<u16> = value.encode_utf16().chain(std::iter::once(0)).collect();
         let bytes: Vec<u8> = wide.iter().flat_map(|c| c.to_le_bytes()).collect();
@@ -96,7 +96,7 @@ fn set_string(subkey: &str, name: &str, value: &str) {
     }
 }
 
-fn delete_value(subkey: &str, name: &str) {
+pub fn delete_value(subkey: &str, name: &str) {
     // SAFETY: plain strings.
     let _ = unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, &HSTRING::from(subkey), &HSTRING::from(name)) };
 }

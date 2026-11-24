@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.8.0
+
+### Added
+- **Windows: install for your user, no admin** — on first run, Glint offers to install itself: it's copied to `%LOCALAPPDATA%\Programs\Glint`, gets a Start menu shortcut, starts at login from there, and is listed in **Settings › Apps** (per-user Uninstall entry) with a working Uninstall that removes the app, shortcut, login entry, settings and log. Running a newer downloaded exe offers to update the installed copy (closing the running one first); the same or an older version just opens the installed copy. *No* keeps Glint portable and isn't asked again; the tray menu's *Install Glint…* installs later and hands over to the installed copy. Command line: `--install`, `--uninstall [--quiet]`, `--portable`. All new text is in the 9 languages.
+- **Shared version ordering** (`logic::compare_versions`, pre-releases before finals) in the core, with tests.
+
 ## v1.7.0
 
 ### Fixed

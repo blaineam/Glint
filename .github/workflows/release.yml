@@ -160,8 +160,8 @@ jobs:
 
             ### Install on Windows 10/11 (no admin needed)
             1. Download `Glint-windows-x64.exe` (most PCs) or `Glint-windows-arm64.exe` (Snapdragon/ARM PCs) below
-            2. Put it anywhere you like, e.g. `%LOCALAPPDATA%\Programs\Glint`, and run it
-            3. The exe isn't code-signed yet, so SmartScreen may warn: choose **More info → Run anyway**
+            2. Run it. The exe isn't code-signed yet, so SmartScreen may warn: choose **More info → Run anyway**
+            3. Choose **Yes** to install it for your user (Start menu, starts at login, uninstall from Settings › Apps), or **No** to keep it portable. Running a newer exe later offers to update the installed copy.
 
             Glint lives in the tray. Brightness: your keyboard's brightness keys, or **Ctrl+Alt+Page Up / Page Down** (changeable in the tray menu). Click the tray icon for sliders, right-click for settings. Volume keys drive your monitor's speakers when Windows plays through it.
 

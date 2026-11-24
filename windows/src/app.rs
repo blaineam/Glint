@@ -36,6 +36,7 @@ use crate::gdebug;
 use crate::glog;
 use crate::hidkeys;
 use crate::i18n::t;
+use crate::install;
 use crate::logic::{self, Direction, HotkeyScheme, Settings, STEP_OPTIONS};
 use crate::osd::Osd;
 use crate::settings;
@@ -47,7 +48,9 @@ pub const VERSION: &str = match option_env!("GLINT_VERSION") {
     None => env!("CARGO_PKG_VERSION"),
 };
 
-const CLASS: PCWSTR = w!("GlintMainWindow");
+/// The hidden main window's class; `install` finds a running Glint by it.
+pub const MAIN_CLASS: PCWSTR = w!("GlintMainWindow");
+const CLASS: PCWSTR = MAIN_CLASS;
 const WM_APP_SHOW: u32 = 0x8000 + 2;
 const WM_APP_VOLKEY: u32 = 0x8000 + 3;
 const WM_APP_AUDIO_CHANGED: u32 = 0x8000 + 4;
@@ -86,6 +89,7 @@ const ID_ALWAYS_B: usize = 111;
 const ID_ALWAYS_V: usize = 112;
 const ID_WRITE_ONLY: usize = 113;
 const ID_DEBUG: usize = 114;
+const ID_INSTALL: usize = 115;
 const ID_BSTEP: usize = 200;
 const ID_VSTEP: usize = 300;
 const ID_HOTKEY: usize = 400;
@@ -174,7 +178,31 @@ fn register_audio_notifier(hwnd: HWND) -> Option<(IMMDeviceEnumerator, IMMNotifi
 }
 
 pub fn run() {
-    let background = std::env::args().any(|a| a == "--background");
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let has = |flag: &str| args.iter().any(|a| a == flag);
+    let background = has("--background");
+    if has("--uninstall") {
+        install::uninstall(has("--quiet"));
+        return;
+    }
+    if let Some(pid) =
+        args.iter().position(|a| a == "--wait").and_then(|i| args.get(i + 1)).and_then(|p| p.parse().ok())
+    {
+        install::wait_for_pid(pid);
+    }
+    if has("--install") {
+        install::close_running();
+        match install::install() {
+            Ok(exe) if !install::is_installed_copy() => install::launch(&exe, &[]),
+            Ok(_) => {}
+            Err(e) => crate::glog!("install failed: {e}"),
+        }
+        return;
+    }
+    // Opened by hand from a download: offer to install (or update / open the installed copy).
+    if !background && !has("--portable") && !install::is_installed_copy() && install::offer() {
+        return;
+    }
     // SAFETY: Win32 setup on the UI thread; every handle lives until process exit.
     unsafe {
         let _instance_mutex = CreateMutexW(None, true, w!("Local\\Glint-wemiller-single-instance"));
@@ -778,6 +806,9 @@ impl App {
             }
             append(menu, checked(s.show_osd), ID_OSD, t("Show on-screen indicator"));
             append(menu, checked(login), ID_LOGIN, t("Launch at login"));
+            if !install::is_installed_copy() {
+                append(menu, MF_STRING, ID_INSTALL, t("Install Glint…"));
+            }
             append(menu, MF_STRING, ID_HIDE, t("Hide tray icon…"));
             append(menu, MF_STRING, ID_RESCAN, t("Rescan displays"));
             separator(menu);
@@ -864,6 +895,13 @@ impl App {
             }
             ID_WEBSITE => open(WEBSITE),
             ID_SUPPORT => open(SUPPORT),
+            ID_INSTALL => {
+                if install::install_from_tray() {
+                    // The installed copy starts once this one has quit.
+                    // SAFETY: destroying our own window ends the message loop.
+                    let _ = unsafe { DestroyWindow(self.hwnd) };
+                }
+            }
             ID_LOG => {
                 if let Some(d) = crate::log::dir() {
                     let _ = std::fs::create_dir_all(&d);

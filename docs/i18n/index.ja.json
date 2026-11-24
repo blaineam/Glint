@@ -53,6 +53,6 @@
   "why-does-glint-need.8e8c95": "Glint に「アクセシビリティ」の許可が必要なのはなぜ？",
   "why-isn-t-glint.ff8a43": "Glint が Mac App Store にないのはなぜですか？",
   "yes-brew-install-cask.3a7df2": "はい。<code>brew install --cask blaineam/tap/glint</code>",
-  "yes-glint-for-windows.cf9cf6": "はい。Windows 10/11 版の Glint は、インストーラも管理者権限も不要な小さなトレイアプリです。<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">一般的な PC 用</a>、<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">ARM PC 用</a>をダウンロードできます。輝度キー付きのキーボードはそのまま使え、どのキーボードでも Ctrl+Alt+Page Up / Page Down が使えます。モニタがバックライトを固定する HDR ディスプレイでは、代わりに Windows の SDR コンテンツの明るさを調整します。",
+  "yes-glint-for-windows.73b2b2": "はい。Windows 10/11 版の Glint は小さなトレイアプリで、初回起動時に管理者権限なしでこのユーザー用にインストールされ、「設定 › アプリ」から削除できます。<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">一般的な PC 用</a>、<a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">ARM PC 用</a>をダウンロードできます。輝度キー付きのキーボードはそのまま使え、どのキーボードでも Ctrl+Alt+Page Up / Page Down が使えます。モニタがバックライトを固定する HDR ディスプレイでは、代わりに Windows の SDR コンテンツの明るさを調整します。",
   "your-keyboard-your-monitor.69fac5": "あなたのキーボードで。<br><span>あなたのモニターを。</span>"
 }

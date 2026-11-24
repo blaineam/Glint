@@ -22,6 +22,8 @@ mod hdr;
 #[cfg(windows)]
 mod hidkeys;
 #[cfg(windows)]
+mod install;
+#[cfg(windows)]
 mod log;
 #[cfg(windows)]
 mod osd;
@@ -52,8 +54,13 @@ mod tests {
     /// Every `t("...")` in the Windows UI must have translations.
     #[test]
     fn every_ui_string_is_translated() {
-        let sources =
-            [include_str!("app.rs"), include_str!("flyout.rs"), include_str!("osd.rs"), include_str!("ddc.rs")];
+        let sources = [
+            include_str!("app.rs"),
+            include_str!("flyout.rs"),
+            include_str!("osd.rs"),
+            include_str!("ddc.rs"),
+            include_str!("install.rs"),
+        ];
         let keys: Vec<&str> = sources.iter().flat_map(|s| glint_core::i18n::keys_in_source(s)).collect();
         assert!(keys.len() > 20, "expected the UI to use t(), found {}", keys.len());
         let missing: Vec<_> = keys.into_iter().filter(|k| !glint_core::i18n::has_key(k)).collect();

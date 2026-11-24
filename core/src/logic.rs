@@ -289,6 +289,34 @@ pub fn percent_to_sdr_level(percent: f64) -> u32 {
     (1000.0 + percent.clamp(0.0, 100.0) * 50.0).round() as u32
 }
 
+/// Orders release versions ("1.7.0", "1.8.0-rc.2", "v1.7.1"): numeric parts compared as
+/// numbers, and a pre-release sorts before its final version. Unparseable parts count as 0.
+pub fn compare_versions(a: &str, b: &str) -> std::cmp::Ordering {
+    fn split(v: &str) -> (Vec<u64>, Option<Vec<u64>>) {
+        let v = v.trim().trim_start_matches('v');
+        let (main, pre) = match v.split_once('-') {
+            Some((m, p)) => (m, Some(p)),
+            None => (v, None),
+        };
+        let nums = |s: &str| {
+            s.split(['.', '-'])
+                .map(|p| p.trim_start_matches(|c: char| !c.is_ascii_digit()).parse().unwrap_or(0))
+                .collect::<Vec<u64>>()
+        };
+        (nums(main), pre.map(nums))
+    }
+    let (am, ap) = split(a);
+    let (bm, bp) = split(b);
+    let len = am.len().max(bm.len());
+    let pad = |v: &[u64]| (0..len).map(|i| v.get(i).copied().unwrap_or(0)).collect::<Vec<_>>();
+    pad(&am).cmp(&pad(&bm)).then_with(|| match (ap, bp) {
+        (None, None) => std::cmp::Ordering::Equal,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (Some(x), Some(y)) => x.cmp(&y),
+    })
+}
+
 /// Text shown in the OSD for a percentage.
 pub fn percent_label(p: f64) -> String {
     format!("{}%", p.round() as i64)
@@ -417,6 +445,20 @@ mod tests {
         assert_eq!(percent_to_sdr_level(56.25), 3813);
         assert_eq!(percent_to_sdr_level(150.0), 6000);
         assert_eq!(sdr_level_to_percent(percent_to_sdr_level(40.0)), 40.0);
+    }
+
+    #[test]
+    fn version_ordering() {
+        use std::cmp::Ordering::*;
+        assert_eq!(compare_versions("1.7.0", "1.7.0"), Equal);
+        assert_eq!(compare_versions("v1.7.0", "1.7.0"), Equal);
+        assert_eq!(compare_versions("1.7.1", "1.7.0"), Greater);
+        assert_eq!(compare_versions("1.10.0", "1.9.9"), Greater);
+        assert_eq!(compare_versions("1.8.0-rc.1", "1.8.0"), Less);
+        assert_eq!(compare_versions("1.8.0-rc.2", "1.8.0-rc.10"), Less);
+        assert_eq!(compare_versions("1.8.0-rc.1", "1.7.9"), Greater);
+        assert_eq!(compare_versions("1.7", "1.7.0"), Equal);
+        assert_eq!(compare_versions("", "1.0.0"), Less);
     }
 
     #[test]

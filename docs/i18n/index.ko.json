@@ -53,6 +53,6 @@
   "why-does-glint-need.8e8c95": "Glint에 손쉬운 사용 권한이 필요한 이유는 무엇인가요?",
   "why-isn-t-glint.ff8a43": "Glint가 Mac App Store에 없는 이유는 무엇인가요?",
   "yes-brew-install-cask.3a7df2": "네. <code>brew install --cask blaineam/tap/glint</code>",
-  "yes-glint-for-windows.cf9cf6": "네. Windows 10/11용 Glint는 설치 프로그램도 관리자 권한도 필요 없는 작은 트레이 앱입니다. <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">대부분의 PC용</a> 또는 <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">ARM PC용</a>을 내려받으세요. 밝기 키가 있는 키보드는 그대로 작동하고, 어떤 키보드든 Ctrl+Alt+Page Up / Page Down을 쓸 수 있습니다. 모니터가 백라이트를 고정하는 HDR 디스플레이에서는 대신 Windows의 SDR 콘텐츠 밝기를 조절합니다.",
+  "yes-glint-for-windows.73b2b2": "네. Windows 10/11용 Glint는 작은 트레이 앱으로, 처음 실행할 때 관리자 권한 없이 이 사용자용으로 설치되며 설정 › 앱에서 제거할 수 있습니다. <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-x64.exe\">대부분의 PC용</a> 또는 <a href=\"https://github.com/blaineam/Glint/releases/latest/download/Glint-windows-arm64.exe\">ARM PC용</a>을 내려받으세요. 밝기 키가 있는 키보드는 그대로 작동하고, 어떤 키보드든 Ctrl+Alt+Page Up / Page Down을 쓸 수 있습니다. 모니터가 백라이트를 고정하는 HDR 디스플레이에서는 대신 Windows의 SDR 콘텐츠 밝기를 조절합니다.",
   "your-keyboard-your-monitor.69fac5": "내 키보드로,<br><span>내 모니터를.</span>"
 }
